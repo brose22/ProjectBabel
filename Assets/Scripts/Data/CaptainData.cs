@@ -17,6 +17,8 @@ public class CaptainData : ScriptableObject
     public Color color = Color.white;
     public string abilityName;
     [TextArea] public string abilityDescription;
+    [Tooltip("The special ability fired from the meter. Without one, the tower has no special.")]
+    public AbilityData ability;
 
     [Header("Stats")]
     [Tooltip("Base damage of each soldier act, before class and level scaling.")]

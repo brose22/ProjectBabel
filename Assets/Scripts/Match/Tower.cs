@@ -30,6 +30,8 @@ public class Tower : MonoBehaviour
     public bool IsDisabled { get; private set; }
     // The wave number whose end makes a disabled tower restorable. Set by MatchManager.
     public int RestorableAfterWave { get; private set; }
+    // Special-ability meter, 0 to 1. The ability can fire once it reaches 1.
+    public float SpecialCharge { get; private set; }
 
     readonly List<Soldier> soldiers = new();
     // Home offset for each soldier slot, kept so a swapped-in soldier stands where the old one did.
@@ -39,6 +41,11 @@ public class Tower : MonoBehaviour
     public float Range => Captain.range;
     public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed);
     public float SoldierPower => Captain.power * (1f + 0.1f * (Captain.level - 1));
+
+    public bool HasAbility => Captain.ability != null;
+    public bool IsSpecialReady => HasAbility && SpecialCharge >= 1f;
+    public float AbilityRange => Range * (HasAbility ? Captain.ability.rangeMultiplier : 1f);
+    public bool CanUseAbility => IsSpecialReady && !IsDisabled && FindAbilityTarget() != null;
 
     public int LivingSoldiers
     {
@@ -139,6 +146,55 @@ public class Tower : MonoBehaviour
             drawProgress = Mathf.Min(drawProgress, 1f);
         }
         reserveBar.SetFraction((float)Reserve / capacity);
+
+        ChargeSpecial();
+        UpdateBodyColor();
+    }
+
+    // Fills only while enemies are on the field, so the special can't be stockpiled between waves.
+    void ChargeSpecial()
+    {
+        if (!HasAbility || IsDisabled || Enemy.Active.Count == 0) return;
+        float perSecond = Captain.specialChargeRate / Mathf.Max(1f, Captain.ability.chargeSeconds);
+        SpecialCharge = Mathf.Min(1f, SpecialCharge + perSecond * Time.deltaTime);
+    }
+
+    // Disabled towers are dimmed; a ready special makes the tower pulse toward white.
+    void UpdateBodyColor()
+    {
+        if (IsDisabled)
+            body.color = Color.Lerp(Captain.color, Color.black, 0.65f);
+        else if (IsSpecialReady)
+            body.color = Color.Lerp(Captain.color, Color.white, 0.2f + 0.2f * Mathf.Sin(Time.time * 6f));
+        else
+            body.color = Captain.color;
+    }
+
+    // The ability aims at the enemy closest to the tower within the ability's range.
+    public Enemy FindAbilityTarget()
+    {
+        if (!HasAbility) return null;
+        Enemy closest = null;
+        float closestDistance = AbilityRange;
+        foreach (Enemy enemy in Enemy.Active)
+        {
+            float distance = Vector2.Distance(transform.position, enemy.transform.position);
+            if (distance <= closestDistance)
+            {
+                closest = enemy;
+                closestDistance = distance;
+            }
+        }
+        return closest;
+    }
+
+    public bool TryUseAbility()
+    {
+        if (!CanUseAbility) return false;
+        AbilityCaster.Cast(this, FindAbilityTarget(), body.sprite, rangeIndicator.sprite);
+        SpecialCharge = 0f;
+        GameEvents.RaiseAbilityUsed(this);
+        return true;
     }
 
     public bool TrySpendReserve(int cost)
@@ -221,7 +277,6 @@ public class Tower : MonoBehaviour
         drawProgress = 0f;
         foreach (Soldier soldier in soldiers)
             soldier.Despawn();
-        body.color = Color.Lerp(Captain.color, Color.black, 0.65f);
         GameEvents.RaiseTowerDisabled(this);
     }
 
@@ -233,7 +288,6 @@ public class Tower : MonoBehaviour
         IsDisabled = false;
         Health = MaxHealth;
         UpdateHealthBar();
-        body.color = Captain.color;
         foreach (Soldier soldier in soldiers)
             soldier.Respawn();
         GameEvents.RaiseTowerRestored(this);

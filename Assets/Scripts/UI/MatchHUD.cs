@@ -22,7 +22,7 @@ public class MatchHUD : MonoBehaviour
     {
         get
         {
-            float height = 240f + SoldierSlotsHeight;
+            float height = 266f + SoldierSlotsHeight;
             return new(8f, ReferenceHeight - 8f - height, 300f, height);
         }
     }
@@ -48,8 +48,8 @@ public class MatchHUD : MonoBehaviour
         if (placement.IsMoving && placement.Selected != null) DrawMoveHint(placement.Selected);
         if (match.IsOver) DrawEndPanel();
 
-        GUI.Label(new Rect(ReferenceWidth - 545f, ReferenceHeight - 24f, 540f, 22f),
-            "Click: place / select    1-3: Gold draw    M: move    X: sell    Space: next wave    Esc: deselect");
+        GUI.Label(new Rect(ReferenceWidth - 605f, ReferenceHeight - 24f, 600f, 22f),
+            "Click: place / select    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave    Esc: deselect");
     }
 
     void DrawTopBar()
@@ -93,6 +93,7 @@ public class MatchHUD : MonoBehaviour
         GUILayout.Label($"Likes: {string.Join(", ", captain.likes)}");
         GUILayout.Label($"Dislikes: {string.Join(", ", captain.dislikes)}");
         DrawTowerCondition(tower);
+        DrawAbility(tower);
         DrawSoldierSlots(tower);
 
         GUILayout.Label("Gold draw");
@@ -141,6 +142,26 @@ public class MatchHUD : MonoBehaviour
             }
             GUILayout.EndHorizontal();
         }
+    }
+
+    // Meter percentage plus a Use button that only lights up when the ability is ready and has a target.
+    void DrawAbility(Tower tower)
+    {
+        AbilityData ability = tower.Captain.ability;
+        GUILayout.BeginHorizontal();
+        if (ability == null)
+        {
+            GUILayout.Label("No special ability");
+        }
+        else
+        {
+            GUILayout.Label($"{ability.displayName}  {Mathf.FloorToInt(tower.SpecialCharge * 100f)}%");
+            bool wasEnabled = GUI.enabled;
+            GUI.enabled = wasEnabled && tower.CanUseAbility;
+            if (GUILayout.Button("Use (Q)", GUILayout.Width(80f))) tower.TryUseAbility();
+            GUI.enabled = wasEnabled;
+        }
+        GUILayout.EndHorizontal();
     }
 
     void DrawTowerCondition(Tower tower)
