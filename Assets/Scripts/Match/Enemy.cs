@@ -63,6 +63,13 @@ public class Enemy : MonoBehaviour
         if (Health <= 0f) Die();
     }
 
+    // Pushes the enemy back along its path (never before the start); it then walks on as usual.
+    public void Knockback(float distance)
+    {
+        if (!IsTargetable || !(distance > 0f)) return;
+        transform.position = PathMath.MoveBack(path, nextPoint, transform.position, distance, out nextPoint);
+    }
+
     void Die()
     {
         Remove();
