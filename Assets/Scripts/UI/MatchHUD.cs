@@ -5,8 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // The match HUD, built in uGUI at runtime: top bar, selected-tower panel, move hint, captain
-// requests, approval messages, end panel and controls hint. Labels and buttons refresh every frame;
-// the tower panel and request cards are rebuilt only when their structure changes.
+// requests, approval messages and controls hint (RunScreens shows results). Labels and buttons
+// refresh every frame; the tower panel and request cards rebuild only when their structure changes.
 public class MatchHUD : MonoBehaviour
 {
     const float TopBarHeight = 32f;
@@ -27,7 +27,6 @@ public class MatchHUD : MonoBehaviour
 
     RectTransform towerPanel;
     RectTransform requestList;
-    RectTransform endPanel;
     Text moveHint;
     Text messages;
     string towerPanelKey;
@@ -38,7 +37,7 @@ public class MatchHUD : MonoBehaviour
     CaptainRequests Requests => requests != null ? requests : requests = match.GetComponent<CaptainRequests>();
 
     // Takes a screen position in Input System coordinates; kept for PlacementController.
-    public bool IsPointerOverHud(Vector2 screenPosition) => match.IsOver || UIKit.IsPointerOverUI();
+    public bool IsPointerOverHud(Vector2 screenPosition) => match.IsOver || match.State == MatchState.Setup || UIKit.IsPointerOverUI();
 
     void Start()
     {
@@ -68,12 +67,13 @@ public class MatchHUD : MonoBehaviour
     void LateUpdate()
     {
         if (canvas == null) return;
+        // The run setup screen covers everything; the HUD returns once the run begins.
+        canvas.enabled = match.State != MatchState.Setup;
         UIKit.Refresh(barRefreshers);
         UpdateTowerPanel();
         UpdateRequests();
         UpdateMoveHint();
         messages.text = Relationships != null ? string.Join("\n", Relationships.RecentMessages) : "";
-        if (match.IsOver && endPanel == null) BuildEndPanel();
     }
 
     void OnDestroy()
@@ -323,22 +323,4 @@ public class MatchHUD : MonoBehaviour
         }
     }
 
-    // ---------- End panel ----------
-
-    void BuildEndPanel()
-    {
-        endPanel = UIKit.Panel(canvas.transform, "End Panel", UIKit.PanelColor);
-        UIKit.Place(endPanel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(340f, 0f));
-        VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(endPanel, 14, 6, fitContent: true);
-        layout.childAlignment = TextAnchor.UpperCenter;
-
-        UIKit.Label(endPanel, match.State == MatchState.Won ? "Victory" : "Defeat", 26, TextAnchor.MiddleCenter);
-        UIKit.Label(endPanel, $"Waves cleared {match.WavesCleared}/{match.WaveCount}", 13, TextAnchor.MiddleCenter);
-        UIKit.Label(endPanel, $"Kills {match.Kills}   Leaks {match.Leaks}   Casualties {match.Casualties}", 13, TextAnchor.MiddleCenter);
-        UIKit.Label(endPanel, $"Gold left {RunState.Current.Gold}", 13, TextAnchor.MiddleCenter);
-        if (Relationships != null && Relationships.Walkouts.Count > 0)
-            UIKit.Label(endPanel, "Walked out for this run: " + string.Join(", ", Relationships.Walkouts.ConvertAll(c => c.displayName)),
-                13, TextAnchor.MiddleCenter, UIKit.SelectedButtonColor);
-        UIKit.Button(endPanel, "Start a new run", match.RestartRun, 200f, 28f);
-    }
 }

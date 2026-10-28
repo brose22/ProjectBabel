@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public enum MatchState { Preparing, WaveActive, Won, Lost }
+// Setup is the run setup screen, shown before a run's first match while no party is chosen.
+public enum MatchState { Setup, Preparing, WaveActive, Won, Lost }
 
 // Runs one match: wave flow, tower placement, and the win/lose result.
 public class MatchManager : MonoBehaviour
@@ -42,10 +44,11 @@ public class MatchManager : MonoBehaviour
     {
         get
         {
-            int count = data.roster.Count;
+            List<CaptainData> party = RunState.Current.Party;
+            int count = party.Count;
             for (int i = 0; i < count; i++)
             {
-                CaptainData captain = data.roster[(nextCaptainIndex + i) % count];
+                CaptainData captain = party[(nextCaptainIndex + i) % count];
                 if (captain != null && !Tower.All.Exists(t => t.Captain == captain) && !RunState.Current.HasDeparted(captain))
                     return captain;
             }
@@ -58,7 +61,8 @@ public class MatchManager : MonoBehaviour
     {
         CaptainData current = NextCaptain;
         if (current == null) return;
-        nextCaptainIndex = (data.roster.IndexOf(current) + 1) % data.roster.Count;
+        List<CaptainData> party = RunState.Current.Party;
+        nextCaptainIndex = (party.IndexOf(current) + 1) % party.Count;
     }
 
     public bool CanPlaceTower => !IsOver && Tower.All.Count < data.maxTowers && NextCaptain != null;
@@ -70,6 +74,8 @@ public class MatchManager : MonoBehaviour
     {
         if (RunState.Current == null)
             RunState.StartNewRun(data.startingHealth, data.startingGold);
+        // A run without a party starts at the setup screen; later matches go straight to play.
+        State = RunState.Current.HasParty ? MatchState.Preparing : MatchState.Setup;
         Time.timeScale = GameSpeed;
 
         // Added at runtime so existing scenes need no rebuild.
@@ -78,6 +84,7 @@ public class MatchManager : MonoBehaviour
             cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
         if (!TryGetComponent(out Relationships _)) gameObject.AddComponent<Relationships>();
         if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
+        if (!TryGetComponent(out RunScreens _)) gameObject.AddComponent<RunScreens>();
     }
 
     void OnEnable()
@@ -206,9 +213,29 @@ public class MatchManager : MonoBehaviour
         if (!IsOver && !IsHitStopped) Time.timeScale = GameSpeed;
     }
 
+    // Ends the run: back to the setup screen with fresh health and Gold. Approval and bond ranks
+    // are untouched, since they carry between runs.
     public void RestartRun()
     {
         RunState.StartNewRun(data.startingHealth, data.startingGold);
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
+    // Starts the run with the chosen captains; called from the setup screen.
+    public void BeginRun(IEnumerable<CaptainData> party)
+    {
+        if (State != MatchState.Setup) return;
+        RunState.Current.SetParty(party);
+        nextCaptainIndex = 0;
+        State = MatchState.Preparing;
+    }
+
+    // After a win, plays the next match of the run. Health, Gold, XP, the party and any walkouts
+    // carry over because they live in RunState.
+    public void NextMatch()
+    {
+        if (State != MatchState.Won) return;
+        RunState.Current.CompleteMatch();
         SceneManager.LoadScene(gameObject.scene.name);
     }
 

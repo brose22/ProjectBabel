@@ -52,6 +52,21 @@ public class RunState
         return best;
     }
 
+    // The captains picked for this run (GDD: a run brings a subset of the roster). Empty until the
+    // player has picked, which is how the match knows to show the run setup screen.
+    public List<CaptainData> Party { get; } = new();
+    public bool HasParty => Party.Count > 0;
+    // Matches finished this run; the next match is MatchesPlayed + 1.
+    public int MatchesPlayed { get; private set; }
+
+    public void SetParty(IEnumerable<CaptainData> captains)
+    {
+        Party.Clear();
+        Party.AddRange(captains);
+    }
+
+    public void CompleteMatch() => MatchesPlayed++;
+
     public bool HasDeparted(CaptainData captain) => departed.Contains(captain);
 
     public void Depart(CaptainData captain) => departed.Add(captain);
