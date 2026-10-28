@@ -1,78 +1,258 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
+using UnityEngine.UI;
 
-// Grey-box HUD drawn with IMGUI. It is meant to be replaced by real UI once the loop plays well.
-// All layout is in a 540-pixel-tall reference space that is scaled to the screen.
+// The match HUD, built in uGUI at runtime: top bar, selected-tower panel, move hint, captain
+// requests, approval messages, end panel and controls hint. Labels and buttons refresh every frame;
+// the tower panel and request cards are rebuilt only when their structure changes.
 public class MatchHUD : MonoBehaviour
 {
-    const float ReferenceHeight = 540f;
-    const float TopBarHeight = 34f;
-    // One label row plus one button row per soldier slot in the selection panel.
-    const float SoldierSlotHeight = 48f;
+    const float TopBarHeight = 32f;
+    const float PanelWidth = 310f;
     static readonly string[] DrawRateLabels = { "Low", "Normal", "High" };
+    static readonly SupportEffect[] StatEffects = { SupportEffect.ActSpeed, SupportEffect.Damage, SupportEffect.Defense };
 
     [SerializeField] MatchManager match;
     [SerializeField] PlacementController placement;
 
-    GUIStyle titleStyle;
     Relationships relationships;
     CaptainRequests requests;
+    Canvas canvas;
 
-    float Scale => Screen.height / ReferenceHeight;
-    float ReferenceWidth => Screen.width / Scale;
-    Rect TopBarRect => new(0f, 0f, ReferenceWidth, TopBarHeight);
-    Rect SelectionRect
+    readonly List<Action> barRefreshers = new();
+    readonly List<Action> panelRefreshers = new();
+    readonly List<Action> requestRefreshers = new();
+
+    RectTransform towerPanel;
+    RectTransform requestList;
+    RectTransform endPanel;
+    Text moveHint;
+    Text messages;
+    string towerPanelKey;
+    string requestKey;
+
+    // Added to the match at runtime, so they are looked up rather than wired in the scene.
+    Relationships Relationships => relationships != null ? relationships : relationships = match.GetComponent<Relationships>();
+    CaptainRequests Requests => requests != null ? requests : requests = match.GetComponent<CaptainRequests>();
+
+    // Takes a screen position in Input System coordinates; kept for PlacementController.
+    public bool IsPointerOverHud(Vector2 screenPosition) => match.IsOver || UIKit.IsPointerOverUI();
+
+    void Start()
     {
-        get
+        canvas = UIKit.CreateCanvas("Match HUD", 10);
+        BuildTopBar();
+
+        towerPanel = UIKit.Panel(canvas.transform, "Tower Panel", UIKit.PanelColor);
+        UIKit.Place(towerPanel, new Vector2(0f, 0f), new Vector2(8f, 8f), new Vector2(PanelWidth, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(towerPanel, 8, 3, fitContent: true);
+
+        moveHint = UIKit.Label(canvas.transform, "", 13, TextAnchor.MiddleCenter, UIKit.SelectedButtonColor);
+        UIKit.Place(moveHint.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -TopBarHeight - 6f), new Vector2(520f, 22f));
+
+        requestList = UIKit.Group(canvas.transform, "Requests");
+        UIKit.Place(requestList, new Vector2(0.5f, 1f), new Vector2(0f, -TopBarHeight - 30f), new Vector2(600f, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(requestList, 0, 4, fitContent: true);
+
+        messages = UIKit.Label(canvas.transform, "", 12, TextAnchor.UpperRight);
+        UIKit.Place(messages.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, -TopBarHeight - 6f), new Vector2(330f, 120f));
+
+        Text hint = UIKit.Label(canvas.transform,
+            "Click: place / select    Tab: next captain    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave",
+            11, TextAnchor.LowerRight, UIKit.MutedTextColor);
+        UIKit.Place(hint.rectTransform, new Vector2(1f, 0f), new Vector2(-8f, 6f), new Vector2(640f, 18f));
+    }
+
+    void LateUpdate()
+    {
+        if (canvas == null) return;
+        UIKit.Refresh(barRefreshers);
+        UpdateTowerPanel();
+        UpdateRequests();
+        UpdateMoveHint();
+        messages.text = Relationships != null ? string.Join("\n", Relationships.RecentMessages) : "";
+        if (match.IsOver && endPanel == null) BuildEndPanel();
+    }
+
+    void OnDestroy()
+    {
+        if (canvas != null) Destroy(canvas.gameObject);
+    }
+
+    // ---------- Top bar ----------
+
+    void BuildTopBar()
+    {
+        RectTransform bar = UIKit.Panel(canvas.transform, "Top Bar", UIKit.PanelColor);
+        bar.anchorMin = new Vector2(0f, 1f);
+        bar.anchorMax = Vector2.one;
+        bar.pivot = new Vector2(0.5f, 1f);
+        bar.sizeDelta = new Vector2(0f, TopBarHeight);
+        UIKit.Layout<HorizontalLayoutGroup>(bar, 4, 10);
+
+        RunState run() => RunState.Current;
+        UIKit.Size(UIKit.LiveLabel(bar, () => $"Health {run().Health}/{run().MaxHealth}", barRefreshers), 90f);
+        UIKit.Size(UIKit.LiveLabel(bar, () => $"Gold {run().Gold}", barRefreshers), 80f);
+        UIKit.Size(UIKit.LiveLabel(bar, () => $"Wave {Mathf.Min(match.WavesCleared + 1, match.WaveCount)}/{match.WaveCount}", barRefreshers), 64f);
+        UIKit.Size(UIKit.LiveLabel(bar, () => $"Towers {Tower.All.Count}/{match.Data.maxTowers}", barRefreshers), 66f);
+        UIKit.LiveButton(bar, NextCaptainLabel, match.CycleNextCaptain, barRefreshers,
+            interactable: () => match.CanPlaceTower, width: 200f);
+        UIKit.Size(UIKit.LiveLabel(bar, () => $"Kills {match.Kills}  Leaks {match.Leaks}  Casualties {match.Casualties}",
+            barRefreshers, 12, color: UIKit.MutedTextColor), flexibleWidth: 1f);
+        UIKit.LiveButton(bar, WaveButtonLabel, match.StartNextWave, barRefreshers,
+            interactable: () => match.State == MatchState.Preparing, width: 120f);
+        UIKit.LiveButton(bar, () => match.GameSpeed > 1f ? "Speed x2" : "Speed x1", match.ToggleGameSpeed, barRefreshers, width: 76f);
+    }
+
+    string NextCaptainLabel()
+    {
+        CaptainData next = match.NextCaptain;
+        return match.CanPlaceTower && next != null ? $"Next: {next.displayName} ({next.role})  [Tab]" : "No captains to place";
+    }
+
+    string WaveButtonLabel()
+    {
+        if (match.State == MatchState.WaveActive) return "Wave in progress";
+        if (match.State != MatchState.Preparing) return "Match over";
+        return match.NextWaveCountdown > 0f ? $"Next wave ({Mathf.CeilToInt(match.NextWaveCountdown)})" : "Start wave";
+    }
+
+    // ---------- Tower panel ----------
+
+    // The panel's structure depends on these; anything else changes through refreshers.
+    string TowerPanelKey(Tower tower)
+    {
+        if (tower == null) return "";
+        return $"{tower.GetHashCode()}|{tower.Soldiers.Count}|{tower.IsDisabled}|{match.CanRestore(tower)}|{placement.IsMoving}";
+    }
+
+    void UpdateTowerPanel()
+    {
+        Tower tower = placement.Selected;
+        string key = TowerPanelKey(tower);
+        if (key != towerPanelKey)
         {
-            float height = 310f + SoldierSlotsHeight;
-            return new(8f, ReferenceHeight - 8f - height, 300f, height);
+            towerPanelKey = key;
+            panelRefreshers.Clear();
+            UIKit.Clear(towerPanel);
+            towerPanel.gameObject.SetActive(tower != null);
+            if (tower != null) BuildTowerPanel(tower);
         }
-    }
-    float SoldierSlotsHeight => placement.Selected != null ? placement.Selected.Soldiers.Count * SoldierSlotHeight : 0f;
-    Rect EndRect => new(ReferenceWidth * 0.5f - 150f, ReferenceHeight * 0.5f - 100f, 300f, 200f);
-
-    // Takes a screen position in Input System coordinates (origin bottom-left).
-    public bool IsPointerOverHud(Vector2 screenPosition)
-    {
-        var gui = new Vector2(screenPosition.x / Scale, (Screen.height - screenPosition.y) / Scale);
-        if (TopBarRect.Contains(gui)) return true;
-        if (placement.Selected != null && SelectionRect.Contains(gui)) return true;
-        if (Requests != null)
-            for (int i = 0; i < Requests.Pending.Count; i++)
-                if (RequestRect(i).Contains(gui)) return true;
-        return match.IsOver;
+        if (tower != null) UIKit.Refresh(panelRefreshers);
     }
 
-    void OnGUI()
+    void BuildTowerPanel(Tower tower)
     {
-        titleStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter };
-        GUI.matrix = Matrix4x4.Scale(new Vector3(Scale, Scale, 1f));
+        CaptainData captain = tower.Captain;
+        Transform panel = towerPanel;
 
-        DrawTopBar();
-        if (placement.Selected != null) DrawSelection(placement.Selected);
-        if (placement.IsMoving && placement.Selected != null) DrawMoveHint(placement.Selected);
-        DrawApprovalMessages();
-        DrawRequests();
-        if (match.IsOver) DrawEndPanel();
+        UIKit.LiveLabel(panel, () => $"{captain.displayName}  Lv {tower.Level}  Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})",
+            panelRefreshers, 15);
+        UIKit.Label(panel, $"{captain.element} {captain.role}", 12, color: UIKit.MutedTextColor);
+        UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}", panelRefreshers);
+        UIKit.LiveLabel(panel, () => $"Reserve {tower.Reserve}/{captain.resourceCapacity}   " +
+            (tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}"), panelRefreshers);
+        UIKit.LiveLabel(panel, () => AuraLabel(tower), panelRefreshers, 12);
+        UIKit.LiveLabel(panel, () => BoostLabel(tower), panelRefreshers, 12);
+        UIKit.Label(panel, $"Likes: {string.Join(", ", captain.likes)}", 12, color: UIKit.MutedTextColor);
+        UIKit.Label(panel, $"Dislikes: {string.Join(", ", captain.dislikes)}", 12, color: UIKit.MutedTextColor);
 
-        GUI.Label(new Rect(ReferenceWidth - 655f, ReferenceHeight - 24f, 650f, 22f),
-            "Click: place / select    Tab: next captain    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave");
-    }
+        BuildCondition(panel, tower);
+        BuildAbility(panel, tower);
+        BuildSoldierSlots(panel, tower);
 
-    static readonly SupportEffect[] StatEffects = { SupportEffect.ActSpeed, SupportEffect.Damage, SupportEffect.Defense };
-
-    // Total boosts on the tower's soldiers right now (aura plus timed), with time left on timed ones.
-    static string BoostLabel(Tower tower)
-    {
-        var parts = new System.Collections.Generic.List<string>();
-        foreach (SupportEffect effect in StatEffects)
+        UIKit.Label(panel, "Gold draw", 12, color: UIKit.MutedTextColor);
+        Transform drawRow = Row(panel);
+        for (int i = 0; i < DrawRateLabels.Length; i++)
         {
-            float boost = tower.Boost(effect);
-            if (boost <= 0f) continue;
-            float secondsLeft = tower.TimedBoostSecondsLeft(effect);
-            parts.Add($"{effect} +{boost * 100f:0}%" + (secondsLeft > 0f ? $" ({Mathf.CeilToInt(secondsLeft)}s)" : ""));
+            var rate = (DrawRate)i;
+            UIKit.LiveButton(drawRow, () => DrawRateLabels[(int)rate], () => tower.SetDrawRate(rate), panelRefreshers,
+                selected: () => tower.DrawRate == rate, width: 96f);
         }
-        return parts.Count == 0 ? "Boosts: none" : "Boosts: " + string.Join(", ", parts);
+
+        Transform actions = Row(panel);
+        if (placement.IsMoving)
+            UIKit.Button(actions, "Cancel move", placement.CancelMove, 145f);
+        else
+            UIKit.LiveButton(actions, () => match.MoveCost(tower) > 0 ? $"Move ({match.MoveCost(tower)} Gold)" : "Move (free)",
+                placement.BeginMove, panelRefreshers, () => match.CanMove(tower) && match.CanAffordMove(tower), width: 145f);
+        UIKit.Button(actions, "Sell (returns reserve)", placement.SellSelected, 145f);
+    }
+
+    static Transform Row(Transform parent)
+    {
+        RectTransform row = UIKit.Group(parent, "Row");
+        UIKit.Layout<HorizontalLayoutGroup>(row, 0, 4);
+        return row;
+    }
+
+    void BuildCondition(Transform panel, Tower tower)
+    {
+        if (!tower.IsDisabled)
+        {
+            UIKit.LiveLabel(panel, () => $"Health {Mathf.CeilToInt(tower.Health)}/{Mathf.CeilToInt(tower.MaxHealth)}", panelRefreshers);
+            return;
+        }
+        if (!match.CanRestore(tower))
+        {
+            UIKit.Label(panel, $"Disabled (restorable after wave {tower.RestorableAfterWave})", 13, color: UIKit.SelectedButtonColor);
+            return;
+        }
+        UIKit.Label(panel, "Disabled", 13, color: UIKit.SelectedButtonColor);
+        UIKit.LiveButton(panel, () => $"Restore ({match.RestoreCost(tower)} Gold)", () => match.TryRestoreTower(tower), panelRefreshers,
+            () => RunState.Current.Gold >= match.RestoreCost(tower));
+    }
+
+    // Meter percentage plus a Use button that only lights up when the ability is ready and usable.
+    void BuildAbility(Transform panel, Tower tower)
+    {
+        AbilityData ability = tower.Captain.ability;
+        if (ability == null)
+        {
+            UIKit.Label(panel, "No special ability", 13, color: UIKit.MutedTextColor);
+            return;
+        }
+        Transform row = Row(panel);
+        UIKit.Size(UIKit.LiveLabel(row, () => $"{ability.displayName}  {Mathf.FloorToInt(tower.SpecialCharge * 100f)}%", panelRefreshers),
+            flexibleWidth: 1f);
+        UIKit.LiveButton(row, () => "Use (Q)", () => tower.TryUseAbility(), panelRefreshers, () => tower.CanUseAbility, width: 80f);
+    }
+
+    // Slots 3 and 4 open at bond ranks B and S (GDD).
+    static string SlotLabel(int slot) => slot switch
+    {
+        2 => "Slot 3 (B)",
+        3 => "Slot 4 (S)",
+        _ => $"Slot {slot + 1}",
+    };
+
+    // Per slot: its class and state, then a button per class. Other classes show the reserve cost
+    // of switching and grey out when the reserve can't cover it or the tower is disabled.
+    void BuildSoldierSlots(Transform panel, Tower tower)
+    {
+        var classes = match.Data.ChoosableClasses;
+        for (int i = 0; i < tower.Soldiers.Count; i++)
+        {
+            int slot = i;
+            UIKit.LiveLabel(panel, () =>
+            {
+                Soldier soldier = tower.Soldiers[slot];
+                return $"{SlotLabel(slot)}: {soldier.Class.displayName} ({(soldier.IsDead ? "dead" : "alive")})";
+            }, panelRefreshers, 12);
+            Transform row = Row(panel);
+            foreach (SoldierClassData soldierClass in classes)
+            {
+                if (soldierClass == null) continue;
+                SoldierClassData option = soldierClass;
+                UIKit.LiveButton(row,
+                    () => tower.Soldiers[slot].Class == option ? option.displayName : $"{option.displayName} {tower.RespawnCostOf(option)}",
+                    () => tower.SetSlotClass(slot, option), panelRefreshers,
+                    () => tower.Soldiers[slot].Class == option || (!tower.IsDisabled && tower.Reserve >= tower.RespawnCostOf(option)),
+                    () => tower.Soldiers[slot].Class == option, width: 70f, height: 22f);
+            }
+        }
     }
 
     // Shows the live boost during a wave, otherwise what the aura will do when one starts.
@@ -92,221 +272,73 @@ public class MatchHUD : MonoBehaviour
         }
     }
 
-    void DrawTopBar()
+    // Total boosts on the tower's soldiers right now (aura plus timed), with time left on timed ones.
+    static string BoostLabel(Tower tower)
     {
-        RunState run = RunState.Current;
-        GUILayout.BeginArea(TopBarRect, GUI.skin.box);
-        GUILayout.BeginHorizontal();
-
-        GUILayout.Label($"Health {run.Health}/{run.MaxHealth}", GUILayout.Width(95f));
-        GUILayout.Label($"Gold {run.Gold}", GUILayout.Width(75f));
-        GUILayout.Label($"Wave {Mathf.Min(match.WavesCleared + 1, match.WaveCount)}/{match.WaveCount}", GUILayout.Width(70f));
-
-        GUILayout.Label($"Towers {Tower.All.Count}/{match.Data.maxTowers}", GUILayout.Width(70f));
-        if (match.CanPlaceTower)
+        var parts = new List<string>();
+        foreach (SupportEffect effect in StatEffects)
         {
-            CaptainData next = match.NextCaptain;
-            if (GUILayout.Button($"Next: {next.displayName} ({next.role})  [Tab]", GUILayout.Width(190f)))
-                match.CycleNextCaptain();
+            float boost = tower.Boost(effect);
+            if (boost <= 0f) continue;
+            float secondsLeft = tower.TimedBoostSecondsLeft(effect);
+            parts.Add($"{effect} +{boost * 100f:0}%" + (secondsLeft > 0f ? $" ({Mathf.CeilToInt(secondsLeft)}s)" : ""));
         }
-        GUILayout.Label($"Kills {match.Kills}   Leaks {match.Leaks}   Casualties {match.Casualties}");
-
-        GUILayout.FlexibleSpace();
-        if (match.State == MatchState.Preparing)
-        {
-            string label = match.NextWaveCountdown > 0f
-                ? $"Next wave ({Mathf.CeilToInt(match.NextWaveCountdown)})"
-                : "Start wave";
-            if (GUILayout.Button(label, GUILayout.Width(120f))) match.StartNextWave();
-        }
-        if (GUILayout.Button(match.GameSpeed > 1f ? "Speed x2" : "Speed x1", GUILayout.Width(75f)))
-            match.ToggleGameSpeed();
-
-        GUILayout.EndHorizontal();
-        GUILayout.EndArea();
+        return parts.Count == 0 ? "Boosts: none" : "Boosts: " + string.Join(", ", parts);
     }
 
-    void DrawSelection(Tower tower)
+    void UpdateMoveHint()
     {
-        CaptainData captain = tower.Captain;
-        GUILayout.BeginArea(SelectionRect, GUI.skin.box);
-
-        GUILayout.Label($"{captain.displayName}  Lv {tower.Level}  Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})  ({captain.element} {captain.role})");
-        GUILayout.Label($"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}");
-        GUILayout.Label($"Reserve {tower.Reserve}/{captain.resourceCapacity}   " +
-                        (tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}"));
-        GUILayout.Label(AuraLabel(tower));
-        GUILayout.Label(BoostLabel(tower));
-        GUILayout.Label($"Likes: {string.Join(", ", captain.likes)}");
-        GUILayout.Label($"Dislikes: {string.Join(", ", captain.dislikes)}");
-        DrawTowerCondition(tower);
-        DrawAbility(tower);
-        DrawSoldierSlots(tower);
-
-        GUILayout.Label("Gold draw");
-        int rate = GUILayout.Toolbar((int)tower.DrawRate, DrawRateLabels);
-        if (rate != (int)tower.DrawRate) tower.SetDrawRate((DrawRate)rate);
-
-        GUILayout.BeginHorizontal();
-        DrawMoveButton(tower);
-        if (GUILayout.Button("Sell (returns reserve)")) placement.SellSelected();
-        GUILayout.EndHorizontal();
-
-        GUILayout.EndArea();
-    }
-
-    // Slots 3 and 4 open at bond ranks B and S (GDD).
-    static string SlotLabel(int slot) => slot switch
-    {
-        2 => "Slot 3 (B)",
-        3 => "Slot 4 (S)",
-        _ => $"Slot {slot + 1}",
-    };
-
-    // Per slot: rank, class and state, then one button per class. Other classes show the
-    // reserve cost of switching and grey out when the reserve can't cover it or the tower is disabled.
-    void DrawSoldierSlots(Tower tower)
-    {
-        var classes = match.Data.ChoosableClasses;
-        for (int slot = 0; slot < tower.Soldiers.Count; slot++)
+        Tower tower = placement.Selected;
+        if (!placement.IsMoving || tower == null)
         {
-            Soldier soldier = tower.Soldiers[slot];
-            GUILayout.Label($"{SlotLabel(slot)}: {soldier.Class.displayName} ({(soldier.IsDead ? "dead" : "alive")})");
-
-            GUILayout.BeginHorizontal();
-            foreach (SoldierClassData soldierClass in classes)
-            {
-                if (soldierClass == null) continue;
-                if (soldierClass == soldier.Class)
-                {
-                    GUILayout.Toggle(true, soldierClass.displayName, GUI.skin.button);
-                    continue;
-                }
-                int cost = tower.RespawnCostOf(soldierClass);
-                bool wasEnabled = GUI.enabled;
-                GUI.enabled = wasEnabled && !tower.IsDisabled && tower.Reserve >= cost;
-                if (GUILayout.Button($"{soldierClass.displayName} {cost}")) tower.SetSlotClass(slot, soldierClass);
-                GUI.enabled = wasEnabled;
-            }
-            GUILayout.EndHorizontal();
-        }
-    }
-
-    // Meter percentage plus a Use button that only lights up when the ability is ready and has a target.
-    void DrawAbility(Tower tower)
-    {
-        AbilityData ability = tower.Captain.ability;
-        GUILayout.BeginHorizontal();
-        if (ability == null)
-        {
-            GUILayout.Label("No special ability");
-        }
-        else
-        {
-            GUILayout.Label($"{ability.displayName}  {Mathf.FloorToInt(tower.SpecialCharge * 100f)}%");
-            bool wasEnabled = GUI.enabled;
-            GUI.enabled = wasEnabled && tower.CanUseAbility;
-            if (GUILayout.Button("Use (Q)", GUILayout.Width(80f))) tower.TryUseAbility();
-            GUI.enabled = wasEnabled;
-        }
-        GUILayout.EndHorizontal();
-    }
-
-    void DrawTowerCondition(Tower tower)
-    {
-        if (!tower.IsDisabled)
-        {
-            GUILayout.Label($"Health {Mathf.CeilToInt(tower.Health)}/{Mathf.CeilToInt(tower.MaxHealth)}");
+            moveHint.text = "";
             return;
         }
-
-        if (!match.CanRestore(tower))
-        {
-            GUILayout.Label($"Disabled (restorable after wave {tower.RestorableAfterWave})");
-            return;
-        }
-
-        GUILayout.Label("Disabled");
-        int cost = match.RestoreCost(tower);
-        GUI.enabled = RunState.Current.Gold >= cost;
-        if (GUILayout.Button($"Restore ({cost} Gold)")) match.TryRestoreTower(tower);
-        GUI.enabled = true;
+        moveHint.text = $"Moving {tower.Captain.displayName}: click a free tile (Esc / right-click to cancel)" +
+                        (match.CanAffordMove(tower) ? "" : "  - not enough Gold");
     }
 
-    void DrawMoveButton(Tower tower)
-    {
-        if (placement.IsMoving)
-        {
-            if (GUILayout.Button("Cancel move")) placement.CancelMove();
-            return;
-        }
+    // ---------- Requests ----------
 
-        int cost = match.MoveCost(tower);
-        bool wasEnabled = GUI.enabled;
-        GUI.enabled = wasEnabled && match.CanMove(tower) && match.CanAffordMove(tower);
-        if (GUILayout.Button(cost > 0 ? $"Move ({cost} Gold)" : "Move (free)")) placement.BeginMove();
-        GUI.enabled = wasEnabled;
-    }
-
-    // Purely informational (a box takes no clicks), so it stays out of IsPointerOverHud and
-    // tiles under it remain clickable.
-    void DrawMoveHint(Tower tower)
-    {
-        string hint = $"Moving {tower.Captain.displayName}: click a free tile (Esc / right-click to cancel)";
-        if (!match.CanAffordMove(tower)) hint += "  - not enough Gold";
-        GUI.Box(new Rect(ReferenceWidth * 0.5f - 230f, TopBarHeight + 6f, 460f, 24f), hint);
-    }
-
-    // Added to the match at runtime, so it is looked up rather than wired in the scene.
-    Relationships Relationships => relationships != null ? relationships : relationships = match.GetComponent<Relationships>();
-    CaptainRequests Requests => requests != null ? requests : requests = match.GetComponent<CaptainRequests>();
-
-    // Request cards sit below the move hint, top centre.
-    Rect RequestRect(int index) => new(ReferenceWidth * 0.5f - 280f, TopBarHeight + 34f + index * 30f, 560f, 28f);
-
-    void DrawRequests()
+    void UpdateRequests()
     {
         if (Requests == null) return;
-        // Answering removes the request, so draw from a copy.
-        var snapshot = new System.Collections.Generic.List<CaptainRequests.Request>(Requests.Pending);
-        for (int i = 0; i < snapshot.Count; i++)
+        var key = new StringBuilder();
+        foreach (CaptainRequests.Request request in Requests.Pending) key.Append(request.GetHashCode()).Append('|');
+        if (key.ToString() == requestKey) return;
+        requestKey = key.ToString();
+
+        requestRefreshers.Clear();
+        UIKit.Clear(requestList);
+        foreach (CaptainRequests.Request request in Requests.Pending)
         {
-            CaptainRequests.Request request = snapshot[i];
             if (request.Tower == null) continue;
-            GUILayout.BeginArea(RequestRect(i), GUI.skin.box);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label($"{request.Tower.Captain.displayName}: \"{request.Text}\"");
-            if (GUILayout.Button("No", GUILayout.Width(44f))) Requests.Answer(request, RequestAnswer.No);
-            if (GUILayout.Button("Some", GUILayout.Width(52f))) Requests.Answer(request, RequestAnswer.Some);
-            if (GUILayout.Button("Yes", GUILayout.Width(44f))) Requests.Answer(request, RequestAnswer.Yes);
-            GUILayout.EndHorizontal();
-            GUILayout.EndArea();
+            RectTransform card = UIKit.Panel(requestList, "Request", UIKit.PanelColor);
+            UIKit.Size(card, 600f, 30f);
+            UIKit.Layout<HorizontalLayoutGroup>(card, 4, 6);
+            UIKit.Size(UIKit.Label(card, $"{request.Tower.Captain.displayName}: \"{request.Text}\""), flexibleWidth: 1f);
+            UIKit.Button(card, "No", () => Requests.Answer(request, RequestAnswer.No), 44f);
+            UIKit.Button(card, "Some", () => Requests.Answer(request, RequestAnswer.Some), 52f);
+            UIKit.Button(card, "Yes", () => Requests.Answer(request, RequestAnswer.Yes), 44f);
         }
     }
 
-    // Recent approval changes, top right under the bar. Labels only, so clicks pass through.
-    void DrawApprovalMessages()
-    {
-        if (Relationships == null) return;
-        float y = TopBarHeight + 4f;
-        foreach (string message in Relationships.RecentMessages)
-        {
-            GUI.Label(new Rect(ReferenceWidth - 320f, y, 315f, 20f), message);
-            y += 18f;
-        }
-    }
+    // ---------- End panel ----------
 
-    void DrawEndPanel()
+    void BuildEndPanel()
     {
-        GUILayout.BeginArea(EndRect, GUI.skin.box);
-        GUILayout.Label(match.State == MatchState.Won ? "Victory" : "Defeat", titleStyle);
-        GUILayout.Label($"Waves cleared {match.WavesCleared}/{match.WaveCount}");
-        GUILayout.Label($"Kills {match.Kills}   Leaks {match.Leaks}   Casualties {match.Casualties}");
-        GUILayout.Label($"Gold left {RunState.Current.Gold}");
+        endPanel = UIKit.Panel(canvas.transform, "End Panel", UIKit.PanelColor);
+        UIKit.Place(endPanel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(340f, 0f));
+        VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(endPanel, 14, 6, fitContent: true);
+        layout.childAlignment = TextAnchor.UpperCenter;
+
+        UIKit.Label(endPanel, match.State == MatchState.Won ? "Victory" : "Defeat", 26, TextAnchor.MiddleCenter);
+        UIKit.Label(endPanel, $"Waves cleared {match.WavesCleared}/{match.WaveCount}", 13, TextAnchor.MiddleCenter);
+        UIKit.Label(endPanel, $"Kills {match.Kills}   Leaks {match.Leaks}   Casualties {match.Casualties}", 13, TextAnchor.MiddleCenter);
+        UIKit.Label(endPanel, $"Gold left {RunState.Current.Gold}", 13, TextAnchor.MiddleCenter);
         if (Relationships != null && Relationships.Walkouts.Count > 0)
-            GUILayout.Label("Walked out for this run: " + string.Join(", ", Relationships.Walkouts.ConvertAll(c => c.displayName)));
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("Start a new run")) match.RestartRun();
-        GUILayout.EndArea();
+            UIKit.Label(endPanel, "Walked out for this run: " + string.Join(", ", Relationships.Walkouts.ConvertAll(c => c.displayName)),
+                13, TextAnchor.MiddleCenter, UIKit.SelectedButtonColor);
+        UIKit.Button(endPanel, "Start a new run", match.RestartRun, 200f, 28f);
     }
 }
