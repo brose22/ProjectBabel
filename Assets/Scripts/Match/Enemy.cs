@@ -18,6 +18,13 @@ public class Enemy : MonoBehaviour
     int nextPoint;
     float attackTimer;
     float towerAttackTimer;
+    // Seconds left on each status, indexed by StatusKind.
+    readonly float[] statusTime = new float[StatusRules.KindCount];
+    float burnDamagePerSecond;
+    int tintedStatus = -1;
+
+    float MoveSpeed => Data.moveSpeed * (HasStatus(StatusKind.Slow) ? StatusRules.SlowSpeedMultiplier : 1f);
+    float AttackIntervalMultiplier => HasStatus(StatusKind.Stun) ? StatusRules.StunAttackIntervalMultiplier : 1f;
 
     public void Init(EnemyData data, Vector3[] pathPoints, float healthMultiplier)
     {
@@ -37,6 +44,9 @@ public class Enemy : MonoBehaviour
     {
         if (!IsTargetable) return;
 
+        TickStatuses();
+        if (!IsTargetable) return;
+
         // Deployed soldiers in reach block the enemy until one side falls back or dies.
         Soldier blocker = Soldier.FindDeployedNear(transform.position, Data.attackRange);
         if (blocker != null)
@@ -45,17 +55,61 @@ public class Enemy : MonoBehaviour
             if (attackTimer <= 0f)
             {
                 blocker.TakeDamage(Data.attackDamage);
-                attackTimer = Data.attackInterval;
+                attackTimer = Data.attackInterval * AttackIntervalMultiplier;
             }
             return;
         }
 
         TickTowerAttack();
 
+        float step = MoveSpeed * Time.deltaTime;
+        if (HasStatus(StatusKind.Dizzy))
+        {
+            transform.position = PathMath.MoveBack(path, nextPoint, transform.position, step, out nextPoint);
+            return;
+        }
+
         Vector3 target = path[nextPoint];
-        transform.position = Vector3.MoveTowards(transform.position, target, Data.moveSpeed * Time.deltaTime);
+        transform.position = Vector3.MoveTowards(transform.position, target, step);
         if (transform.position == target && ++nextPoint >= path.Length)
             Leak();
+    }
+
+    public bool HasStatus(StatusKind kind) => statusTime[(int)kind] > 0f;
+
+    // Reapplying a status refreshes its timer rather than stacking. Burn keeps the strongest caster.
+    public void ApplyStatus(StatusKind kind, float casterPower)
+    {
+        if (!IsTargetable) return;
+        if (kind == StatusKind.Burn)
+        {
+            float damagePerSecond = casterPower * StatusRules.BurnPowerPerSecond;
+            burnDamagePerSecond = HasStatus(StatusKind.Burn) ? Mathf.Max(burnDamagePerSecond, damagePerSecond) : damagePerSecond;
+        }
+        statusTime[(int)kind] = Mathf.Max(statusTime[(int)kind], StatusRules.DurationOf(kind));
+    }
+
+    void TickStatuses()
+    {
+        int tint = -1;
+        for (int i = 0; i < statusTime.Length; i++)
+        {
+            if (statusTime[i] <= 0f) continue;
+            statusTime[i] -= Time.deltaTime;
+            if (statusTime[i] > 0f && tint < 0) tint = i;
+        }
+        UpdateTint(tint);
+
+        if (HasStatus(StatusKind.Burn))
+            TakeDamage(burnDamagePerSecond * Time.deltaTime);
+    }
+
+    // Shows the first active status as a tint on the body so statuses are readable in grey-box.
+    void UpdateTint(int status)
+    {
+        if (status == tintedStatus) return;
+        tintedStatus = status;
+        body.color = status < 0 ? Data.color : Color.Lerp(Data.color, StatusRules.TintOf((StatusKind)status), 0.6f);
     }
 
     // A passing hit on its own timer: the enemy keeps walking. It only runs while the enemy walks,
@@ -68,7 +122,7 @@ public class Enemy : MonoBehaviour
         Tower tower = Tower.FindClosestActive(transform.position, Data.towerAttackRange);
         if (tower == null) return;
         tower.TakeDamage(Data.towerDamage);
-        towerAttackTimer = Mathf.Max(0.1f, Data.towerAttackInterval);
+        towerAttackTimer = Mathf.Max(0.1f, Data.towerAttackInterval) * AttackIntervalMultiplier;
     }
 
     public void TakeDamage(float amount)
