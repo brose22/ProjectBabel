@@ -38,6 +38,7 @@ public class MatchManager : MonoBehaviour
     }
 
     public bool CanPlaceTower => !IsOver && Tower.All.Count < data.maxTowers && NextCaptain != null;
+    public bool CanAffordMove => RunState.Current.Gold >= data.relocationCost;
 
     void Awake()
     {
@@ -128,6 +129,21 @@ public class MatchManager : MonoBehaviour
     {
         if (!CanRestore(tower) || !RunState.Current.TrySpendGold(RestoreCost(tower))) return false;
         tower.Restore();
+        return true;
+    }
+
+    // Relocates a tower for Gold. It keeps its reserve and soldiers. A disabled tower stays put
+    // until it is restored.
+    public bool CanMove(Tower tower) => !IsOver && tower != null && !tower.IsDisabled && Tower.All.Contains(tower);
+
+    public bool MoveTower(Tower tower, Vector2Int cell)
+    {
+        if (!CanMove(tower) || !grid.IsBuildable(cell)) return false;
+        if (data.relocationCost > 0 && !RunState.Current.TrySpendGold(data.relocationCost)) return false;
+        grid.ClearOccupant(tower.Cell);
+        grid.SetOccupant(cell, tower);
+        tower.MoveTo(cell, grid.CellCenter(cell));
+        GameEvents.RaiseTowerMoved(tower);
         return true;
     }
 

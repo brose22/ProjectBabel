@@ -45,10 +45,11 @@ public class MatchHUD : MonoBehaviour
 
         DrawTopBar();
         if (placement.Selected != null) DrawSelection(placement.Selected);
+        if (placement.IsMoving && placement.Selected != null) DrawMoveHint(placement.Selected);
         if (match.IsOver) DrawEndPanel();
 
-        GUI.Label(new Rect(ReferenceWidth - 470f, ReferenceHeight - 24f, 465f, 22f),
-            "Click: place / select    1-3: Gold draw    X: sell    Space: next wave    Esc: deselect");
+        GUI.Label(new Rect(ReferenceWidth - 545f, ReferenceHeight - 24f, 540f, 22f),
+            "Click: place / select    1-3: Gold draw    M: move    X: sell    Space: next wave    Esc: deselect");
     }
 
     void DrawTopBar()
@@ -98,7 +99,10 @@ public class MatchHUD : MonoBehaviour
         int rate = GUILayout.Toolbar((int)tower.DrawRate, DrawRateLabels);
         if (rate != (int)tower.DrawRate) tower.SetDrawRate((DrawRate)rate);
 
+        GUILayout.BeginHorizontal();
+        DrawMoveButton(tower);
         if (GUILayout.Button("Sell (returns reserve)")) placement.SellSelected();
+        GUILayout.EndHorizontal();
 
         GUILayout.EndArea();
     }
@@ -158,6 +162,30 @@ public class MatchHUD : MonoBehaviour
         GUI.enabled = RunState.Current.Gold >= cost;
         if (GUILayout.Button($"Restore ({cost} Gold)")) match.TryRestoreTower(tower);
         GUI.enabled = true;
+    }
+
+    void DrawMoveButton(Tower tower)
+    {
+        if (placement.IsMoving)
+        {
+            if (GUILayout.Button("Cancel move")) placement.CancelMove();
+            return;
+        }
+
+        int cost = match.Data.relocationCost;
+        bool wasEnabled = GUI.enabled;
+        GUI.enabled = wasEnabled && match.CanMove(tower) && match.CanAffordMove;
+        if (GUILayout.Button(cost > 0 ? $"Move ({cost} Gold)" : "Move (free)")) placement.BeginMove();
+        GUI.enabled = wasEnabled;
+    }
+
+    // Purely informational (a box takes no clicks), so it stays out of IsPointerOverHud and
+    // tiles under it remain clickable.
+    void DrawMoveHint(Tower tower)
+    {
+        string hint = $"Moving {tower.Captain.displayName}: click a free tile (Esc / right-click to cancel)";
+        if (!match.CanAffordMove) hint += "  - not enough Gold";
+        GUI.Box(new Rect(ReferenceWidth * 0.5f - 230f, TopBarHeight + 6f, 460f, 24f), hint);
     }
 
     void DrawEndPanel()

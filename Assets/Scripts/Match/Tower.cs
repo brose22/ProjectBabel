@@ -141,6 +141,16 @@ public class Tower : MonoBehaviour
 
     public void SetSelected(bool selected) => rangeIndicator.enabled = selected;
 
+    // Soldiers are children of the tower, so deployed ones would be dragged along mid-act;
+    // calling everyone home keeps them consistent with the new position.
+    public void MoveTo(Vector2Int cell, Vector3 position)
+    {
+        Cell = cell;
+        transform.position = position;
+        foreach (Soldier soldier in soldiers)
+            soldier.ReturnHome();
+    }
+
     public bool IsInRange(Vector3 position, float slack = 0f) =>
         Vector2.Distance(transform.position, position) <= Range + slack;
 
