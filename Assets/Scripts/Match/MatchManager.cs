@@ -24,6 +24,10 @@ public class MatchManager : MonoBehaviour
     public int Casualties { get; private set; }
 
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
+    public bool IsHitStopped => hitStopRemaining > 0f;
+
+    // Real-time seconds left on the current ability hit-stop.
+    float hitStopRemaining;
 
     // The first roster captain who isn't already on the field.
     public CaptainData NextCaptain
@@ -53,6 +57,7 @@ public class MatchManager : MonoBehaviour
         GameEvents.EnemyLeaked += OnEnemyLeaked;
         GameEvents.SoldierDied += OnSoldierDied;
         GameEvents.TowerDisabled += OnTowerDisabled;
+        GameEvents.AbilityUsed += OnAbilityUsed;
     }
 
     void OnDisable()
@@ -61,12 +66,15 @@ public class MatchManager : MonoBehaviour
         GameEvents.EnemyLeaked -= OnEnemyLeaked;
         GameEvents.SoldierDied -= OnSoldierDied;
         GameEvents.TowerDisabled -= OnTowerDisabled;
+        GameEvents.AbilityUsed -= OnAbilityUsed;
     }
 
     void OnDestroy() => Time.timeScale = 1f;
 
     void Update()
     {
+        TickHitStop();
+
         if (State == MatchState.WaveActive)
         {
             if (!spawner.IsSpawning && Enemy.Active.Count == 0)
@@ -150,13 +158,31 @@ public class MatchManager : MonoBehaviour
     public void ToggleGameSpeed()
     {
         GameSpeed = GameSpeed > 1f ? 1f : 2f;
-        if (!IsOver) Time.timeScale = GameSpeed;
+        if (!IsOver && !IsHitStopped) Time.timeScale = GameSpeed;
     }
 
     public void RestartRun()
     {
         RunState.StartNewRun(data.startingHealth, data.startingGold);
         SceneManager.LoadScene(gameObject.scene.name);
+    }
+
+    // Freezes the match for a moment when an ability lands so the hit reads. Overlapping
+    // abilities extend the freeze to the longest one rather than stacking.
+    void OnAbilityUsed(Tower tower)
+    {
+        float seconds = tower.Captain.ability.hitStopSeconds;
+        if (seconds <= 0f || IsOver) return;
+        hitStopRemaining = Mathf.Max(hitStopRemaining, seconds);
+        Time.timeScale = 0f;
+    }
+
+    // Counts in unscaled time, since the freeze itself sets timeScale to 0.
+    void TickHitStop()
+    {
+        if (hitStopRemaining <= 0f) return;
+        hitStopRemaining -= Time.unscaledDeltaTime;
+        if (hitStopRemaining <= 0f && !IsOver) Time.timeScale = GameSpeed;
     }
 
     void Finish(MatchState result)

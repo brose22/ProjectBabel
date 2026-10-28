@@ -40,4 +40,8 @@ public class AbilityData : ScriptableObject
     public float zoneDuration = 4f;
     [Tooltip("Chance that each enemy hit gets the captain's element status. Bond ranks will raise it later.")]
     [Range(0f, 1f)] public float statusChance = 0.3f;
+
+    [Header("Feel")]
+    [Tooltip("Real-time seconds the whole match freezes when the ability lands, while its effect plays. 0 turns it off.")]
+    public float hitStopSeconds = 0.15f;
 }

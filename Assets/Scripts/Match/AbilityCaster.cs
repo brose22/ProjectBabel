@@ -18,18 +18,20 @@ public static class AbilityCaster
         Vector3 at = target.transform.position;
         Color color = StatusRules.TintOf(StatusRules.ForElement(tower.Captain.element));
         color.a = FlashAlpha;
+        // The effect pops open over the hit-stop, so it plays while the match is frozen.
+        float pop = ability.hitStopSeconds;
 
         switch (ability.shape)
         {
             case AbilityData.Shape.Single:
                 Hit(tower, target, damage);
-                AbilityZone.Spawn(at, 0f, Vector3.one * SingleTargetFlashRadius, discSprite, color, FlashSeconds);
+                AbilityZone.Spawn(at, 0f, Vector3.one * SingleTargetFlashRadius, discSprite, color, FlashSeconds, pop);
                 break;
 
             case AbilityData.Shape.Area:
                 foreach (Enemy enemy in EnemiesWhere(e => Vector2.Distance(at, e.transform.position) <= ability.radius))
                     Hit(tower, enemy, damage);
-                AbilityZone.Spawn(at, 0f, Vector3.one * ability.radius, discSprite, color, FlashSeconds);
+                AbilityZone.Spawn(at, 0f, Vector3.one * ability.radius, discSprite, color, FlashSeconds, pop);
                 break;
 
             case AbilityData.Shape.Line:
@@ -39,14 +41,17 @@ public static class AbilityCaster
                 Vector2 line = end - (Vector2)origin;
                 float angle = Mathf.Atan2(line.y, line.x) * Mathf.Rad2Deg;
                 AbilityZone.Spawn((Vector2)origin + line * 0.5f, angle, new Vector3(line.magnitude, ability.radius * 2f, 1f),
-                    squareSprite, color, FlashSeconds);
+                    squareSprite, color, FlashSeconds, pop);
                 break;
 
             case AbilityData.Shape.Zone:
                 // The status lands on whoever is in the zone when it is cast; the zone itself only burns.
                 foreach (Enemy enemy in EnemiesWhere(e => Vector2.Distance(at, e.transform.position) <= ability.radius))
+                {
+                    enemy.FlashHit(pop);
                     TryApplyStatus(tower, enemy);
-                AbilityZone.Spawn(at, 0f, Vector3.one * ability.radius, discSprite, color, ability.zoneDuration,
+                }
+                AbilityZone.Spawn(at, 0f, Vector3.one * ability.radius, discSprite, color, ability.zoneDuration, pop,
                     ability.radius, damage);
                 break;
         }
@@ -59,6 +64,7 @@ public static class AbilityCaster
     {
         enemy.TakeDamage(damage);
         if (!enemy.IsTargetable) return;
+        enemy.FlashHit(tower.Captain.ability.hitStopSeconds);
         enemy.Knockback(tower.Captain.ability.knockbackDistance);
         TryApplyStatus(tower, enemy);
     }
