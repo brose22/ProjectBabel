@@ -41,6 +41,8 @@ public class MatchData : ScriptableObject
     public int soldiersPerTower = 2;
     [Tooltip("Gold to restore a disabled level 1 tower; scales with the captain's level.")]
     public int restoreBaseCost = 30;
+    [Tooltip("Gold taken from the shared pool to relocate a tower mid-match. 0 makes moving free.")]
+    public int relocationCost = 25;
 
     [Header("Waves")]
     [Tooltip("Seconds before the next wave starts on its own. The first wave waits for the player.")]

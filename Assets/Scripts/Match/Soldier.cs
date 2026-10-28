@@ -175,6 +175,20 @@ public class Soldier : MonoBehaviour
         return Vector2.Distance(transform.position, destination) <= stopDistance + 0.001f;
     }
 
+    // Cancels any act in progress and snaps home. Deployed soldiers recover as if they had
+    // returned normally; dead soldiers stay dead and keep their respawn timer.
+    public void ReturnHome()
+    {
+        if (IsDead) return;
+        target = null;
+        transform.position = Home;
+        if (IsDeployed)
+        {
+            timer = Tower.ActCooldown;
+            SetState(State.Recovering);
+        }
+    }
+
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
