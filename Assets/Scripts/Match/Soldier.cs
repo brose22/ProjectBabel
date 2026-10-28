@@ -24,6 +24,8 @@ public class Soldier : MonoBehaviour
     public SoldierClassData Class { get; private set; }
     public Tower Tower { get; private set; }
     public bool IsDead => state == State.Dead;
+    public int ActCost => Tower.ActCostOf(Class);
+    public int RespawnCost => Tower.RespawnCostOf(Class);
     bool IsDeployed => state is State.Advancing or State.Returning;
 
     Vector3 homeOffset;
@@ -75,7 +77,7 @@ public class Soldier : MonoBehaviour
     void TickReady()
     {
         Enemy enemy = Tower.FindClosestEnemy(transform.position);
-        if (enemy == null || !Tower.TrySpendReserve(Class.actCost)) return;
+        if (enemy == null || !Tower.TrySpendReserve(ActCost)) return;
         target = enemy;
         SetState(State.Advancing);
     }
@@ -162,7 +164,7 @@ public class Soldier : MonoBehaviour
     void TickDead()
     {
         timer -= Time.deltaTime;
-        if (timer <= 0f && Tower.TrySpendReserve(Class.respawnCost))
+        if (timer <= 0f && Tower.TrySpendReserve(RespawnCost))
             Revive();
     }
 

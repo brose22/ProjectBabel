@@ -15,7 +15,6 @@ public class Tower : MonoBehaviour
     [SerializeField] Soldier soldierPrefab;
 
     public CaptainData Captain { get; private set; }
-    public SoldierClassData SoldierClass { get; private set; }
     public Vector2Int Cell { get; private set; }
     public DrawRate DrawRate { get; private set; } = DrawRate.Normal;
     public int Reserve { get; private set; }
@@ -46,24 +45,47 @@ public class Tower : MonoBehaviour
         _ => 1f,
     };
 
-    public void Init(CaptainData captain, SoldierClassData soldierClass, int soldierCount, Vector2Int cell)
+    // One soldier per entry in slotClasses; the soldier list index is the slot index.
+    public void Init(CaptainData captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
     {
         Captain = captain;
-        SoldierClass = soldierClass;
         Cell = cell;
         body.color = captain.color;
         // The range sprite is a disc two units across, so its scale equals the radius.
         rangeIndicator.transform.localScale = Vector3.one * captain.range;
         rangeIndicator.enabled = false;
 
-        for (int i = 0; i < soldierCount; i++)
-        {
-            Soldier soldier = Instantiate(soldierPrefab, transform);
-            soldier.Init(this, soldierClass, HomeOffset(i, soldierCount));
-            soldiers.Add(soldier);
-        }
+        for (int i = 0; i < slotClasses.Count; i++)
+            soldiers.Add(SpawnSoldier(slotClasses[i], i, slotClasses.Count));
 
         All.Add(this);
+    }
+
+    Soldier SpawnSoldier(SoldierClassData soldierClass, int slot, int slotCount)
+    {
+        Soldier soldier = Instantiate(soldierPrefab, transform);
+        soldier.Init(this, soldierClass, HomeOffset(slot, slotCount));
+        return soldier;
+    }
+
+    public SoldierClassData SlotClass(int slot) => soldiers[slot].Class;
+
+    // Soldier costs scale with the captain's level, not the soldier's.
+    public int ActCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.actCost, Captain.level);
+    public int RespawnCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.respawnCost, Captain.level);
+
+    // Swapping a slot's class costs the new class's respawn, and the replacement starts fresh
+    // at home. The old soldier is retired, not killed, so it is no casualty.
+    public bool SetSlotClass(int slot, SoldierClassData newClass)
+    {
+        if (newClass == null || slot < 0 || slot >= soldiers.Count) return false;
+        if (soldiers[slot].Class == newClass) return false;
+        if (!TrySpendReserve(RespawnCostOf(newClass))) return false;
+
+        Destroy(soldiers[slot].gameObject);
+        soldiers[slot] = SpawnSoldier(newClass, slot, soldiers.Count);
+        GameEvents.RaiseSoldierMixChanged(this);
+        return true;
     }
 
     static Vector3 HomeOffset(int index, int count)
