@@ -25,6 +25,7 @@ public static class GreyBoxMatchBuilder
     static readonly Vector2Int MapSize = new(24, 12);
 
     static readonly string[] SliceCaptains = { "Cinder", "Marin", "Ember" };
+    const float WaveHealthGrowth = 0.06f;
 
     // The slice city. Waypoint cells; the first and last sit just off the map so enemies walk on
     // and off screen. The road winds through town from the gate (top left) to the castle (right).
@@ -272,7 +273,8 @@ public static class GreyBoxMatchBuilder
         var waves = new List<WaveDefinition>();
         for (int i = 0; i < grunts.Length; i++)
         {
-            var wave = new WaveDefinition { healthMultiplier = 1f + 0.15f * i };
+            // +6% enemy health per wave, tuned for the slice's three captains by simulated playtests.
+            var wave = new WaveDefinition { healthMultiplier = 1f + WaveHealthGrowth * i };
             wave.groups.Add(new SpawnGroup { enemy = grunt, count = grunts[i], spawnInterval = Mathf.Max(0.6f, 1.4f - 0.08f * i) });
             if (raiders[i] > 0)
                 wave.groups.Add(new SpawnGroup { enemy = raider, count = raiders[i], spawnInterval = 1.5f, delayBefore = 1.5f });
@@ -281,7 +283,7 @@ public static class GreyBoxMatchBuilder
             if (i >= 3)
                 wave.groups.Add(new SpawnGroup { enemy = brute, count = 1 + (i - 3) / 3, spawnInterval = 2.5f, delayBefore = 2f });
             if (i >= 5)
-                wave.groups.Add(new SpawnGroup { enemy = bombard, count = 1 + (i - 5) / 2, spawnInterval = 3f, delayBefore = 2f });
+                wave.groups.Add(new SpawnGroup { enemy = bombard, count = 1 + (i - 5) / 3, spawnInterval = 3f, delayBefore = 2f });
             waves.Add(wave);
         }
         return waves;
