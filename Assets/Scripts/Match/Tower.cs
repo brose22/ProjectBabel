@@ -44,12 +44,28 @@ public class Tower : MonoBehaviour
 
     public float Range => Captain.range;
     public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed * (1f + Boost(SupportEffect.ActSpeed)));
-    public float SoldierPower => Captain.power * (1f + 0.1f * (Captain.level - 1)) * (1f + Boost(SupportEffect.Damage));
+    public float SoldierPower => Captain.power * LevelMath.StatFactor(Level) * (1f + Boost(SupportEffect.Damage));
     // Multiplies damage this tower's soldiers take.
     public float SoldierDamageTakenMultiplier => AuraMath.DamageTakenMultiplier(Boost(SupportEffect.Defense));
 
     bool IsWaveRunning => match != null && match.State == MatchState.WaveActive;
     public bool IsAuraActive => Captain.aura != SupportEffect.None && IsWaveRunning && !IsDisabled;
+
+    // XP lives in RunState so a captain keeps it if sold and placed again within the run.
+    // The asset's level is a floor, for captains authored above level 1.
+    public int Xp => RunState.Current != null ? RunState.Current.XpOf(Captain) : 0;
+    public int Level => Mathf.Max(Captain.level, LevelMath.LevelForXp(Xp));
+    public int XpForNextLevel => LevelMath.XpForLevel(Level + 1);
+    public bool IsMaxLevel => Level >= LevelMath.MaxLevel;
+
+    // XP per point of health a Healer restores, and per boosted soldier act scaled by boost size.
+    const float SupportXpPerHealthHealed = 0.5f;
+    const float SupportXpPerBoostedAct = 4f;
+    // Flat XP for casting a support ability that grants a boost.
+    const float SupportAbilityBoostXp = 10f;
+    float supportXpBank;
+    int supportXpThisWave;
+    float supportXpWaveStart = -1f;
 
     public bool HasAbility => Captain.ability != null;
     public bool IsSpecialReady => HasAbility && SpecialCharge >= 1f;
@@ -105,8 +121,8 @@ public class Tower : MonoBehaviour
     public SoldierClassData SlotClass(int slot) => soldiers[slot].Class;
 
     // Soldier costs scale with the captain's level, not the soldier's.
-    public int ActCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.actCost, Captain.level);
-    public int RespawnCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.respawnCost, Captain.level);
+    public int ActCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.actCost, Level);
+    public int RespawnCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.respawnCost, Level);
 
     // Swapping a slot's class costs the new class's respawn, and the replacement starts fresh
     // at home. The old soldier is retired, not killed, so it is no casualty. A disabled tower has
@@ -169,9 +185,15 @@ public class Tower : MonoBehaviour
     {
         if (effect is SupportEffect.None or SupportEffect.Heal) return 0f;
         float boost = Time.time < timedBoostUntil[(int)effect] ? timedBoostAmount[(int)effect] : 0f;
-        if (Captain.aura == effect && IsAuraActive)
-            boost += AuraMath.FadedStrength(Captain.auraStrength, Time.time - match.WaveStartTime, Captain.auraFadeSeconds);
+        if (Captain.aura == effect) boost += AuraBoost();
         return boost;
+    }
+
+    // This captain's own stat aura right now, fading over the wave; 0 for Heal or when inactive.
+    float AuraBoost()
+    {
+        if (Captain.aura is SupportEffect.None or SupportEffect.Heal || !IsAuraActive) return 0f;
+        return AuraMath.FadedStrength(Captain.auraStrength, Time.time - match.WaveStartTime, Captain.auraFadeSeconds);
     }
 
     // Seconds left on a timed boost, or 0.
@@ -206,8 +228,43 @@ public class Tower : MonoBehaviour
     {
         if (Captain.aura != SupportEffect.Heal || !IsAuraActive) return;
         float amount = Captain.auraStrength * Time.deltaTime;
+        float healed = 0f;
         foreach (Soldier soldier in soldiers)
-            soldier.Heal(amount);
+            healed += soldier.Heal(amount);
+        GainSupportXp(healed * SupportXpPerHealthHealed);
+    }
+
+    public void GainXp(int amount)
+    {
+        if (amount <= 0 || RunState.Current == null) return;
+        int before = Level;
+        RunState.Current.AddXp(Captain, amount);
+        if (Level > before) GameEvents.RaiseCaptainLeveledUp(this);
+    }
+
+    // XP from healing and buffing, banked in fractions and capped per wave (GDD).
+    public void GainSupportXp(float amount)
+    {
+        if (amount <= 0f || match == null) return;
+        if (supportXpWaveStart != match.WaveStartTime)
+        {
+            supportXpWaveStart = match.WaveStartTime;
+            supportXpThisWave = 0;
+        }
+        supportXpBank += amount;
+        int whole = Mathf.FloorToInt(supportXpBank);
+        if (whole <= 0) return;
+        supportXpBank -= whole;
+        int allowed = Mathf.Min(whole, match.Data.supportXpCapPerWave - supportXpThisWave);
+        if (allowed <= 0) return;
+        supportXpThisWave += allowed;
+        GainXp(allowed);
+    }
+
+    // Called when one of this tower's soldiers acts: a Buffer earns XP for acts its aura boosted.
+    public void OnSoldierActed()
+    {
+        GainSupportXp(SupportXpPerBoostedAct * AuraBoost());
     }
 
     // Fills only while enemies are on the field, so the special can't be stockpiled between waves.
@@ -250,7 +307,11 @@ public class Tower : MonoBehaviour
     public bool TryUseAbility()
     {
         if (!CanUseAbility) return false;
-        if (IsSupportAbility) AbilityCaster.CastSupport(this, rangeIndicator.sprite);
+        if (IsSupportAbility)
+        {
+            float healed = AbilityCaster.CastSupport(this, rangeIndicator.sprite);
+            GainSupportXp(healed * SupportXpPerHealthHealed + (Captain.ability.buffAmount > 0f ? SupportAbilityBoostXp : 0f));
+        }
         else AbilityCaster.Cast(this, FindAbilityTarget(), body.sprite, rangeIndicator.sprite);
         SpecialCharge = 0f;
         GameEvents.RaiseAbilityUsed(this);

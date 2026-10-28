@@ -24,7 +24,8 @@ public class Soldier : MonoBehaviour
     public SoldierClassData Class { get; private set; }
     public Tower Tower { get; private set; }
     public bool IsDead => state == State.Dead;
-    public float MaxHealth => Class.maxHealth;
+    // Soldier health scales with the captain's level, like their damage.
+    public float MaxHealth => Class.maxHealth * LevelMath.StatFactor(Tower.Level);
     public int ActCost => Tower.ActCostOf(Class);
     public int RespawnCost => Tower.RespawnCostOf(Class);
     bool IsDeployed => state is State.Advancing or State.Returning;
@@ -110,12 +111,13 @@ public class Soldier : MonoBehaviour
     void Strike(Enemy enemy)
     {
         float damage = Tower.SoldierPower * Class.damageMultiplier;
+        Tower.OnSoldierActed();
         switch (Class.attackStyle)
         {
             case SoldierClassData.AttackStyle.Ranged:
                 // Fire and forget: the soldier heads home while the shot is in flight.
                 bool hasOwnSprite = projectileSprite != null;
-                Projectile.Launch(transform.position, enemy, damage, Class.projectileSpeed,
+                Projectile.Launch(transform.position, enemy, damage, Tower, Class.projectileSpeed,
                     hasOwnSprite ? projectileSprite : body.sprite, Class.color,
                     hasOwnSprite ? 1f : body.transform.lossyScale.x * FallbackProjectileScale,
                     body.sortingOrder + 1);
@@ -124,7 +126,7 @@ public class Soldier : MonoBehaviour
                 SplashDamage(enemy, damage);
                 break;
             default:
-                enemy.TakeDamage(damage);
+                enemy.TakeDamage(damage, Tower);
                 enemy.Knockback(Class.knockbackDistance);
                 break;
         }
@@ -134,7 +136,7 @@ public class Soldier : MonoBehaviour
     {
         if (Class.splashRadius <= 0f)
         {
-            enemy.TakeDamage(damage);
+            enemy.TakeDamage(damage, Tower);
             return;
         }
 
@@ -145,7 +147,7 @@ public class Soldier : MonoBehaviour
         {
             if (victim != null && victim.IsTargetable &&
                 Vector2.Distance(center, victim.transform.position) <= Class.splashRadius)
-                victim.TakeDamage(damage);
+                victim.TakeDamage(damage, Tower);
         }
     }
 

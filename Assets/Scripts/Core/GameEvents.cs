@@ -18,6 +18,7 @@ public static class GameEvents
     public static event Action<Tower> SoldierMixChanged;
     public static event Action<Tower> TowerDisabled;
     public static event Action<Tower> TowerRestored;
+    public static event Action<Tower> CaptainLeveledUp;
 
     public static void RaiseEnemyKilled(Enemy enemy) => EnemyKilled?.Invoke(enemy);
     public static void RaiseEnemyLeaked(Enemy enemy) => EnemyLeaked?.Invoke(enemy);
@@ -32,6 +33,7 @@ public static class GameEvents
     public static void RaiseSoldierMixChanged(Tower tower) => SoldierMixChanged?.Invoke(tower);
     public static void RaiseTowerDisabled(Tower tower) => TowerDisabled?.Invoke(tower);
     public static void RaiseTowerRestored(Tower tower) => TowerRestored?.Invoke(tower);
+    public static void RaiseCaptainLeveledUp(Tower tower) => CaptainLeveledUp?.Invoke(tower);
 
     // Statics survive play sessions when domain reload is disabled, so clear them on entry.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -50,5 +52,6 @@ public static class GameEvents
         SoldierMixChanged = null;
         TowerDisabled = null;
         TowerRestored = null;
+        CaptainLeveledUp = null;
     }
 }

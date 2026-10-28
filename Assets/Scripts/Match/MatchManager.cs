@@ -154,7 +154,7 @@ public class MatchManager : MonoBehaviour
         tower.Sell();
     }
 
-    public int RestoreCost(Tower tower) => GoldCosts.Scaled(data.restoreBaseCost, tower.Captain.level);
+    public int RestoreCost(Tower tower) => GoldCosts.Scaled(data.restoreBaseCost, tower.Level);
 
     public bool CanRestore(Tower tower) =>
         !IsOver && tower.IsDisabled && WavesCleared >= tower.RestorableAfterWave;
@@ -221,7 +221,12 @@ public class MatchManager : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    void OnEnemyKilled(Enemy enemy) => Kills++;
+    // The tower that landed the killing blow earns the XP; a destroyed (sold) tower earns nothing.
+    void OnEnemyKilled(Enemy enemy)
+    {
+        Kills++;
+        if (enemy.KilledBy != null) enemy.KilledBy.GainXp(enemy.Data.xpReward);
+    }
 
     void OnSoldierDied(Soldier soldier) => Casualties++;
 
