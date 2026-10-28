@@ -39,6 +39,8 @@ public class MatchData : ScriptableObject
     [HideInInspector] public SoldierClassData defaultSoldierClass;
     [Tooltip("GDD: 2 at bond ranks D and C.")]
     public int soldiersPerTower = 2;
+    [Tooltip("Gold to restore a disabled level 1 tower; scales with the captain's level.")]
+    public int restoreBaseCost = 30;
 
     [Header("Waves")]
     [Tooltip("Seconds before the next wave starts on its own. The first wave waits for the player.")]

@@ -22,4 +22,11 @@ public class EnemyData : ScriptableObject
     [Tooltip("Enemies stop and fight any deployed soldier within this many tiles.")]
     public float attackRange = 0.6f;
     public float attackInterval = 1f;
+
+    [Header("Attacking towers")]
+    [Tooltip("Damage dealt to a tower in passing. 0 means this enemy never hits towers.")]
+    public float towerDamage;
+    [Tooltip("Enemies hit the closest working tower within this many tiles without stopping.")]
+    public float towerAttackRange = 1.5f;
+    public float towerAttackInterval = 1f;
 }

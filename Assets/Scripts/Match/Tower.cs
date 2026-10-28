@@ -13,12 +13,19 @@ public class Tower : MonoBehaviour
     [SerializeField] SpriteRenderer rangeIndicator;
     [SerializeField] HealthBar reserveBar;
     [SerializeField] Soldier soldierPrefab;
+    // Optional until the prefab builder adds it.
+    [SerializeField] HealthBar healthBar;
 
     public CaptainData Captain { get; private set; }
     public Vector2Int Cell { get; private set; }
     public DrawRate DrawRate { get; private set; } = DrawRate.Normal;
     public int Reserve { get; private set; }
     public IReadOnlyList<Soldier> Soldiers => soldiers;
+    public float Health { get; private set; }
+    public float MaxHealth => Mathf.Max(1, Captain.health);
+    public bool IsDisabled { get; private set; }
+    // The wave number whose end makes a disabled tower restorable. Set by MatchManager.
+    public int RestorableAfterWave { get; private set; }
 
     readonly List<Soldier> soldiers = new();
     float drawProgress;
@@ -54,6 +61,8 @@ public class Tower : MonoBehaviour
         // The range sprite is a disc two units across, so its scale equals the radius.
         rangeIndicator.transform.localScale = Vector3.one * captain.range;
         rangeIndicator.enabled = false;
+        Health = MaxHealth;
+        UpdateHealthBar();
 
         for (int i = 0; i < slotClasses.Count; i++)
             soldiers.Add(SpawnSoldier(slotClasses[i], i, slotClasses.Count));
@@ -75,10 +84,11 @@ public class Tower : MonoBehaviour
     public int RespawnCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.respawnCost, Captain.level);
 
     // Swapping a slot's class costs the new class's respawn, and the replacement starts fresh
-    // at home. The old soldier is retired, not killed, so it is no casualty.
+    // at home. The old soldier is retired, not killed, so it is no casualty. A disabled tower has
+    // no soldiers on the field, so its mix is locked until it is restored.
     public bool SetSlotClass(int slot, SoldierClassData newClass)
     {
-        if (newClass == null || slot < 0 || slot >= soldiers.Count) return false;
+        if (IsDisabled || newClass == null || slot < 0 || slot >= soldiers.Count) return false;
         if (soldiers[slot].Class == newClass) return false;
         if (!TrySpendReserve(RespawnCostOf(newClass))) return false;
 
@@ -97,7 +107,7 @@ public class Tower : MonoBehaviour
     void Update()
     {
         int capacity = Captain.resourceCapacity;
-        if (Reserve >= capacity)
+        if (Reserve >= capacity || IsDisabled)
         {
             drawProgress = 0f;
         }
@@ -150,6 +160,62 @@ public class Tower : MonoBehaviour
             }
         }
         return closest;
+    }
+
+    // The closest tower that is not disabled within radius of position, or null.
+    public static Tower FindClosestActive(Vector3 position, float radius)
+    {
+        Tower closest = null;
+        float closestDistance = radius;
+        foreach (Tower tower in All)
+        {
+            if (tower.IsDisabled) continue;
+            float distance = Vector2.Distance(position, tower.transform.position);
+            if (distance <= closestDistance)
+            {
+                closest = tower;
+                closestDistance = distance;
+            }
+        }
+        return closest;
+    }
+
+    public void TakeDamage(float amount)
+    {
+        if (IsDisabled) return;
+        Health = Mathf.Max(0f, Health - amount);
+        UpdateHealthBar();
+        if (Health <= 0f) Disable();
+    }
+
+    // The tower keeps its reserve but stops drawing Gold, and its soldiers leave the field.
+    void Disable()
+    {
+        IsDisabled = true;
+        drawProgress = 0f;
+        foreach (Soldier soldier in soldiers)
+            soldier.Despawn();
+        body.color = Color.Lerp(Captain.color, Color.black, 0.65f);
+        GameEvents.RaiseTowerDisabled(this);
+    }
+
+    public void SetRestorableAfterWave(int waveNumber) => RestorableAfterWave = waveNumber;
+
+    public void Restore()
+    {
+        if (!IsDisabled) return;
+        IsDisabled = false;
+        Health = MaxHealth;
+        UpdateHealthBar();
+        body.color = Captain.color;
+        foreach (Soldier soldier in soldiers)
+            soldier.Respawn();
+        GameEvents.RaiseTowerRestored(this);
+    }
+
+    void UpdateHealthBar()
+    {
+        if (healthBar != null) healthBar.SetFraction(Health / MaxHealth);
     }
 
     // Unspent reserve goes back to the shared pool.

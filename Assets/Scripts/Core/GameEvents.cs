@@ -16,6 +16,8 @@ public static class GameEvents
     public static event Action<int> WaveStarted;
     public static event Action<int> WaveEnded;
     public static event Action<Tower> SoldierMixChanged;
+    public static event Action<Tower> TowerDisabled;
+    public static event Action<Tower> TowerRestored;
 
     public static void RaiseEnemyKilled(Enemy enemy) => EnemyKilled?.Invoke(enemy);
     public static void RaiseEnemyLeaked(Enemy enemy) => EnemyLeaked?.Invoke(enemy);
@@ -28,6 +30,8 @@ public static class GameEvents
     public static void RaiseWaveStarted(int waveNumber) => WaveStarted?.Invoke(waveNumber);
     public static void RaiseWaveEnded(int waveNumber) => WaveEnded?.Invoke(waveNumber);
     public static void RaiseSoldierMixChanged(Tower tower) => SoldierMixChanged?.Invoke(tower);
+    public static void RaiseTowerDisabled(Tower tower) => TowerDisabled?.Invoke(tower);
+    public static void RaiseTowerRestored(Tower tower) => TowerRestored?.Invoke(tower);
 
     // Statics survive play sessions when domain reload is disabled, so clear them on entry.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -44,5 +48,7 @@ public static class GameEvents
         WaveStarted = null;
         WaveEnded = null;
         SoldierMixChanged = null;
+        TowerDisabled = null;
+        TowerRestored = null;
     }
 }
