@@ -19,7 +19,7 @@ Early development. One developer at 20 hours a week, with a vertical slice targe
 
 | Milestone | Scope | State |
 |---|---|---|
-| M1: grey-box match | Path, waves, global health and Gold, tower placement, Attacker captains, basic soldiers, placeholder HUD | In review (`m1/*` branches) |
+| M1: grey-box match | Path, waves, global health and Gold, tower placement, Attacker captains, basic soldiers, placeholder HUD | Done (merged) |
 | M2: soldier system | Four soldier classes (Knight knockback), soldier mix, tower damage/disable/restore, relocation | In progress (`m2/*` branches) |
 | M3: roles and elements | Buffer and Healer roles, statuses, special-ability meter, levels and XP, enemy types and weaknesses | Planned |
 | M4: relationships | Approval, like/dislike tags, requests, bond ranks D–S | Planned |
@@ -34,8 +34,6 @@ Later phases cover the world map and full run, the remaining content, polish, an
 1. Clone the repository and open the folder in Unity Hub with editor version 6000.5.5f1.
 2. Open `Assets/Scenes/Match.unity` and press **Play**.
 3. To regenerate the grey-box scene, use the menu **Babel → Build Grey-Box Match Scene**. Existing data assets and prefabs are kept, so your tuning survives a rebuild.
-
-The playable match arrives with the M1 branches. Until those are merged, `main` holds only the empty project.
 
 ### Controls (grey-box match)
 
