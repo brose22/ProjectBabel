@@ -21,6 +21,8 @@ public static class GameEvents
     public static event Action<Tower> CaptainLeveledUp;
     public static event Action<CaptainData> ApprovalChanged;
     public static event Action<CaptainData> BondRankUp;
+    // True for a win, false for a loss.
+    public static event Action<bool> MatchEnded;
 
     public static void RaiseEnemyKilled(Enemy enemy) => EnemyKilled?.Invoke(enemy);
     public static void RaiseEnemyLeaked(Enemy enemy) => EnemyLeaked?.Invoke(enemy);
@@ -38,6 +40,7 @@ public static class GameEvents
     public static void RaiseCaptainLeveledUp(Tower tower) => CaptainLeveledUp?.Invoke(tower);
     public static void RaiseApprovalChanged(CaptainData captain) => ApprovalChanged?.Invoke(captain);
     public static void RaiseBondRankUp(CaptainData captain) => BondRankUp?.Invoke(captain);
+    public static void RaiseMatchEnded(bool won) => MatchEnded?.Invoke(won);
 
     // Statics survive play sessions when domain reload is disabled, so clear them on entry.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -59,5 +62,6 @@ public static class GameEvents
         CaptainLeveledUp = null;
         ApprovalChanged = null;
         BondRankUp = null;
+        MatchEnded = null;
     }
 }
