@@ -21,8 +21,18 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0ee4a914cbf0f914a84a07cb6edeb8f2, type: 2}
   - {fileID: 11400000, guid: 7c9505c473c0bd943b8389edc1d6de4f, type: 2}
   - {fileID: 11400000, guid: 619363b2a1c6b5942996898e40358ced, type: 2}
+  availableClasses:
+  - {fileID: 11400000, guid: 092649eb89d26e54bbc80ef4355c8dee, type: 2}
+  - {fileID: 11400000, guid: ab2d5a4fc8edeb24993b3bb754908b4d, type: 2}
+  - {fileID: 11400000, guid: ed0e11508e550bf4bb2962b86b14060e, type: 2}
+  - {fileID: 11400000, guid: e6c07f0f9c3429d4295c91683af11a3e, type: 2}
+  defaultMix:
+  - {fileID: 11400000, guid: 092649eb89d26e54bbc80ef4355c8dee, type: 2}
+  - {fileID: 11400000, guid: ab2d5a4fc8edeb24993b3bb754908b4d, type: 2}
   defaultSoldierClass: {fileID: 11400000, guid: ed0e11508e550bf4bb2962b86b14060e, type: 2}
   soldiersPerTower: 2
+  restoreBaseCost: 30
+  relocationCost: 25
   timeBetweenWaves: 15
   waves:
   - groups:
@@ -39,49 +49,81 @@ MonoBehaviour:
     healthMultiplier: 1.15
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
-      count: 4
+      count: 3
       spawnInterval: 1.24
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 1.3
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 4
       spawnInterval: 1.16
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 1
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 1.45
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
-      count: 5
+      count: 4
       spawnInterval: 1.0799999
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 2
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 1.6
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
-      count: 5
+      count: 4
       spawnInterval: 1
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 2
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 1.75
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
-      count: 6
+      count: 4
       spawnInterval: 0.91999996
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 2
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 1.9000001
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
-      count: 6
+      count: 4
       spawnInterval: 0.84
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 3
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 2.05
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
-      count: 7
+      count: 5
       spawnInterval: 0.76
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 3
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 2.2
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
-      count: 8
+      count: 5
       spawnInterval: 0.68
       delayBefore: 0
+    - enemy: {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+      count: 4
+      spawnInterval: 1.5
+      delayBefore: 1.5
     healthMultiplier: 2.3500001
