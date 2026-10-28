@@ -51,6 +51,7 @@ public class MatchManager : MonoBehaviour
         GameEvents.EnemyKilled += OnEnemyKilled;
         GameEvents.EnemyLeaked += OnEnemyLeaked;
         GameEvents.SoldierDied += OnSoldierDied;
+        GameEvents.TowerDisabled += OnTowerDisabled;
     }
 
     void OnDisable()
@@ -58,6 +59,7 @@ public class MatchManager : MonoBehaviour
         GameEvents.EnemyKilled -= OnEnemyKilled;
         GameEvents.EnemyLeaked -= OnEnemyLeaked;
         GameEvents.SoldierDied -= OnSoldierDied;
+        GameEvents.TowerDisabled -= OnTowerDisabled;
     }
 
     void OnDestroy() => Time.timeScale = 1f;
@@ -117,6 +119,18 @@ public class MatchManager : MonoBehaviour
         tower.Sell();
     }
 
+    public int RestoreCost(Tower tower) => GoldCosts.Scaled(data.restoreBaseCost, tower.Captain.level);
+
+    public bool CanRestore(Tower tower) =>
+        !IsOver && tower.IsDisabled && WavesCleared >= tower.RestorableAfterWave;
+
+    public bool TryRestoreTower(Tower tower)
+    {
+        if (!CanRestore(tower) || !RunState.Current.TrySpendGold(RestoreCost(tower))) return false;
+        tower.Restore();
+        return true;
+    }
+
     public void ToggleGameSpeed()
     {
         GameSpeed = GameSpeed > 1f ? 1f : 2f;
@@ -139,6 +153,11 @@ public class MatchManager : MonoBehaviour
     void OnEnemyKilled(Enemy enemy) => Kills++;
 
     void OnSoldierDied(Soldier soldier) => Casualties++;
+
+    // A disabled tower sits out the whole of the next wave. Disabled during wave N: restorable
+    // once wave N+1 ends. Disabled between waves (after wave N ended): also once wave N+1 ends.
+    void OnTowerDisabled(Tower tower) =>
+        tower.SetRestorableAfterWave(WavesCleared + (State == MatchState.WaveActive ? 2 : 1));
 
     void OnEnemyLeaked(Enemy enemy)
     {

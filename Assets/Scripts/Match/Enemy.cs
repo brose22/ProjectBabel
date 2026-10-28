@@ -17,6 +17,7 @@ public class Enemy : MonoBehaviour
     Vector3[] path;
     int nextPoint;
     float attackTimer;
+    float towerAttackTimer;
 
     public void Init(EnemyData data, Vector3[] pathPoints, float healthMultiplier)
     {
@@ -49,10 +50,25 @@ public class Enemy : MonoBehaviour
             return;
         }
 
+        TickTowerAttack();
+
         Vector3 target = path[nextPoint];
         transform.position = Vector3.MoveTowards(transform.position, target, Data.moveSpeed * Time.deltaTime);
         if (transform.position == target && ++nextPoint >= path.Length)
             Leak();
+    }
+
+    // A passing hit on its own timer: the enemy keeps walking. It only runs while the enemy walks,
+    // so an enemy held up by soldiers fights them and nothing else.
+    void TickTowerAttack()
+    {
+        if (Data.towerDamage <= 0f) return;
+        towerAttackTimer -= Time.deltaTime;
+        if (towerAttackTimer > 0f) return;
+        Tower tower = Tower.FindClosestActive(transform.position, Data.towerAttackRange);
+        if (tower == null) return;
+        tower.TakeDamage(Data.towerDamage);
+        towerAttackTimer = Mathf.Max(0.1f, Data.towerAttackInterval);
     }
 
     public void TakeDamage(float amount)

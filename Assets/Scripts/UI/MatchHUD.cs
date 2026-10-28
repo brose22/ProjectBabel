@@ -22,7 +22,7 @@ public class MatchHUD : MonoBehaviour
     {
         get
         {
-            float height = 190f + SoldierSlotsHeight;
+            float height = 240f + SoldierSlotsHeight;
             return new(8f, ReferenceHeight - 8f - height, 300f, height);
         }
     }
@@ -91,6 +91,7 @@ public class MatchHUD : MonoBehaviour
         GUILayout.Label($"Reserve {tower.Reserve}/{captain.resourceCapacity}");
         GUILayout.Label($"Likes: {string.Join(", ", captain.likes)}");
         GUILayout.Label($"Dislikes: {string.Join(", ", captain.dislikes)}");
+        DrawTowerCondition(tower);
         DrawSoldierSlots(tower);
 
         GUILayout.Label("Gold draw");
@@ -110,7 +111,7 @@ public class MatchHUD : MonoBehaviour
     };
 
     // Per slot: rank, class and state, then one button per class. Other classes show the
-    // reserve cost of switching and grey out when the reserve can't cover it.
+    // reserve cost of switching and grey out when the reserve can't cover it or the tower is disabled.
     void DrawSoldierSlots(Tower tower)
     {
         var classes = match.Data.ChoosableClasses;
@@ -130,12 +131,33 @@ public class MatchHUD : MonoBehaviour
                 }
                 int cost = tower.RespawnCostOf(soldierClass);
                 bool wasEnabled = GUI.enabled;
-                GUI.enabled = wasEnabled && tower.Reserve >= cost;
+                GUI.enabled = wasEnabled && !tower.IsDisabled && tower.Reserve >= cost;
                 if (GUILayout.Button($"{soldierClass.displayName} {cost}")) tower.SetSlotClass(slot, soldierClass);
                 GUI.enabled = wasEnabled;
             }
             GUILayout.EndHorizontal();
         }
+    }
+
+    void DrawTowerCondition(Tower tower)
+    {
+        if (!tower.IsDisabled)
+        {
+            GUILayout.Label($"Health {Mathf.CeilToInt(tower.Health)}/{Mathf.CeilToInt(tower.MaxHealth)}");
+            return;
+        }
+
+        if (!match.CanRestore(tower))
+        {
+            GUILayout.Label($"Disabled (restorable after wave {tower.RestorableAfterWave})");
+            return;
+        }
+
+        GUILayout.Label("Disabled");
+        int cost = match.RestoreCost(tower);
+        GUI.enabled = RunState.Current.Gold >= cost;
+        if (GUILayout.Button($"Restore ({cost} Gold)")) match.TryRestoreTower(tower);
+        GUI.enabled = true;
     }
 
     void DrawEndPanel()

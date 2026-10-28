@@ -193,6 +193,21 @@ public class Soldier : MonoBehaviour
         GameEvents.RaiseSoldierDied(this);
     }
 
+    // Called when the tower is disabled. Not a death: no event, no casualty, no respawn timer.
+    public void Despawn()
+    {
+        target = null;
+        SetState(State.Ready);
+        gameObject.SetActive(false);
+    }
+
+    // Called when the tower is restored: the soldier comes back fresh at home.
+    public void Respawn()
+    {
+        gameObject.SetActive(true);
+        Revive();
+    }
+
     void Revive()
     {
         health = Class.maxHealth;
