@@ -148,10 +148,11 @@ public class MatchHUD : MonoBehaviour
         GUILayout.EndArea();
     }
 
+    // Slots 3 and 4 open at bond ranks B and S (GDD).
     static string SlotLabel(int slot) => slot switch
     {
-        0 => "D",
-        1 => "C",
+        2 => "Slot 3 (B)",
+        3 => "Slot 4 (S)",
         _ => $"Slot {slot + 1}",
     };
 

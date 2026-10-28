@@ -146,17 +146,34 @@ public class Tower : MonoBehaviour
     }
 
     // Soldiers wait in a cross around the tower; each slot takes a random free arm.
-    // Past four soldiers the arms are reshuffled and reused.
+    // Past four soldiers the arms are reused.
     void AssignSlotHomes(int count)
     {
         slotHomes.Clear();
-        var free = new List<Vector3>();
         for (int i = 0; i < count; i++)
+            slotHomes.Add(PickFreeHome());
+    }
+
+    Vector3 PickFreeHome()
+    {
+        var free = new List<Vector3>();
+        foreach (Vector3 direction in CrossDirections)
+            if (!slotHomes.Contains(direction * SoldierHomeDistance)) free.Add(direction);
+        if (free.Count == 0) free.AddRange(CrossDirections);
+        return free[Random.Range(0, free.Count)] * SoldierHomeDistance;
+    }
+
+    // A rank-up mid-match adds soldiers straight away (GDD: 3 at B, 4 at S), on free arms of the
+    // cross. A disabled tower's new soldiers wait off the field until it is restored.
+    public void GrowSoldierSlots(int count, System.Func<int, SoldierClassData> classForSlot)
+    {
+        while (soldiers.Count < count)
         {
-            if (free.Count == 0) free.AddRange(CrossDirections);
-            int pick = Random.Range(0, free.Count);
-            slotHomes.Add(free[pick] * SoldierHomeDistance);
-            free.RemoveAt(pick);
+            int slot = soldiers.Count;
+            slotHomes.Add(PickFreeHome());
+            Soldier soldier = SpawnSoldier(classForSlot(slot), slot);
+            soldiers.Add(soldier);
+            if (IsDisabled) soldier.Despawn();
         }
     }
 

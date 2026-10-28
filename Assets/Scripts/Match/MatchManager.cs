@@ -46,7 +46,7 @@ public class MatchManager : MonoBehaviour
             for (int i = 0; i < count; i++)
             {
                 CaptainData captain = data.roster[(nextCaptainIndex + i) % count];
-                if (captain != null && !Tower.All.Exists(t => t.Captain == captain))
+                if (captain != null && !Tower.All.Exists(t => t.Captain == captain) && !RunState.Current.HasDeparted(captain))
                     return captain;
             }
             return null;
@@ -83,6 +83,7 @@ public class MatchManager : MonoBehaviour
         GameEvents.SoldierDied += OnSoldierDied;
         GameEvents.TowerDisabled += OnTowerDisabled;
         GameEvents.AbilityUsed += OnAbilityUsed;
+        GameEvents.BondRankUp += OnBondRankUp;
     }
 
     void OnDisable()
@@ -92,6 +93,7 @@ public class MatchManager : MonoBehaviour
         GameEvents.SoldierDied -= OnSoldierDied;
         GameEvents.TowerDisabled -= OnTowerDisabled;
         GameEvents.AbilityUsed -= OnAbilityUsed;
+        GameEvents.BondRankUp -= OnBondRankUp;
     }
 
     void OnDestroy() => Time.timeScale = 1f;
@@ -135,14 +137,25 @@ public class MatchManager : MonoBehaviour
         NextWaveCountdown = data.timeBetweenWaves;
     }
 
+    // Bond rank sets how many soldiers a captain fields (GDD); soldiersPerTower is the floor.
+    int SoldierCountFor(CaptainData captain) =>
+        Mathf.Max(data.soldiersPerTower, BondMath.SoldierCount(ApprovalStore.RankOf(captain)));
+
+    void OnBondRankUp(CaptainData captain)
+    {
+        Tower tower = Tower.All.Find(t => t.Captain == captain);
+        if (tower != null) tower.GrowSoldierSlots(SoldierCountFor(captain), data.DefaultClassForSlot);
+    }
+
     public Tower PlaceTower(Vector2Int cell)
     {
         if (!CanPlaceTower || !grid.IsBuildable(cell)) return null;
         Tower tower = Instantiate(towerPrefab, grid.CellCenter(cell), Quaternion.identity);
-        var slotClasses = new SoldierClassData[data.soldiersPerTower];
+        CaptainData captain = NextCaptain;
+        var slotClasses = new SoldierClassData[SoldierCountFor(captain)];
         for (int i = 0; i < slotClasses.Length; i++)
             slotClasses[i] = data.DefaultClassForSlot(i);
-        tower.Init(this, NextCaptain, slotClasses, cell);
+        tower.Init(this, captain, slotClasses, cell);
         grid.SetOccupant(cell, tower);
         GameEvents.RaiseTowerPlaced(tower);
         return tower;
