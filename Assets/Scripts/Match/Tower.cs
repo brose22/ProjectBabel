@@ -44,6 +44,9 @@ public class Tower : MonoBehaviour
     // Fractional free reserve earned from approval, paid out a whole coin at a time.
     float efficiencyBank;
     MatchManager match;
+    // The body colour before disabled dimming or the ready pulse: white for drawn art, so it shows
+    // as painted, or the captain colour for squares and tinted generic art.
+    Color baseColor = Color.white;
     // Timed boosts from support abilities, indexed by SupportEffect: amount and game time they end.
     readonly float[] timedBoostAmount = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
     readonly float[] timedBoostUntil = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
@@ -107,7 +110,7 @@ public class Tower : MonoBehaviour
         match = owner;
         Captain = captain;
         Cell = cell;
-        body.color = captain.color;
+        ApplyArt(captain);
         // The range sprite is a disc two units across, so its scale equals the radius.
         rangeIndicator.transform.localScale = Vector3.one * captain.range;
         rangeIndicator.enabled = false;
@@ -310,15 +313,28 @@ public class Tower : MonoBehaviour
         SpecialCharge = Mathf.Min(1f, SpecialCharge + perSecond * Time.deltaTime);
     }
 
+    // Drawn captain art replaces the placeholder square at full tile size.
+    void ApplyArt(CaptainData captain)
+    {
+        if (captain.sprite == null)
+        {
+            baseColor = captain.color;
+            return;
+        }
+        body.sprite = captain.sprite;
+        body.transform.localScale = Vector3.one;
+        baseColor = captain.tintSprite ? captain.color : Color.white;
+    }
+
     // Disabled towers are dimmed; a ready special makes the tower pulse toward white.
     void UpdateBodyColor()
     {
         if (IsDisabled)
-            body.color = Color.Lerp(Captain.color, Color.black, 0.65f);
+            body.color = Color.Lerp(baseColor, Color.black, 0.65f);
         else if (IsSpecialReady)
-            body.color = Color.Lerp(Captain.color, Color.white, 0.2f + 0.2f * Mathf.Sin(Time.time * 6f));
+            body.color = Color.Lerp(baseColor, Color.white, 0.2f + 0.2f * Mathf.Sin(Time.time * 6f));
         else
-            body.color = Captain.color;
+            body.color = baseColor;
     }
 
     // The ability aims at the enemy closest to the tower within the ability's range.
@@ -360,7 +376,7 @@ public class Tower : MonoBehaviour
             float healed = AbilityCaster.CastSupport(this, rangeIndicator.sprite);
             GainSupportXp(healed * SupportXpPerHealthHealed + (Captain.ability.buffAmount > 0f ? SupportAbilityBoostXp : 0f));
         }
-        else AbilityCaster.Cast(this, FindAbilityTarget(), body.sprite, rangeIndicator.sprite);
+        else AbilityCaster.Cast(this, FindAbilityTarget(), SpriteUtil.Square, rangeIndicator.sprite);
         SpecialCharge = 0f;
         GameEvents.RaiseAbilityUsed(this);
         return true;

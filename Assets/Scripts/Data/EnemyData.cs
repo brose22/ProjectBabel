@@ -5,6 +5,8 @@ public class EnemyData : ScriptableObject
 {
     public string displayName = "Enemy";
     public Color color = Color.red;
+    [Tooltip("Optional art, drawn for the standard enemy size (0.6) and scaled by size. Without it the enemy is a square in its colour.")]
+    public Sprite sprite;
     [Tooltip("Body size in tiles.")]
     public float size = 0.6f;
 

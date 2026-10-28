@@ -19,6 +19,8 @@ MonoBehaviour:
   abilityName: Rockfall
   abilityDescription: Single-target stun hit
   ability: {fileID: 11400000, guid: 9c559c25da50cdb44a8277b7783d5c4e, type: 2}
+  sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
+  tintSprite: 1
   power: 14
   range: 1.75
   speed: 0.6

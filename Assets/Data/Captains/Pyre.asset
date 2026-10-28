@@ -19,6 +19,8 @@ MonoBehaviour:
   abilityName: Scorched Earth
   abilityDescription: Damage zone on the path
   ability: {fileID: 11400000, guid: c8b2a61cb24fa6d47a9dd83f6013bce3, type: 2}
+  sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
+  tintSprite: 1
   power: 10
   range: 2
   speed: 1

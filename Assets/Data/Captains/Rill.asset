@@ -19,6 +19,8 @@ MonoBehaviour:
   abilityName: Flow State
   abilityDescription: Faster soldier acts
   ability: {fileID: 11400000, guid: 679260ee960cde6469e7ddc3f75809c2, type: 2}
+  sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
+  tintSprite: 1
   power: 7
   range: 2
   speed: 1.1

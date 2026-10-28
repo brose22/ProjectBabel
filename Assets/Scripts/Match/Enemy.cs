@@ -8,6 +8,8 @@ public class Enemy : MonoBehaviour
     const float WeaknessMarkerSize = 0.15f;
     const float ShotStreakWidth = 0.05f;
     const float ShotStreakSeconds = 0.12f;
+    // Enemy art is drawn for this size; other sizes scale the sprite.
+    const float ArtSize = 0.6f;
 
     [SerializeField] SpriteRenderer body;
     [SerializeField] HealthBar healthBar;
@@ -29,6 +31,8 @@ public class Enemy : MonoBehaviour
     float burnDamagePerSecond;
     Tower burnSource;
     int tintedStatus = -1;
+    // The body colour with no status: white for drawn art, or the data colour for squares.
+    Color baseColor = Color.white;
     // Unscaled time until which the enemy shows the white ability-hit flash.
     float hitFlashUntil;
     const int HitFlashTint = -2;
@@ -43,12 +47,28 @@ public class Enemy : MonoBehaviour
         nextPoint = 1;
         MaxHealth = Health = data.maxHealth * healthMultiplier;
         transform.position = path[0];
-        body.color = data.color;
-        body.transform.localScale = Vector3.one * data.size;
+        ApplyArt(data);
         healthBar.SetFraction(1f);
         if (data.hasWeakness) AddWeaknessMarker();
         IsTargetable = true;
         Active.Add(this);
+    }
+
+    // Drawn art shows as painted and scales with size; without it the body is a coloured square.
+    void ApplyArt(EnemyData data)
+    {
+        if (data.sprite != null)
+        {
+            body.sprite = data.sprite;
+            body.transform.localScale = Vector3.one * (data.size / ArtSize);
+            baseColor = Color.white;
+        }
+        else
+        {
+            body.transform.localScale = Vector3.one * data.size;
+            baseColor = data.color;
+        }
+        body.color = baseColor;
     }
 
     public bool IsWeakTo(Element element) => Data.hasWeakness && Data.weakness == element;
@@ -62,7 +82,7 @@ public class Enemy : MonoBehaviour
         marker.transform.localPosition = new Vector3(-0.3f, 0.45f, 0f);
         marker.transform.localScale = Vector3.one * WeaknessMarkerSize;
         var renderer = marker.AddComponent<SpriteRenderer>();
-        renderer.sprite = body.sprite;
+        renderer.sprite = SpriteUtil.Square;
         renderer.color = StatusRules.TintOf(StatusRules.ForElement(Data.weakness));
         renderer.sortingOrder = body.sortingOrder + 1;
     }
@@ -81,7 +101,7 @@ public class Enemy : MonoBehaviour
 
         Vector2 shot = target.transform.position - transform.position;
         AbilityZone.Spawn((Vector2)transform.position + shot * 0.5f, Mathf.Atan2(shot.y, shot.x) * Mathf.Rad2Deg,
-            new Vector3(shot.magnitude, ShotStreakWidth, 1f), body.sprite, Data.color, ShotStreakSeconds, 0f);
+            new Vector3(shot.magnitude, ShotStreakWidth, 1f), SpriteUtil.Square, Data.color, ShotStreakSeconds, 0f);
     }
 
     void Update()
@@ -174,7 +194,7 @@ public class Enemy : MonoBehaviour
         if (tint == tintedStatus) return;
         tintedStatus = tint;
         if (tint == HitFlashTint) body.color = Color.white;
-        else body.color = tint < 0 ? Data.color : Color.Lerp(Data.color, StatusRules.TintOf((StatusKind)tint), 0.6f);
+        else body.color = tint < 0 ? baseColor : Color.Lerp(baseColor, StatusRules.TintOf((StatusKind)tint), 0.6f);
     }
 
     // A passing hit on its own timer: the enemy keeps walking. It only runs while the enemy walks,
