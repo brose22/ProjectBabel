@@ -38,6 +38,9 @@ public class Tower : MonoBehaviour
     readonly List<Vector3> slotHomes = new();
     float drawProgress;
     MatchManager match;
+    // Timed boosts from support abilities, indexed by SupportEffect: amount and game time they end.
+    readonly float[] timedBoostAmount = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
+    readonly float[] timedBoostUntil = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
 
     public float Range => Captain.range;
     public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed * (1f + Boost(SupportEffect.ActSpeed)));
@@ -51,7 +54,8 @@ public class Tower : MonoBehaviour
     public bool HasAbility => Captain.ability != null;
     public bool IsSpecialReady => HasAbility && SpecialCharge >= 1f;
     public float AbilityRange => Range * (HasAbility ? Captain.ability.rangeMultiplier : 1f);
-    public bool CanUseAbility => IsSpecialReady && !IsDisabled && FindAbilityTarget() != null;
+    public bool IsSupportAbility => HasAbility && Captain.ability.shape == AbilityData.Shape.Support;
+    public bool CanUseAbility => IsSpecialReady && !IsDisabled && (IsSupportAbility || FindAbilityTarget() != null);
 
     public int LivingSoldiers
     {
@@ -159,12 +163,42 @@ public class Tower : MonoBehaviour
         UpdateBodyColor();
     }
 
-    // How strong a stat boost on this tower's soldiers is right now (0.5 = +50%). Buffer auras
-    // start full when the wave begins and fade over the wave.
+    // How strong a stat boost on this tower's soldiers is right now (0.5 = +50%): its own aura,
+    // which starts full when the wave begins and fades over the wave, plus any timed boost.
     public float Boost(SupportEffect effect)
     {
-        if (effect == SupportEffect.Heal || Captain.aura != effect || !IsAuraActive) return 0f;
-        return AuraMath.FadedStrength(Captain.auraStrength, Time.time - match.WaveStartTime, Captain.auraFadeSeconds);
+        if (effect is SupportEffect.None or SupportEffect.Heal) return 0f;
+        float boost = Time.time < timedBoostUntil[(int)effect] ? timedBoostAmount[(int)effect] : 0f;
+        if (Captain.aura == effect && IsAuraActive)
+            boost += AuraMath.FadedStrength(Captain.auraStrength, Time.time - match.WaveStartTime, Captain.auraFadeSeconds);
+        return boost;
+    }
+
+    // Seconds left on a timed boost, or 0.
+    public float TimedBoostSecondsLeft(SupportEffect effect) =>
+        effect is SupportEffect.None or SupportEffect.Heal ? 0f : Mathf.Max(0f, timedBoostUntil[(int)effect] - Time.time);
+
+    // Re-applying a boost keeps the stronger amount and the later end time rather than stacking.
+    public void AddTimedBoost(SupportEffect effect, float amount, float seconds)
+    {
+        if (effect is SupportEffect.None or SupportEffect.Heal || amount <= 0f || seconds <= 0f) return;
+        int i = (int)effect;
+        bool active = Time.time < timedBoostUntil[i];
+        timedBoostAmount[i] = active ? Mathf.Max(timedBoostAmount[i], amount) : amount;
+        timedBoostUntil[i] = Mathf.Max(timedBoostUntil[i], Time.time + seconds);
+    }
+
+    // Restores a fraction of max health to the tower and each living soldier. Returns the total
+    // health restored. Disabled towers can only be brought back by Restore.
+    public float HealAll(float fraction)
+    {
+        if (IsDisabled || fraction <= 0f) return 0f;
+        float healed = Mathf.Min(MaxHealth * fraction, MaxHealth - Health);
+        Health += healed;
+        UpdateHealthBar();
+        foreach (Soldier soldier in soldiers)
+            healed += soldier.Heal(soldier.MaxHealth * fraction);
+        return healed;
     }
 
     // Healer auras restore living soldiers a little every frame while the wave runs.
@@ -216,7 +250,8 @@ public class Tower : MonoBehaviour
     public bool TryUseAbility()
     {
         if (!CanUseAbility) return false;
-        AbilityCaster.Cast(this, FindAbilityTarget(), body.sprite, rangeIndicator.sprite);
+        if (IsSupportAbility) AbilityCaster.CastSupport(this, rangeIndicator.sprite);
+        else AbilityCaster.Cast(this, FindAbilityTarget(), body.sprite, rangeIndicator.sprite);
         SpecialCharge = 0f;
         GameEvents.RaiseAbilityUsed(this);
         return true;

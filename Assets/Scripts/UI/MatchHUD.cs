@@ -22,7 +22,7 @@ public class MatchHUD : MonoBehaviour
     {
         get
         {
-            float height = 288f + SoldierSlotsHeight;
+            float height = 310f + SoldierSlotsHeight;
             return new(8f, ReferenceHeight - 8f - height, 300f, height);
         }
     }
@@ -50,6 +50,22 @@ public class MatchHUD : MonoBehaviour
 
         GUI.Label(new Rect(ReferenceWidth - 655f, ReferenceHeight - 24f, 650f, 22f),
             "Click: place / select    Tab: next captain    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave");
+    }
+
+    static readonly SupportEffect[] StatEffects = { SupportEffect.ActSpeed, SupportEffect.Damage, SupportEffect.Defense };
+
+    // Total boosts on the tower's soldiers right now (aura plus timed), with time left on timed ones.
+    static string BoostLabel(Tower tower)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        foreach (SupportEffect effect in StatEffects)
+        {
+            float boost = tower.Boost(effect);
+            if (boost <= 0f) continue;
+            float secondsLeft = tower.TimedBoostSecondsLeft(effect);
+            parts.Add($"{effect} +{boost * 100f:0}%" + (secondsLeft > 0f ? $" ({Mathf.CeilToInt(secondsLeft)}s)" : ""));
+        }
+        return parts.Count == 0 ? "Boosts: none" : "Boosts: " + string.Join(", ", parts);
     }
 
     // Shows the live boost during a wave, otherwise what the aura will do when one starts.
@@ -112,6 +128,7 @@ public class MatchHUD : MonoBehaviour
         GUILayout.Label($"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}");
         GUILayout.Label($"Reserve {tower.Reserve}/{captain.resourceCapacity}");
         GUILayout.Label(AuraLabel(tower));
+        GUILayout.Label(BoostLabel(tower));
         GUILayout.Label($"Likes: {string.Join(", ", captain.likes)}");
         GUILayout.Label($"Dislikes: {string.Join(", ", captain.dislikes)}");
         DrawTowerCondition(tower);
