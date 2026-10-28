@@ -24,10 +24,27 @@ public static class GreyBoxMatchBuilder
 
     static readonly Vector2Int MapSize = new(24, 12);
 
-    // Waypoint cells. The first and last sit just off the map so enemies walk on and off screen.
+    static readonly string[] SliceCaptains = { "Cinder", "Marin", "Ember" };
+
+    // The slice city. Waypoint cells; the first and last sit just off the map so enemies walk on
+    // and off screen. The road winds through town from the gate (top left) to the castle (right).
     static readonly Vector2Int[] PathCells =
     {
-        new(-1, 9), new(5, 9), new(5, 3), new(11, 3), new(11, 9), new(17, 9), new(17, 5), new(24, 5),
+        new(-1, 10), new(3, 10), new(3, 3), new(8, 3), new(8, 9), new(13, 9), new(13, 2), new(18, 2), new(18, 7), new(24, 7),
+    };
+
+    // Props that block building: the town's houses in the road's loops, trees around the edge,
+    // and a few rocks. They leave open ground at every bend for towers.
+    static readonly (string art, Vector2Int cell)[] Props =
+    {
+        ("prop_house", new(5, 6)), ("prop_house", new(6, 6)), ("prop_house", new(11, 6)), ("prop_house", new(11, 5)),
+        ("prop_house", new(16, 5)), ("prop_house", new(16, 6)), ("prop_house", new(21, 3)), ("prop_house", new(22, 3)),
+        ("prop_tree", new(0, 0)), ("prop_tree", new(1, 0)), ("prop_tree", new(0, 1)), ("prop_tree", new(6, 0)),
+        ("prop_tree", new(7, 0)), ("prop_tree", new(15, 0)), ("prop_tree", new(1, 6)), ("prop_tree", new(5, 11)),
+        ("prop_tree", new(10, 11)), ("prop_tree", new(11, 11)), ("prop_tree", new(20, 10)), ("prop_tree", new(22, 11)),
+        ("prop_tree", new(23, 11)), ("prop_tree", new(23, 10)),
+        ("prop_rock", new(2, 1)), ("prop_rock", new(9, 6)), ("prop_rock", new(12, 0)), ("prop_rock", new(20, 0)),
+        ("prop_rock", new(17, 10)),
     };
 
     [MenuItem("Babel/Build Grey-Box Match Scene")]
@@ -190,7 +207,7 @@ public static class GreyBoxMatchBuilder
         AbilityData secondWind = SupportAbility("SecondWind", "Second Wind", "Heal plus speed boost",
             chargeSeconds: 20f, radius: 2f, healFraction: 0.25f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.5f, buffSeconds: 6f);
 
-        var roster = new List<CaptainData>
+        var allCaptains = new List<CaptainData>
         {
             Captain("Cinder", Element.Fire, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage", flareVolley,
                 new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }, refusalTemper: 1.25f),
@@ -223,6 +240,12 @@ public static class GreyBoxMatchBuilder
                 new[] { CaptainTag.Archers, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Casualties },
                 CaptainRole.Healer, SupportEffect.Heal, 1.5f, refusalTemper: 0.75f),
         };
+
+        // The vertical slice runs with one captain of each role (GDD month 12); the other captains
+        // are still built so they are ready for later milestones.
+        var roster = new List<CaptainData>();
+        foreach (string name in SliceCaptains)
+            roster.Add(allCaptains.Find(c => c.name == name));
 
         string matchPath = DataFolder + "/GreyBoxMatch.asset";
         bool matchExisted = AssetDatabase.LoadAssetAtPath<MatchData>(matchPath) != null;
@@ -563,8 +586,15 @@ public static class GreyBoxMatchBuilder
         gridObject.AddComponent<Grid>();
         Tilemap ground = AddTilemap(gridObject.transform, "Ground", 0);
         Tilemap pathTilemap = AddTilemap(gridObject.transform, "Path", 1);
+        Tilemap propTilemap = AddTilemap(gridObject.transform, "Props", 2);
+        foreach ((string art, Vector2Int cell) in Props)
+        {
+            TileBase prop = PropTile(art);
+            if (prop != null) propTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), prop);
+        }
         GridMap gridMap = gridObject.AddComponent<GridMap>();
-        Wire(gridMap, ("groundTilemap", ground), ("pathTilemap", pathTilemap), ("groundTile", groundTile), ("pathTile", pathTile), ("groundAccentTile", groundAccentTile), ("path", path));
+        Wire(gridMap, ("groundTilemap", ground), ("pathTilemap", pathTilemap), ("propTilemap", propTilemap), ("groundTile", groundTile),
+            ("pathTile", pathTile), ("groundAccentTile", groundAccentTile), ("path", path));
         var gridSo = new SerializedObject(gridMap);
         gridSo.FindProperty("size").vector2IntValue = MapSize;
         gridSo.ApplyModifiedPropertiesWithoutUndo();
@@ -691,6 +721,15 @@ public static class GreyBoxMatchBuilder
         tile.sprite = sprite;
         tile.color = Color.white;
         MarkUpgraded(tile, "its art");
+    }
+
+    // A tile asset for a prop's art (PropTree.asset for prop_tree), or null if the art is missing.
+    static TileBase PropTile(string artName)
+    {
+        Sprite art = ArtSprite(artName);
+        if (art == null) return null;
+        string assetName = "Prop" + char.ToUpperInvariant(artName[5]) + artName.Substring(6);
+        return LoadOrCreate<Tile>($"{ArtFolder}/{assetName}.asset", t => t.sprite = art);
     }
 
     // A map prop drawn with its generated art, or a tinted square if the art is missing.

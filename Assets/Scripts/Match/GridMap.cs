@@ -8,6 +8,8 @@ public class GridMap : MonoBehaviour
 {
     [SerializeField] Tilemap groundTilemap;
     [SerializeField] Tilemap pathTilemap;
+    [Tooltip("Optional: houses, trees and rocks. Any cell with a prop can't be built on.")]
+    [SerializeField] Tilemap propTilemap;
     [SerializeField] TileBase groundTile;
     [SerializeField] TileBase pathTile;
     [Tooltip("Optional variety tile scattered over the ground (flowers and the like).")]
@@ -60,7 +62,10 @@ public class GridMap : MonoBehaviour
 
     public bool InBounds(Vector2Int cell) => cell.x >= 0 && cell.y >= 0 && cell.x < size.x && cell.y < size.y;
 
-    public bool IsBuildable(Vector2Int cell) => InBounds(cell) && !pathCells.Contains(cell) && !occupants.ContainsKey(cell);
+    public bool IsBuildable(Vector2Int cell) =>
+        InBounds(cell) && !pathCells.Contains(cell) && !occupants.ContainsKey(cell) && !HasProp(cell);
+
+    bool HasProp(Vector2Int cell) => propTilemap != null && propTilemap.HasTile(new Vector3Int(cell.x, cell.y, 0));
 
     public Vector2Int WorldToCell(Vector3 world) => new(Mathf.FloorToInt(world.x), Mathf.FloorToInt(world.y));
 
