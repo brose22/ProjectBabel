@@ -22,7 +22,7 @@ public class MatchHUD : MonoBehaviour
     {
         get
         {
-            float height = 266f + SoldierSlotsHeight;
+            float height = 288f + SoldierSlotsHeight;
             return new(8f, ReferenceHeight - 8f - height, 300f, height);
         }
     }
@@ -48,8 +48,25 @@ public class MatchHUD : MonoBehaviour
         if (placement.IsMoving && placement.Selected != null) DrawMoveHint(placement.Selected);
         if (match.IsOver) DrawEndPanel();
 
-        GUI.Label(new Rect(ReferenceWidth - 605f, ReferenceHeight - 24f, 600f, 22f),
-            "Click: place / select    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave    Esc: deselect");
+        GUI.Label(new Rect(ReferenceWidth - 655f, ReferenceHeight - 24f, 650f, 22f),
+            "Click: place / select    Tab: next captain    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave");
+    }
+
+    // Shows the live boost during a wave, otherwise what the aura will do when one starts.
+    static string AuraLabel(Tower tower)
+    {
+        CaptainData captain = tower.Captain;
+        switch (captain.aura)
+        {
+            case SupportEffect.None:
+                return "Aura: none";
+            case SupportEffect.Heal:
+                return $"Aura: heals soldiers {captain.auraStrength:0.#}/s" + (tower.IsAuraActive ? "" : " in waves");
+            default:
+                return tower.IsAuraActive
+                    ? $"Aura: {captain.aura} +{tower.Boost(captain.aura) * 100f:0}% (fading)"
+                    : $"Aura: {captain.aura} +{captain.auraStrength * 100f:0}% at wave start";
+        }
     }
 
     void DrawTopBar()
@@ -62,9 +79,13 @@ public class MatchHUD : MonoBehaviour
         GUILayout.Label($"Gold {run.Gold}", GUILayout.Width(75f));
         GUILayout.Label($"Wave {Mathf.Min(match.WavesCleared + 1, match.WaveCount)}/{match.WaveCount}", GUILayout.Width(70f));
 
-        string towers = $"Towers {Tower.All.Count}/{match.Data.maxTowers}";
-        if (match.CanPlaceTower) towers += $"   Next: {match.NextCaptain.displayName}";
-        GUILayout.Label(towers, GUILayout.Width(170f));
+        GUILayout.Label($"Towers {Tower.All.Count}/{match.Data.maxTowers}", GUILayout.Width(70f));
+        if (match.CanPlaceTower)
+        {
+            CaptainData next = match.NextCaptain;
+            if (GUILayout.Button($"Next: {next.displayName} ({next.role})  [Tab]", GUILayout.Width(190f)))
+                match.CycleNextCaptain();
+        }
         GUILayout.Label($"Kills {match.Kills}   Leaks {match.Leaks}   Casualties {match.Casualties}");
 
         GUILayout.FlexibleSpace();
@@ -90,6 +111,7 @@ public class MatchHUD : MonoBehaviour
         GUILayout.Label($"{captain.displayName}  ({captain.element} {captain.role})");
         GUILayout.Label($"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}");
         GUILayout.Label($"Reserve {tower.Reserve}/{captain.resourceCapacity}");
+        GUILayout.Label(AuraLabel(tower));
         GUILayout.Label($"Likes: {string.Join(", ", captain.likes)}");
         GUILayout.Label($"Dislikes: {string.Join(", ", captain.dislikes)}");
         DrawTowerCondition(tower);
