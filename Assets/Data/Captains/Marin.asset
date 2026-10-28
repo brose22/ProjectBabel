@@ -30,5 +30,6 @@ MonoBehaviour:
   aura: 1
   auraStrength: 2
   auraFadeSeconds: 60
+  refusalTemper: 0.75
   likes: 000000000800000007000000
   dislikes: 030000000400000005000000

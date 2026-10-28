@@ -27,5 +27,9 @@ MonoBehaviour:
   resourceRegen: 2
   specialChargeRate: 1
   level: 1
+  aura: 0
+  auraStrength: 0
+  auraFadeSeconds: 60
+  refusalTemper: 1.25
   likes: 020000000700000009000000
   dislikes: 000000000800000006000000
