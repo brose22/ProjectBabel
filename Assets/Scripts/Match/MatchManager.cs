@@ -62,7 +62,9 @@ public class MatchManager : MonoBehaviour
     }
 
     public bool CanPlaceTower => !IsOver && Tower.All.Count < data.maxTowers && NextCaptain != null;
-    public bool CanAffordMove => RunState.Current.Gold >= data.relocationCost;
+    // Relocation cost for this tower, after any discount a granted request gave it.
+    public int MoveCost(Tower tower) => tower == null ? data.relocationCost : Mathf.RoundToInt(data.relocationCost * tower.MoveCostMultiplier);
+    public bool CanAffordMove(Tower tower) => RunState.Current.Gold >= MoveCost(tower);
 
     void Awake()
     {
@@ -75,6 +77,7 @@ public class MatchManager : MonoBehaviour
         if (cam != null)
             cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
         if (!TryGetComponent(out Relationships _)) gameObject.AddComponent<Relationships>();
+        if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
     }
 
     void OnEnable()
@@ -187,7 +190,9 @@ public class MatchManager : MonoBehaviour
     public bool MoveTower(Tower tower, Vector2Int cell)
     {
         if (!CanMove(tower) || !grid.IsBuildable(cell)) return false;
-        if (data.relocationCost > 0 && !RunState.Current.TrySpendGold(data.relocationCost)) return false;
+        int cost = MoveCost(tower);
+        if (cost > 0 && !RunState.Current.TrySpendGold(cost)) return false;
+        tower.ClearMoveDiscount();
         grid.ClearOccupant(tower.Cell);
         grid.SetOccupant(cell, tower);
         tower.MoveTo(cell, grid.CellCenter(cell));

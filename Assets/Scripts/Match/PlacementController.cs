@@ -63,7 +63,7 @@ public class PlacementController : MonoBehaviour
     // Consumes every click while moving so it can't also select or place.
     void UpdateMove(Mouse mouse, Vector2Int cell)
     {
-        bool valid = grid.IsBuildable(cell) && match.CanAffordMove;
+        bool valid = grid.IsBuildable(cell) && match.CanAffordMove(Selected);
         hoverMarker.enabled = grid.InBounds(cell);
         hoverMarker.transform.position = grid.CellCenter(cell);
         hoverMarker.color = valid ? validColor : invalidColor;
@@ -122,7 +122,7 @@ public class PlacementController : MonoBehaviour
 
     public void BeginMove()
     {
-        if (!match.CanMove(Selected) || !match.CanAffordMove) return;
+        if (!match.CanMove(Selected) || !match.CanAffordMove(Selected)) return;
         IsMoving = true;
     }
 

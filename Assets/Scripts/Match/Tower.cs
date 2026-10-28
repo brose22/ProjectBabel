@@ -32,6 +32,10 @@ public class Tower : MonoBehaviour
     public int RestorableAfterWave { get; private set; }
     // Special-ability meter, 0 to 1. The ability can fire once it reaches 1.
     public float SpecialCharge { get; private set; }
+    // Multiplies the next relocation's Gold cost; a granted request can make it cheaper or free.
+    public float MoveCostMultiplier { get; private set; } = 1f;
+    // Game time a requested special fires by itself, or below zero for none.
+    float autoFireAt = -1f;
 
     readonly List<Soldier> soldiers = new();
     // Home offset for each soldier slot, kept so a swapped-in soldier stands where the old one did.
@@ -133,11 +137,11 @@ public class Tower : MonoBehaviour
     // Swapping a slot's class costs the new class's respawn, and the replacement starts fresh
     // at home. The old soldier is retired, not killed, so it is no casualty. A disabled tower has
     // no soldiers on the field, so its mix is locked until it is restored.
-    public bool SetSlotClass(int slot, SoldierClassData newClass)
+    public bool SetSlotClass(int slot, SoldierClassData newClass, bool free = false)
     {
         if (IsDisabled || newClass == null || slot < 0 || slot >= soldiers.Count) return false;
         if (soldiers[slot].Class == newClass) return false;
-        if (!TrySpendReserve(RespawnCostOf(newClass))) return false;
+        if (!free && !TrySpendReserve(RespawnCostOf(newClass))) return false;
 
         Destroy(soldiers[slot].gameObject);
         soldiers[slot] = SpawnSoldier(newClass, slot);
@@ -205,6 +209,7 @@ public class Tower : MonoBehaviour
         reserveBar.SetFraction((float)Reserve / capacity);
 
         ChargeSpecial();
+        TickAutoFire();
         TickHealAura();
         UpdateBodyColor();
     }
@@ -333,6 +338,19 @@ public class Tower : MonoBehaviour
         }
         return closest;
     }
+
+    // Fires the special by itself after a delay, if it can still be used then.
+    public void FireAbilitySoon(float seconds) => autoFireAt = Time.time + seconds;
+
+    void TickAutoFire()
+    {
+        if (autoFireAt < 0f || Time.time < autoFireAt) return;
+        autoFireAt = -1f;
+        TryUseAbility();
+    }
+
+    public void GrantMoveDiscount(float costMultiplier) => MoveCostMultiplier = Mathf.Min(MoveCostMultiplier, costMultiplier);
+    public void ClearMoveDiscount() => MoveCostMultiplier = 1f;
 
     public bool TryUseAbility()
     {

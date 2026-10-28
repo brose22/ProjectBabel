@@ -44,6 +44,8 @@ public class CaptainData : ScriptableObject
     public float auraFadeSeconds = 60f;
 
     [Header("Relationship")]
+    [Tooltip("Scales the approval lost when the player refuses this captain's requests (GDD: varies by captain).")]
+    public float refusalTemper = 1f;
     public CaptainTag[] likes = new CaptainTag[3];
     public CaptainTag[] dislikes = new CaptainTag[3];
 }
