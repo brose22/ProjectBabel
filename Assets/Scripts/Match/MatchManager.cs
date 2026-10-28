@@ -102,7 +102,10 @@ public class MatchManager : MonoBehaviour
     {
         if (!CanPlaceTower || !grid.IsBuildable(cell)) return null;
         Tower tower = Instantiate(towerPrefab, grid.CellCenter(cell), Quaternion.identity);
-        tower.Init(NextCaptain, data.defaultSoldierClass, data.soldiersPerTower, cell);
+        var slotClasses = new SoldierClassData[data.soldiersPerTower];
+        for (int i = 0; i < slotClasses.Length; i++)
+            slotClasses[i] = data.DefaultClassForSlot(i);
+        tower.Init(NextCaptain, slotClasses, cell);
         grid.SetOccupant(cell, tower);
         GameEvents.RaiseTowerPlaced(tower);
         return tower;

@@ -6,6 +6,8 @@ public class MatchHUD : MonoBehaviour
 {
     const float ReferenceHeight = 540f;
     const float TopBarHeight = 34f;
+    // One label row plus one button row per soldier slot in the selection panel.
+    const float SoldierSlotHeight = 48f;
     static readonly string[] DrawRateLabels = { "Low", "Normal", "High" };
 
     [SerializeField] MatchManager match;
@@ -16,7 +18,15 @@ public class MatchHUD : MonoBehaviour
     float Scale => Screen.height / ReferenceHeight;
     float ReferenceWidth => Screen.width / Scale;
     Rect TopBarRect => new(0f, 0f, ReferenceWidth, TopBarHeight);
-    Rect SelectionRect => new(8f, ReferenceHeight - 8f - 190f, 300f, 190f);
+    Rect SelectionRect
+    {
+        get
+        {
+            float height = 190f + SoldierSlotsHeight;
+            return new(8f, ReferenceHeight - 8f - height, 300f, height);
+        }
+    }
+    float SoldierSlotsHeight => placement.Selected != null ? placement.Selected.Soldiers.Count * SoldierSlotHeight : 0f;
     Rect EndRect => new(ReferenceWidth * 0.5f - 150f, ReferenceHeight * 0.5f - 85f, 300f, 170f);
 
     // Takes a screen position in Input System coordinates (origin bottom-left).
@@ -78,10 +88,10 @@ public class MatchHUD : MonoBehaviour
 
         GUILayout.Label($"{captain.displayName}  ({captain.element} {captain.role})");
         GUILayout.Label($"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}");
-        GUILayout.Label($"Reserve {tower.Reserve}/{captain.resourceCapacity}   " +
-                        $"{tower.SoldierClass.displayName}s {tower.LivingSoldiers}/{tower.Soldiers.Count}");
+        GUILayout.Label($"Reserve {tower.Reserve}/{captain.resourceCapacity}");
         GUILayout.Label($"Likes: {string.Join(", ", captain.likes)}");
         GUILayout.Label($"Dislikes: {string.Join(", ", captain.dislikes)}");
+        DrawSoldierSlots(tower);
 
         GUILayout.Label("Gold draw");
         int rate = GUILayout.Toolbar((int)tower.DrawRate, DrawRateLabels);
@@ -90,6 +100,42 @@ public class MatchHUD : MonoBehaviour
         if (GUILayout.Button("Sell (returns reserve)")) placement.SellSelected();
 
         GUILayout.EndArea();
+    }
+
+    static string SlotLabel(int slot) => slot switch
+    {
+        0 => "D",
+        1 => "C",
+        _ => $"Slot {slot + 1}",
+    };
+
+    // Per slot: rank, class and state, then one button per class. Other classes show the
+    // reserve cost of switching and grey out when the reserve can't cover it.
+    void DrawSoldierSlots(Tower tower)
+    {
+        var classes = match.Data.ChoosableClasses;
+        for (int slot = 0; slot < tower.Soldiers.Count; slot++)
+        {
+            Soldier soldier = tower.Soldiers[slot];
+            GUILayout.Label($"{SlotLabel(slot)}: {soldier.Class.displayName} ({(soldier.IsDead ? "dead" : "alive")})");
+
+            GUILayout.BeginHorizontal();
+            foreach (SoldierClassData soldierClass in classes)
+            {
+                if (soldierClass == null) continue;
+                if (soldierClass == soldier.Class)
+                {
+                    GUILayout.Toggle(true, soldierClass.displayName, GUI.skin.button);
+                    continue;
+                }
+                int cost = tower.RespawnCostOf(soldierClass);
+                bool wasEnabled = GUI.enabled;
+                GUI.enabled = wasEnabled && tower.Reserve >= cost;
+                if (GUILayout.Button($"{soldierClass.displayName} {cost}")) tower.SetSlotClass(slot, soldierClass);
+                GUI.enabled = wasEnabled;
+            }
+            GUILayout.EndHorizontal();
+        }
     }
 
     void DrawEndPanel()
