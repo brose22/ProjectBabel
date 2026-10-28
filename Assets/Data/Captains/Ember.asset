@@ -19,6 +19,8 @@ MonoBehaviour:
   abilityName: Kindle
   abilityDescription: Damage boost to nearby towers
   ability: {fileID: 11400000, guid: bef34b0ff85d81142ad2dc472fe7815f, type: 2}
+  sprite: {fileID: 21300000, guid: 790adc967df52cb4cb083b4bae77482e, type: 3}
+  tintSprite: 0
   power: 8
   range: 2
   speed: 1

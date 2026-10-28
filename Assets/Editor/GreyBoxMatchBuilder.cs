@@ -16,6 +16,8 @@ using Object = UnityEngine.Object;
 public static class GreyBoxMatchBuilder
 {
     const string ArtFolder = "Assets/Art/Placeholder";
+    // Generated pixel art from Tools/pixel_art.py.
+    const string SpriteFolder = "Assets/Art/Sprites";
     const string DataFolder = "Assets/Data";
     const string PrefabFolder = "Assets/Prefabs";
     const string ScenePath = "Assets/Scenes/Match.unity";
@@ -53,13 +55,17 @@ public static class GreyBoxMatchBuilder
 
         TileBase groundTile = LoadOrCreate<Tile>(ArtFolder + "/GroundTile.asset", t => { t.sprite = square; t.color = new Color(0.22f, 0.36f, 0.22f); });
         TileBase pathTile = LoadOrCreate<Tile>(ArtFolder + "/PathTile.asset", t => { t.sprite = square; t.color = new Color(0.55f, 0.45f, 0.3f); });
+        UseTileArt(groundTile, square, "tile_grass");
+        UseTileArt(pathTile, square, "tile_path");
+        TileBase groundAccentTile = LoadOrCreate<Tile>(ArtFolder + "/GroundAccentTile.asset", t => { t.sprite = ArtSprite("tile_grass_flowers"); });
 
         MatchData matchData = CreateData();
+        ApplyArt();
         Enemy enemyPrefab = CreateEnemyPrefab(square);
         Soldier soldierPrefab = CreateSoldierPrefab(square, dot);
         Tower towerPrefab = CreateTowerPrefab(square, disc, soldierPrefab);
 
-        PopulateScene(scene, square, groundTile, pathTile, matchData, enemyPrefab, towerPrefab);
+        PopulateScene(scene, square, groundTile, pathTile, groundAccentTile, matchData, enemyPrefab, towerPrefab);
         AssetDatabase.SaveAssets();
         Debug.Log($"Grey-box match built at {ScenePath}. Press Play to try it.");
     }
@@ -521,7 +527,8 @@ public static class GreyBoxMatchBuilder
 
     // ---------- Scene ----------
 
-    static void PopulateScene(Scene scene, Sprite square, TileBase groundTile, TileBase pathTile, MatchData matchData, Enemy enemyPrefab, Tower towerPrefab)
+    static void PopulateScene(Scene scene, Sprite square, TileBase groundTile, TileBase pathTile, TileBase groundAccentTile,
+        MatchData matchData, Enemy enemyPrefab, Tower towerPrefab)
     {
         // Camera: 384x216 reference at 16 px per unit shows 24 x 13.5 tiles; the top strip is for the HUD.
         var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
@@ -557,15 +564,15 @@ public static class GreyBoxMatchBuilder
         Tilemap ground = AddTilemap(gridObject.transform, "Ground", 0);
         Tilemap pathTilemap = AddTilemap(gridObject.transform, "Path", 1);
         GridMap gridMap = gridObject.AddComponent<GridMap>();
-        Wire(gridMap, ("groundTilemap", ground), ("pathTilemap", pathTilemap), ("groundTile", groundTile), ("pathTile", pathTile), ("path", path));
+        Wire(gridMap, ("groundTilemap", ground), ("pathTilemap", pathTilemap), ("groundTile", groundTile), ("pathTile", pathTile), ("groundAccentTile", groundAccentTile), ("path", path));
         var gridSo = new SerializedObject(gridMap);
         gridSo.FindProperty("size").vector2IntValue = MapSize;
         gridSo.ApplyModifiedPropertiesWithoutUndo();
         gridMap.Paint();
 
         Vector2Int spawn = PathCells[1], goal = PathCells[^2];
-        AddSprite("Spawn Marker", null, square, new Color(0.6f, 0.1f, 0.15f), 3, new Vector3(0.5f, spawn.y + 0.5f), Vector3.one * 0.9f);
-        AddSprite("Base Marker", null, square, new Color(0.25f, 0.4f, 0.95f), 3, new Vector3(MapSize.x - 0.5f, goal.y + 0.5f), Vector3.one * 0.9f);
+        AddProp("Spawn Marker", "prop_gate", square, new Color(0.6f, 0.1f, 0.15f), new Vector3(0.5f, spawn.y + 0.5f));
+        AddProp("Base Marker", "prop_castle", square, new Color(0.25f, 0.4f, 0.95f), new Vector3(MapSize.x - 0.5f, goal.y + 0.5f));
 
         var matchObject = new GameObject("Match");
         MatchManager match = matchObject.AddComponent<MatchManager>();
@@ -627,6 +634,71 @@ public static class GreyBoxMatchBuilder
             property.objectReferenceValue = value;
         }
         so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // ---------- Art ----------
+
+    static Sprite ArtSprite(string name) => AssetDatabase.LoadAssetAtPath<Sprite>($"{SpriteFolder}/{name}.png");
+
+    static IEnumerable<T> LoadAll<T>(string folder) where T : Object
+    {
+        foreach (string guid in AssetDatabase.FindAssets($"t:{typeof(T).Name}", new[] { folder }))
+            yield return AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guid));
+    }
+
+    // Gives generated art (named after the asset: captain_cinder, soldier_knight, enemy_grunt) to
+    // data that has no sprite yet, so art set by hand is kept and a second run changes nothing.
+    // Captains without their own art share a pale generic sprite tinted with the captain colour.
+    static void ApplyArt()
+    {
+        foreach (CaptainData captain in LoadAll<CaptainData>(DataFolder + "/Captains"))
+        {
+            if (captain.sprite != null) continue;
+            Sprite own = ArtSprite("captain_" + captain.name.ToLowerInvariant());
+            Sprite sprite = own != null ? own : ArtSprite("captain_generic");
+            if (sprite == null) continue;
+            captain.sprite = sprite;
+            captain.tintSprite = own == null;
+            MarkUpgraded(captain, "its sprite");
+        }
+        foreach (SoldierClassData soldierClass in LoadAll<SoldierClassData>(DataFolder + "/Soldiers"))
+            UseArt(soldierClass, soldierClass.sprite, "soldier_", s => soldierClass.sprite = s);
+        foreach (EnemyData enemy in LoadAll<EnemyData>(DataFolder + "/Enemies"))
+            UseArt(enemy, enemy.sprite, "enemy_", s => enemy.sprite = s);
+    }
+
+    static void UseArt(Object asset, Sprite current, string prefix, Action<Sprite> assign)
+    {
+        if (current != null) return;
+        Sprite sprite = ArtSprite(prefix + asset.name.ToLowerInvariant());
+        if (sprite == null) return;
+        assign(sprite);
+        MarkUpgraded(asset, "its sprite");
+    }
+
+    static void MarkUpgraded(Object asset, string what)
+    {
+        EditorUtility.SetDirty(asset);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(asset)} with {what}.");
+    }
+
+    // Swaps a tile still showing the placeholder square for its generated art, drawn as painted.
+    static void UseTileArt(TileBase tileBase, Sprite placeholder, string artName)
+    {
+        if (tileBase is not Tile tile || tile.sprite != placeholder) return;
+        Sprite sprite = ArtSprite(artName);
+        if (sprite == null) return;
+        tile.sprite = sprite;
+        tile.color = Color.white;
+        MarkUpgraded(tile, "its art");
+    }
+
+    // A map prop drawn with its generated art, or a tinted square if the art is missing.
+    static void AddProp(string name, string artName, Sprite square, Color fallbackColor, Vector3 position)
+    {
+        Sprite art = ArtSprite(artName);
+        if (art != null) AddSprite(name, null, art, Color.white, 3, position, Vector3.one);
+        else AddSprite(name, null, square, fallbackColor, 3, position, Vector3.one * 0.9f);
     }
 
     static T LoadOrCreate<T>(string path, Action<T> init) where T : ScriptableObject

@@ -20,6 +20,12 @@ public class CaptainData : ScriptableObject
     [Tooltip("The special ability fired from the meter. Without one, the tower has no special.")]
     public AbilityData ability;
 
+    [Header("Art")]
+    [Tooltip("The captain's tower sprite. Without one the tower is a square in the captain colour.")]
+    public Sprite sprite;
+    [Tooltip("Tint the sprite with the captain colour (for the shared, pale generic sprite).")]
+    public bool tintSprite;
+
     [Header("Stats")]
     [Tooltip("Base damage of each soldier act, before class and level scaling.")]
     public float power = 10f;

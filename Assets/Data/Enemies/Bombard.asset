@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyData
   displayName: Bombard
   color: {r: 0.5, g: 0.2, b: 0.5, a: 1}
+  sprite: {fileID: 21300000, guid: f12b2786294c9504e946fefbb3aa8440, type: 3}
   size: 0.8
   maxHealth: 90
   moveSpeed: 0.8

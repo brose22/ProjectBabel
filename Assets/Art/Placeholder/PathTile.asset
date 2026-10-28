@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 13312, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: PathTile
   m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.Tilemaps.Tile
-  m_Sprite: {fileID: 21300000, guid: 7763b3e5e726e76459df933933897e5b, type: 3}
-  m_Color: {r: 0.55, g: 0.45, b: 0.3, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 5ff74b06c0508e74183e8330c0561b6f, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
     e00: 1
     e01: 0

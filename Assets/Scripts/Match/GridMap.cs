@@ -10,6 +10,9 @@ public class GridMap : MonoBehaviour
     [SerializeField] Tilemap pathTilemap;
     [SerializeField] TileBase groundTile;
     [SerializeField] TileBase pathTile;
+    [Tooltip("Optional variety tile scattered over the ground (flowers and the like).")]
+    [SerializeField] TileBase groundAccentTile;
+    [SerializeField, Range(0f, 1f)] float groundAccentChance = 0.12f;
     [SerializeField] EnemyPath path;
     [SerializeField] Vector2Int size = new(24, 12);
 
@@ -28,7 +31,7 @@ public class GridMap : MonoBehaviour
 
         for (int x = 0; x < size.x; x++)
             for (int y = 0; y < size.y; y++)
-                groundTilemap.SetTile(new Vector3Int(x, y, 0), groundTile);
+                groundTilemap.SetTile(new Vector3Int(x, y, 0), IsAccentCell(x, y) ? groundAccentTile : groundTile);
 
         Vector3[] points = path.GetPoints();
         for (int i = 1; i < points.Length; i++)
@@ -50,6 +53,10 @@ public class GridMap : MonoBehaviour
             pathCells.Add(cell);
         }
     }
+
+    // A fixed hash rather than Random, so the ground looks the same every time the map is painted.
+    bool IsAccentCell(int x, int y) =>
+        groundAccentTile != null && (uint)(x * 73856093 ^ y * 19349663) % 1000 < groundAccentChance * 1000f;
 
     public bool InBounds(Vector2Int cell) => cell.x >= 0 && cell.y >= 0 && cell.x < size.x && cell.y < size.y;
 

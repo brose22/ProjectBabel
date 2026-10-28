@@ -19,6 +19,8 @@ MonoBehaviour:
   abilityName: Tidal Mend
   abilityDescription: Heals tower and soldiers
   ability: {fileID: 11400000, guid: 4986bda02ecb3184b99dac983ebfa64e, type: 2}
+  sprite: {fileID: 21300000, guid: bfc6a24d589de3e42a2b8fddcf360a0b, type: 3}
+  tintSprite: 0
   power: 7
   range: 2
   speed: 1

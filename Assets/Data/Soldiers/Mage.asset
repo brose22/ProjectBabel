@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SoldierClassData
   displayName: Mage
   color: {r: 1, g: 0.45, b: 0.75, a: 1}
+  sprite: {fileID: 21300000, guid: cc77cecab118c8d4cbfcdb45a567f6c6, type: 3}
   actCost: 5
   respawnCost: 12
   maxHealth: 18

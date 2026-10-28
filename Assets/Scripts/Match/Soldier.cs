@@ -43,7 +43,17 @@ public class Soldier : MonoBehaviour
         Tower = tower;
         Class = soldierClass;
         homeOffset = offset;
-        body.color = soldierClass.color;
+        if (soldierClass.sprite != null)
+        {
+            // Drawn art is 8 px, half a tile, and shows as painted.
+            body.sprite = soldierClass.sprite;
+            body.transform.localScale = Vector3.one;
+            body.color = Color.white;
+        }
+        else
+        {
+            body.color = soldierClass.color;
+        }
         Revive();
     }
 
