@@ -1,0 +1,344 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
+using Object = UnityEngine.Object;
+
+// Builds the Milestone 1 grey-box match: placeholder sprites and tiles, starter data assets,
+// prefabs, and the Match scene. Existing data assets and prefabs are kept so tuning survives
+// a rebuild; the scene itself is regenerated.
+public static class GreyBoxMatchBuilder
+{
+    const string ArtFolder = "Assets/Art/Placeholder";
+    const string DataFolder = "Assets/Data";
+    const string PrefabFolder = "Assets/Prefabs";
+    const string ScenePath = "Assets/Scenes/Match.unity";
+
+    static readonly Vector2Int MapSize = new(24, 12);
+
+    // Waypoint cells. The first and last sit just off the map so enemies walk on and off screen.
+    static readonly Vector2Int[] PathCells =
+    {
+        new(-1, 9), new(5, 9), new(5, 3), new(11, 3), new(11, 9), new(17, 9), new(17, 5), new(24, 5),
+    };
+
+    [MenuItem("Babel/Build Grey-Box Match Scene")]
+    public static void Build()
+    {
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+
+        // Open the new scene first: opening a scene unloads unsaved assets, which would
+        // break references to anything created below.
+        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+        foreach (string folder in new[] { ArtFolder, DataFolder + "/Captains", DataFolder + "/Enemies", DataFolder + "/Soldiers", PrefabFolder, "Assets/Scenes" })
+            EnsureFolder(folder);
+
+        Sprite square = CreateSpriteAsset(ArtFolder + "/Square.png", 16, 16, (x, y) => Color.white);
+        Sprite disc = CreateSpriteAsset(ArtFolder + "/Disc.png", 64, 32, (x, y) =>
+        {
+            float dx = x - 31.5f, dy = y - 31.5f;
+            return dx * dx + dy * dy <= 32f * 32f ? Color.white : Color.clear;
+        });
+
+        TileBase groundTile = LoadOrCreate<Tile>(ArtFolder + "/GroundTile.asset", t => { t.sprite = square; t.color = new Color(0.22f, 0.36f, 0.22f); });
+        TileBase pathTile = LoadOrCreate<Tile>(ArtFolder + "/PathTile.asset", t => { t.sprite = square; t.color = new Color(0.55f, 0.45f, 0.3f); });
+
+        MatchData matchData = CreateData();
+        Enemy enemyPrefab = CreateEnemyPrefab(square);
+        Soldier soldierPrefab = CreateSoldierPrefab(square);
+        Tower towerPrefab = CreateTowerPrefab(square, disc, soldierPrefab);
+
+        PopulateScene(scene, square, groundTile, pathTile, matchData, enemyPrefab, towerPrefab);
+        AssetDatabase.SaveAssets();
+        Debug.Log($"Grey-box match built at {ScenePath}. Press Play to try it.");
+    }
+
+    // ---------- Data ----------
+
+    static MatchData CreateData()
+    {
+        EnemyData grunt = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Grunt.asset", e =>
+        {
+            e.displayName = "Grunt";
+            e.color = new Color(0.85f, 0.2f, 0.25f);
+        });
+
+        SoldierClassData rogue = LoadOrCreate<SoldierClassData>(DataFolder + "/Soldiers/Rogue.asset", s =>
+        {
+            s.displayName = "Rogue";
+            s.color = new Color(0.9f, 0.9f, 0.75f);
+            s.actCost = 1;
+            s.respawnCost = 4;
+            s.maxHealth = 20f;
+            s.moveSpeed = 4f;
+        });
+
+        var roster = new List<CaptainData>
+        {
+            Captain("Cinder", Element.Fire, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage",
+                new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }),
+            Captain("Brine", Element.Water, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back",
+                new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Stable }),
+            Captain("Slate", Element.Earth, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit",
+                new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }),
+            Captain("Zephyr", Element.Air, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce",
+                new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }),
+            Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path",
+                new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Stable, CaptainTag.Leaks }),
+        };
+
+        return LoadOrCreate<MatchData>(DataFolder + "/GreyBoxMatch.asset", m =>
+        {
+            m.roster = roster;
+            m.defaultSoldierClass = rogue;
+            // 50 enemies over 10 waves, matching the GDD's ~50 kills per match.
+            int[] counts = { 2, 3, 4, 4, 5, 5, 6, 6, 7, 8 };
+            for (int i = 0; i < counts.Length; i++)
+            {
+                var wave = new WaveDefinition { healthMultiplier = 1f + 0.15f * i };
+                wave.groups.Add(new SpawnGroup { enemy = grunt, count = counts[i], spawnInterval = Mathf.Max(0.6f, 1.4f - 0.08f * i) });
+                m.waves.Add(wave);
+            }
+        });
+    }
+
+    static CaptainData Captain(string name, Element element, Color color, float power, float range, float speed,
+        string ability, string abilityDescription, CaptainTag[] likes, CaptainTag[] dislikes)
+    {
+        return LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{name}.asset", c =>
+        {
+            c.displayName = name;
+            c.element = element;
+            c.role = CaptainRole.Attacker;
+            c.color = color;
+            c.power = power;
+            c.range = range;
+            c.speed = speed;
+            c.abilityName = ability;
+            c.abilityDescription = abilityDescription;
+            c.likes = likes;
+            c.dislikes = dislikes;
+        });
+    }
+
+    // ---------- Prefabs ----------
+
+    static Enemy CreateEnemyPrefab(Sprite square)
+    {
+        return LoadOrCreatePrefab<Enemy>(PrefabFolder + "/Enemy.prefab", root =>
+        {
+            SpriteRenderer body = AddSprite("Body", root.transform, square, Color.white, 10, Vector3.zero, Vector3.one * 0.6f);
+            HealthBar bar = AddBar(root.transform, square, new Vector3(0f, 0.45f), 0.6f, new Color(0.3f, 0.9f, 0.3f), false);
+            Enemy enemy = root.AddComponent<Enemy>();
+            Wire(enemy, ("body", body), ("healthBar", bar));
+        });
+    }
+
+    static Soldier CreateSoldierPrefab(Sprite square)
+    {
+        return LoadOrCreatePrefab<Soldier>(PrefabFolder + "/Soldier.prefab", root =>
+        {
+            SpriteRenderer body = AddSprite("Body", root.transform, square, Color.white, 11, Vector3.zero, Vector3.one * 0.3f);
+            HealthBar bar = AddBar(root.transform, square, new Vector3(0f, 0.28f), 0.35f, new Color(0.4f, 0.8f, 1f), true);
+            Soldier soldier = root.AddComponent<Soldier>();
+            Wire(soldier, ("body", body), ("healthBar", bar));
+        });
+    }
+
+    static Tower CreateTowerPrefab(Sprite square, Sprite disc, Soldier soldierPrefab)
+    {
+        return LoadOrCreatePrefab<Tower>(PrefabFolder + "/Tower.prefab", root =>
+        {
+            SpriteRenderer range = AddSprite("RangeIndicator", root.transform, disc, new Color(1f, 1f, 1f, 0.12f), 2, Vector3.zero, Vector3.one);
+            SpriteRenderer body = AddSprite("Body", root.transform, square, Color.white, 5, Vector3.zero, Vector3.one * 0.8f);
+            HealthBar reserve = AddBar(root.transform, square, new Vector3(0f, -0.45f), 0.8f, new Color(1f, 0.85f, 0.2f), false);
+            Tower tower = root.AddComponent<Tower>();
+            Wire(tower, ("body", body), ("rangeIndicator", range), ("reserveBar", reserve), ("soldierPrefab", soldierPrefab));
+        });
+    }
+
+    static HealthBar AddBar(Transform parent, Sprite square, Vector3 localPosition, float width, Color fillColor, bool hideWhenFull)
+    {
+        var barObject = new GameObject("Bar");
+        barObject.transform.SetParent(parent, false);
+        barObject.transform.localPosition = localPosition;
+        AddSprite("Back", barObject.transform, square, new Color(0f, 0f, 0f, 0.7f), 20, Vector3.zero, new Vector3(width, 0.08f, 1f));
+        SpriteRenderer fill = AddSprite("Fill", barObject.transform, square, fillColor, 21, Vector3.zero, new Vector3(width, 0.08f, 1f));
+        HealthBar bar = barObject.AddComponent<HealthBar>();
+        var so = new SerializedObject(bar);
+        so.FindProperty("fill").objectReferenceValue = fill.transform;
+        so.FindProperty("width").floatValue = width;
+        so.FindProperty("hideWhenFull").boolValue = hideWhenFull;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        return bar;
+    }
+
+    // ---------- Scene ----------
+
+    static void PopulateScene(Scene scene, Sprite square, TileBase groundTile, TileBase pathTile, MatchData matchData, Enemy enemyPrefab, Tower towerPrefab)
+    {
+        // Camera: 384x216 reference at 16 px per unit shows 24 x 13.5 tiles; the top strip is for the HUD.
+        var cameraObject = new GameObject("Main Camera") { tag = "MainCamera" };
+        cameraObject.transform.position = new Vector3(MapSize.x * 0.5f, 6.75f, -10f);
+        Camera camera = cameraObject.AddComponent<Camera>();
+        camera.orthographic = true;
+        camera.orthographicSize = 6.75f;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(0.08f, 0.09f, 0.12f);
+        PixelPerfectCamera pixelPerfect = cameraObject.AddComponent<PixelPerfectCamera>();
+        pixelPerfect.assetsPPU = 16;
+        pixelPerfect.refResolutionX = 384;
+        pixelPerfect.refResolutionY = 216;
+
+        var lightObject = new GameObject("Global Light 2D");
+        Light2D light = lightObject.AddComponent<Light2D>();
+        var lightSo = new SerializedObject(light);
+        lightSo.FindProperty("m_LightType").intValue = (int)Light2D.LightType.Global;
+        lightSo.ApplyModifiedPropertiesWithoutUndo();
+
+        // Path waypoints sit at cell centers.
+        var pathObject = new GameObject("EnemyPath");
+        EnemyPath path = pathObject.AddComponent<EnemyPath>();
+        for (int i = 0; i < PathCells.Length; i++)
+        {
+            var point = new GameObject($"Point {i}");
+            point.transform.SetParent(pathObject.transform, false);
+            point.transform.position = new Vector3(PathCells[i].x + 0.5f, PathCells[i].y + 0.5f, 0f);
+        }
+
+        var gridObject = new GameObject("Grid");
+        gridObject.AddComponent<Grid>();
+        Tilemap ground = AddTilemap(gridObject.transform, "Ground", 0);
+        Tilemap pathTilemap = AddTilemap(gridObject.transform, "Path", 1);
+        GridMap gridMap = gridObject.AddComponent<GridMap>();
+        Wire(gridMap, ("groundTilemap", ground), ("pathTilemap", pathTilemap), ("groundTile", groundTile), ("pathTile", pathTile), ("path", path));
+        var gridSo = new SerializedObject(gridMap);
+        gridSo.FindProperty("size").vector2IntValue = MapSize;
+        gridSo.ApplyModifiedPropertiesWithoutUndo();
+        gridMap.Paint();
+
+        Vector2Int spawn = PathCells[1], goal = PathCells[^2];
+        AddSprite("Spawn Marker", null, square, new Color(0.6f, 0.1f, 0.15f), 3, new Vector3(0.5f, spawn.y + 0.5f), Vector3.one * 0.9f);
+        AddSprite("Base Marker", null, square, new Color(0.25f, 0.4f, 0.95f), 3, new Vector3(MapSize.x - 0.5f, goal.y + 0.5f), Vector3.one * 0.9f);
+
+        var matchObject = new GameObject("Match");
+        MatchManager match = matchObject.AddComponent<MatchManager>();
+        WaveSpawner spawner = matchObject.AddComponent<WaveSpawner>();
+        PlacementController placement = matchObject.AddComponent<PlacementController>();
+        MatchHUD hud = matchObject.AddComponent<MatchHUD>();
+        SpriteRenderer hoverMarker = AddSprite("Hover Marker", matchObject.transform, square, Color.white, 4, Vector3.zero, Vector3.one);
+        hoverMarker.enabled = false;
+
+        Wire(match, ("data", matchData), ("grid", gridMap), ("spawner", spawner), ("towerPrefab", towerPrefab));
+        Wire(spawner, ("enemyPrefab", enemyPrefab), ("path", path));
+        Wire(placement, ("match", match), ("grid", gridMap), ("hud", hud), ("hoverMarker", hoverMarker));
+        Wire(hud, ("match", match), ("placement", placement));
+
+        EditorSceneManager.SaveScene(scene, ScenePath);
+        AddSceneToBuild(ScenePath);
+    }
+
+    static Tilemap AddTilemap(Transform parent, string name, int sortingOrder)
+    {
+        var tilemapObject = new GameObject(name);
+        tilemapObject.transform.SetParent(parent, false);
+        Tilemap tilemap = tilemapObject.AddComponent<Tilemap>();
+        tilemapObject.AddComponent<TilemapRenderer>().sortingOrder = sortingOrder;
+        return tilemap;
+    }
+
+    static void AddSceneToBuild(string path)
+    {
+        var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+        scenes.RemoveAll(s => s.path == path);
+        scenes.Insert(0, new EditorBuildSettingsScene(path, true));
+        EditorBuildSettings.scenes = scenes.ToArray();
+    }
+
+    // ---------- Helpers ----------
+
+    static SpriteRenderer AddSprite(string name, Transform parent, Sprite sprite, Color color, int sortingOrder, Vector3 localPosition, Vector3 localScale)
+    {
+        var spriteObject = new GameObject(name);
+        spriteObject.transform.SetParent(parent, false);
+        spriteObject.transform.localPosition = localPosition;
+        spriteObject.transform.localScale = localScale;
+        SpriteRenderer renderer = spriteObject.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.color = color;
+        renderer.sortingOrder = sortingOrder;
+        return renderer;
+    }
+
+    static void Wire(Object target, params (string field, Object value)[] references)
+    {
+        var so = new SerializedObject(target);
+        foreach ((string field, Object value) in references)
+        {
+            SerializedProperty property = so.FindProperty(field);
+            if (property == null)
+                throw new InvalidOperationException($"{target.GetType().Name} has no serialized field '{field}'");
+            property.objectReferenceValue = value;
+        }
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    static T LoadOrCreate<T>(string path, Action<T> init) where T : ScriptableObject
+    {
+        T asset = AssetDatabase.LoadAssetAtPath<T>(path);
+        if (asset != null) return asset;
+        asset = ScriptableObject.CreateInstance<T>();
+        init(asset);
+        AssetDatabase.CreateAsset(asset, path);
+        return asset;
+    }
+
+    static T LoadOrCreatePrefab<T>(string path, Action<GameObject> build) where T : Component
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<T>(path);
+        if (existing != null) return existing;
+        var root = new GameObject(Path.GetFileNameWithoutExtension(path));
+        build(root);
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+        Object.DestroyImmediate(root);
+        return prefab.GetComponent<T>();
+    }
+
+    static Sprite CreateSpriteAsset(string path, int size, int pixelsPerUnit, Func<int, int, Color> pixel)
+    {
+        if (!File.Exists(path))
+        {
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            for (int x = 0; x < size; x++)
+                for (int y = 0; y < size; y++)
+                    texture.SetPixel(x, y, pixel(x, y));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(path);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = pixelsPerUnit;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.alphaIsTransparency = true;
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    static void EnsureFolder(string folder)
+    {
+        if (AssetDatabase.IsValidFolder(folder)) return;
+        string parent = Path.GetDirectoryName(folder).Replace('\\', '/');
+        EnsureFolder(parent);
+        AssetDatabase.CreateFolder(parent, Path.GetFileName(folder));
+    }
+}
