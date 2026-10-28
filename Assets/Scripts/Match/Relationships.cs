@@ -30,8 +30,12 @@ public class Relationships : MonoBehaviour
 
     readonly Dictionary<CaptainData, WaveRecord> records = new();
     readonly List<(string text, float until)> messages = new();
+    readonly Dictionary<CaptainData, float> approvalThisMatch = new();
     int waveLeaks;
     bool waveSold;
+
+    // Total approval change for a captain during this match, for the results screen.
+    public float ApprovalChangeThisMatch(CaptainData captain) => approvalThisMatch.TryGetValue(captain, out float change) ? change : 0f;
 
     // Captains who walked out at the end of this match.
     public List<CaptainData> Walkouts { get; } = new();
@@ -79,7 +83,9 @@ public class Relationships : MonoBehaviour
     {
         if (delta > 0f && MixScore(tower) < 0) delta *= DisapprovedMixGainMultiplier;
         float applied = ApprovalStore.Change(tower.Captain, delta);
-        if (applied != 0f) Post($"{tower.Captain.displayName} {reason} {applied:+0.#;-0.#}");
+        if (applied == 0f) return;
+        approvalThisMatch[tower.Captain] = ApprovalChangeThisMatch(tower.Captain) + applied;
+        Post($"{tower.Captain.displayName} {reason} {applied:+0.#;-0.#}");
     }
 
     void Post(string text)
