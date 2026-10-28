@@ -30,16 +30,35 @@ public class MatchManager : MonoBehaviour
     float hitStopRemaining;
     CameraShake cameraShake;
 
-    // The first roster captain who isn't already on the field.
+    // Game time the current wave started; auras fade from here.
+    public float WaveStartTime { get; private set; }
+
+    // Roster index the player has cycled to; NextCaptain skips anyone already on the field.
+    int nextCaptainIndex;
+
+    // The captain the next placed tower gets: the chosen one, or the next one after it who
+    // isn't already on the field.
     public CaptainData NextCaptain
     {
         get
         {
-            foreach (CaptainData captain in data.roster)
-                if (!Tower.All.Exists(t => t.Captain == captain))
+            int count = data.roster.Count;
+            for (int i = 0; i < count; i++)
+            {
+                CaptainData captain = data.roster[(nextCaptainIndex + i) % count];
+                if (captain != null && !Tower.All.Exists(t => t.Captain == captain))
                     return captain;
+            }
             return null;
         }
+    }
+
+    // Moves the choice to the next captain not yet on the field, wrapping around the roster.
+    public void CycleNextCaptain()
+    {
+        CaptainData current = NextCaptain;
+        if (current == null) return;
+        nextCaptainIndex = (data.roster.IndexOf(current) + 1) % data.roster.Count;
     }
 
     public bool CanPlaceTower => !IsOver && Tower.All.Count < data.maxTowers && NextCaptain != null;
@@ -98,6 +117,7 @@ public class MatchManager : MonoBehaviour
         if (State != MatchState.Preparing) return;
         NextWaveCountdown = -1f;
         State = MatchState.WaveActive;
+        WaveStartTime = Time.time;
         spawner.SpawnWave(data.waves[WavesCleared]);
         GameEvents.RaiseWaveStarted(WavesCleared + 1);
     }
@@ -122,7 +142,7 @@ public class MatchManager : MonoBehaviour
         var slotClasses = new SoldierClassData[data.soldiersPerTower];
         for (int i = 0; i < slotClasses.Length; i++)
             slotClasses[i] = data.DefaultClassForSlot(i);
-        tower.Init(NextCaptain, slotClasses, cell);
+        tower.Init(this, NextCaptain, slotClasses, cell);
         grid.SetOccupant(cell, tower);
         GameEvents.RaiseTowerPlaced(tower);
         return tower;

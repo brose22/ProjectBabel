@@ -84,6 +84,7 @@ public class PlacementController : MonoBehaviour
         if (keyboard == null) return;
 
         if (keyboard.spaceKey.wasPressedThisFrame) match.StartNextWave();
+        if (keyboard.tabKey.wasPressedThisFrame) match.CycleNextCaptain();
         if (keyboard.escapeKey.wasPressedThisFrame)
         {
             if (IsMoving) CancelMove();

@@ -192,9 +192,20 @@ public class Soldier : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
-        health -= amount;
+        health -= amount * Tower.SoldierDamageTakenMultiplier;
         healthBar.SetFraction(health / Class.maxHealth);
         if (health <= 0f) Die();
+    }
+
+    // Returns the health actually restored, which is less than amount near full health.
+    public float Heal(float amount)
+    {
+        if (IsDead || amount <= 0f || !gameObject.activeSelf) return 0f;
+        float healed = Mathf.Min(amount, Class.maxHealth - health);
+        if (healed <= 0f) return 0f;
+        health += healed;
+        healthBar.SetFraction(health / Class.maxHealth);
+        return healed;
     }
 
     void Die()

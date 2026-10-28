@@ -37,10 +37,16 @@ public class Tower : MonoBehaviour
     // Home offset for each soldier slot, kept so a swapped-in soldier stands where the old one did.
     readonly List<Vector3> slotHomes = new();
     float drawProgress;
+    MatchManager match;
 
     public float Range => Captain.range;
-    public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed);
-    public float SoldierPower => Captain.power * (1f + 0.1f * (Captain.level - 1));
+    public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed * (1f + Boost(SupportEffect.ActSpeed)));
+    public float SoldierPower => Captain.power * (1f + 0.1f * (Captain.level - 1)) * (1f + Boost(SupportEffect.Damage));
+    // Multiplies damage this tower's soldiers take.
+    public float SoldierDamageTakenMultiplier => AuraMath.DamageTakenMultiplier(Boost(SupportEffect.Defense));
+
+    bool IsWaveRunning => match != null && match.State == MatchState.WaveActive;
+    public bool IsAuraActive => Captain.aura != SupportEffect.None && IsWaveRunning && !IsDisabled;
 
     public bool HasAbility => Captain.ability != null;
     public bool IsSpecialReady => HasAbility && SpecialCharge >= 1f;
@@ -66,8 +72,9 @@ public class Tower : MonoBehaviour
     };
 
     // One soldier per entry in slotClasses; the soldier list index is the slot index.
-    public void Init(CaptainData captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
+    public void Init(MatchManager owner, CaptainData captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
     {
+        match = owner;
         Captain = captain;
         Cell = cell;
         body.color = captain.color;
@@ -148,7 +155,25 @@ public class Tower : MonoBehaviour
         reserveBar.SetFraction((float)Reserve / capacity);
 
         ChargeSpecial();
+        TickHealAura();
         UpdateBodyColor();
+    }
+
+    // How strong a stat boost on this tower's soldiers is right now (0.5 = +50%). Buffer auras
+    // start full when the wave begins and fade over the wave.
+    public float Boost(SupportEffect effect)
+    {
+        if (effect == SupportEffect.Heal || Captain.aura != effect || !IsAuraActive) return 0f;
+        return AuraMath.FadedStrength(Captain.auraStrength, Time.time - match.WaveStartTime, Captain.auraFadeSeconds);
+    }
+
+    // Healer auras restore living soldiers a little every frame while the wave runs.
+    void TickHealAura()
+    {
+        if (Captain.aura != SupportEffect.Heal || !IsAuraActive) return;
+        float amount = Captain.auraStrength * Time.deltaTime;
+        foreach (Soldier soldier in soldiers)
+            soldier.Heal(amount);
     }
 
     // Fills only while enemies are on the field, so the special can't be stockpiled between waves.
