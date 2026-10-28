@@ -23,7 +23,7 @@ Early development. One developer at 20 hours a week, with a vertical slice targe
 | M2: soldier system | Four soldier classes (Knight knockback), soldier mix, tower damage/disable/restore, relocation | Done (merged) |
 | M3: roles and elements | Status effects, special abilities and hit-stop, Buffer and Healer auras, levels and XP, enemy types and weaknesses | Done (merged) |
 | M4: relationships | Approval (saved between runs), like/dislike judging, requests, bond ranks D–S, walkouts | Done (merged) |
-| M5: vertical slice | One city, 3 captains, full match loop, playtest and tuning | Next |
+| M5: vertical slice | City map, Cinder / Marin / Ember, run setup and results, uGUI HUD, generated pixel art, stats log and tuning | Done (merged) |
 
 Later phases cover the world map and full run, the remaining content, polish, and release prep.
 
@@ -35,11 +35,14 @@ Later phases cover the world map and full run, the remaining content, polish, an
 2. Open `Assets/Scenes/Match.unity` and press **Play**.
 3. To regenerate the grey-box scene, use the menu **Babel → Build Grey-Box Match Scene**. Existing data assets and prefabs are kept, so your tuning survives a rebuild.
 
-### Controls (grey-box match)
+### Controls
 
 | Input | Action |
 |---|---|
 | Left-click a free tile | Place the next captain's tower |
+| `Tab` | Choose which captain to place next |
+| `Q` | Fire the selected tower's special when its meter is full |
+| `M` | Move the selected tower (then click a free tile) |
 | Left-click a tower | Select it |
 | `1` / `2` / `3` | Set the selected tower's Gold draw: Low / Normal / High |
 | `X` | Sell the selected tower (returns its reserve) |
@@ -81,3 +84,8 @@ py -I Tools/compile_check.py <checkout root>
 ```
 
 EditMode tests live in `Assets/Tests/EditMode` and run from Unity's Test Runner.
+
+### Art and stats
+
+- `py -I Tools/pixel_art.py [preview.png]` regenerates the placeholder pixel art in `Assets/Art/Sprites` from the character grids in the script (optionally writing an enlarged preview sheet). The scene builder assigns art by name to any captain, soldier class or enemy without a sprite.
+- Every match logs per-wave stats to the Console and writes a CSV to `stats/` under Unity's persistent data path (`%USERPROFILE%/AppData/LocalLow/DefaultCompany/ProjectBabel` on Windows).
