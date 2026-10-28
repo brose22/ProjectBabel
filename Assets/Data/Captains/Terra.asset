@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6375523ae6732e54a8d1c9770b832f72, type: 3}
+  m_Name: Terra
+  m_EditorClassIdentifier: Assembly-CSharp::CaptainData
+  displayName: Terra
+  element: 2
+  role: 2
+  color: {r: 0.5, g: 0.7, b: 0.35, a: 1}
+  abilityName: Mend the Land
+  abilityDescription: Area heal plus short shield
+  ability: {fileID: 11400000, guid: cbd746a601b800b448e77b3e891bd43a, type: 2}
+  power: 7
+  range: 2
+  speed: 1
+  health: 100
+  resourceCapacity: 20
+  resourceRegen: 2
+  specialChargeRate: 1
+  level: 1
+  aura: 1
+  auraStrength: 1.5
+  auraFadeSeconds: 60
+  likes: 000000000800000004000000
+  dislikes: 030000000900000005000000

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45b212b10d1119e449d39ad3c153f330, type: 3}
+  m_Name: Kindle
+  m_EditorClassIdentifier: Assembly-CSharp::AbilityData
+  displayName: Kindle
+  description: Damage boost to nearby towers
+  chargeSeconds: 20
+  shape: 4
+  rangeMultiplier: 1
+  radius: 2.5
+  damageMultiplier: 2
+  knockbackDistance: 0
+  zoneDuration: 4
+  statusChance: 0
+  healFraction: 0
+  buffEffect: 3
+  buffAmount: 0.5
+  buffSeconds: 8
+  hitStopSeconds: 0.15
+  cameraShake: 0.05
+  cameraShakeSeconds: 0.25
