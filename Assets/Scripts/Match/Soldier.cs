@@ -24,6 +24,7 @@ public class Soldier : MonoBehaviour
     public SoldierClassData Class { get; private set; }
     public Tower Tower { get; private set; }
     public bool IsDead => state == State.Dead;
+    public float MaxHealth => Class.maxHealth;
     public int ActCost => Tower.ActCostOf(Class);
     public int RespawnCost => Tower.RespawnCostOf(Class);
     bool IsDeployed => state is State.Advancing or State.Returning;
@@ -193,7 +194,7 @@ public class Soldier : MonoBehaviour
     {
         if (IsDead) return;
         health -= amount * Tower.SoldierDamageTakenMultiplier;
-        healthBar.SetFraction(health / Class.maxHealth);
+        healthBar.SetFraction(health / MaxHealth);
         if (health <= 0f) Die();
     }
 
@@ -201,10 +202,10 @@ public class Soldier : MonoBehaviour
     public float Heal(float amount)
     {
         if (IsDead || amount <= 0f || !gameObject.activeSelf) return 0f;
-        float healed = Mathf.Min(amount, Class.maxHealth - health);
+        float healed = Mathf.Min(amount, MaxHealth - health);
         if (healed <= 0f) return 0f;
         health += healed;
-        healthBar.SetFraction(health / Class.maxHealth);
+        healthBar.SetFraction(health / MaxHealth);
         return healed;
     }
 
@@ -235,7 +236,7 @@ public class Soldier : MonoBehaviour
 
     void Revive()
     {
-        health = Class.maxHealth;
+        health = MaxHealth;
         transform.position = Home;
         body.enabled = true;
         healthBar.SetFraction(1f);

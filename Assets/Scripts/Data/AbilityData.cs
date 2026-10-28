@@ -15,6 +15,9 @@ public class AbilityData : ScriptableObject
         Line,
         // A patch of ground at the target that hurts enemies standing in it.
         Zone,
+        // Heals and boosts every working tower within radius of the caster, the caster included,
+        // and their soldiers. Needs no enemy target.
+        Support,
     }
 
     public string displayName = "Ability";
@@ -40,6 +43,15 @@ public class AbilityData : ScriptableObject
     public float zoneDuration = 4f;
     [Tooltip("Chance that each enemy hit gets the captain's element status. Bond ranks will raise it later.")]
     [Range(0f, 1f)] public float statusChance = 0.3f;
+
+    [Header("Support shape")]
+    [Tooltip("Fraction of max health restored to each tower in range and to its soldiers.")]
+    [Range(0f, 1f)] public float healFraction;
+    [Tooltip("Stat boost given to each tower in range. Heal and None give no boost.")]
+    public SupportEffect buffEffect;
+    [Tooltip("Size of the boost (0.5 = 50%). It stacks with auras but not with itself.")]
+    public float buffAmount;
+    public float buffSeconds = 8f;
 
     [Header("Feel")]
     [Tooltip("Real-time seconds the whole match freezes when the ability lands, while its effect plays. 0 turns it off.")]
