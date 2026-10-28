@@ -124,7 +124,7 @@ public class MatchHUD : MonoBehaviour
         CaptainData captain = tower.Captain;
         GUILayout.BeginArea(SelectionRect, GUI.skin.box);
 
-        GUILayout.Label($"{captain.displayName}  Lv {tower.Level}  ({captain.element} {captain.role})");
+        GUILayout.Label($"{captain.displayName}  Lv {tower.Level}  Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})  ({captain.element} {captain.role})");
         GUILayout.Label($"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}");
         GUILayout.Label($"Reserve {tower.Reserve}/{captain.resourceCapacity}   " +
                         (tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}"));

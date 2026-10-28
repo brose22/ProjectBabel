@@ -19,6 +19,8 @@ public static class GameEvents
     public static event Action<Tower> TowerDisabled;
     public static event Action<Tower> TowerRestored;
     public static event Action<Tower> CaptainLeveledUp;
+    public static event Action<CaptainData> ApprovalChanged;
+    public static event Action<CaptainData> BondRankUp;
 
     public static void RaiseEnemyKilled(Enemy enemy) => EnemyKilled?.Invoke(enemy);
     public static void RaiseEnemyLeaked(Enemy enemy) => EnemyLeaked?.Invoke(enemy);
@@ -34,6 +36,8 @@ public static class GameEvents
     public static void RaiseTowerDisabled(Tower tower) => TowerDisabled?.Invoke(tower);
     public static void RaiseTowerRestored(Tower tower) => TowerRestored?.Invoke(tower);
     public static void RaiseCaptainLeveledUp(Tower tower) => CaptainLeveledUp?.Invoke(tower);
+    public static void RaiseApprovalChanged(CaptainData captain) => ApprovalChanged?.Invoke(captain);
+    public static void RaiseBondRankUp(CaptainData captain) => BondRankUp?.Invoke(captain);
 
     // Statics survive play sessions when domain reload is disabled, so clear them on entry.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -53,5 +57,7 @@ public static class GameEvents
         TowerDisabled = null;
         TowerRestored = null;
         CaptainLeveledUp = null;
+        ApprovalChanged = null;
+        BondRankUp = null;
     }
 }

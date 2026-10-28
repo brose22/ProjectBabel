@@ -37,6 +37,8 @@ public class Tower : MonoBehaviour
     // Home offset for each soldier slot, kept so a swapped-in soldier stands where the old one did.
     readonly List<Vector3> slotHomes = new();
     float drawProgress;
+    // Fractional free reserve earned from approval, paid out a whole coin at a time.
+    float efficiencyBank;
     MatchManager match;
     // Timed boosts from support abilities, indexed by SupportEffect: amount and game time they end.
     readonly float[] timedBoostAmount = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
@@ -55,6 +57,10 @@ public class Tower : MonoBehaviour
     // The asset's level is a floor, for captains authored above level 1.
     public int Xp => RunState.Current != null ? RunState.Current.XpOf(Captain) : 0;
     public int Level => Mathf.Max(Captain.level, LevelMath.LevelForXp(Xp));
+
+    // Approval and bond rank persist between runs; see ApprovalStore.
+    public float Approval => ApprovalStore.ApprovalOf(Captain);
+    public int BondRank => ApprovalStore.RankOf(Captain);
     public int XpForNextLevel => LevelMath.XpForLevel(Level + 1);
     public bool IsMaxLevel => Level >= LevelMath.MaxLevel;
 
@@ -169,6 +175,13 @@ public class Tower : MonoBehaviour
             {
                 Reserve++;
                 drawProgress -= 1f;
+                // Approval makes each coin go further: the bonus banks up into free reserve coins.
+                efficiencyBank += BondMath.ReserveEfficiencyBonus(Approval);
+                if (efficiencyBank >= 1f && Reserve < capacity)
+                {
+                    Reserve++;
+                    efficiencyBank -= 1f;
+                }
             }
             drawProgress = Mathf.Min(drawProgress, 1f);
         }
@@ -271,7 +284,7 @@ public class Tower : MonoBehaviour
     void ChargeSpecial()
     {
         if (!HasAbility || IsDisabled || Enemy.Active.Count == 0) return;
-        float perSecond = Captain.specialChargeRate / Mathf.Max(1f, Captain.ability.chargeSeconds);
+        float perSecond = Captain.specialChargeRate * BondMath.ChargeRateMultiplier(Approval) / Mathf.Max(1f, Captain.ability.chargeSeconds);
         SpecialCharge = Mathf.Min(1f, SpecialCharge + perSecond * Time.deltaTime);
     }
 
