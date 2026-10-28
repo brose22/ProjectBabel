@@ -37,7 +37,7 @@ public static class GreyBoxMatchBuilder
         // break references to anything created below.
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-        foreach (string folder in new[] { ArtFolder, DataFolder + "/Captains", DataFolder + "/Enemies", DataFolder + "/Soldiers", PrefabFolder, "Assets/Scenes" })
+        foreach (string folder in new[] { ArtFolder, DataFolder + "/Abilities", DataFolder + "/Captains", DataFolder + "/Enemies", DataFolder + "/Soldiers", PrefabFolder, "Assets/Scenes" })
             EnsureFolder(folder);
 
         Sprite square = CreateSpriteAsset(ArtFolder + "/Square.png", 16, 16, (x, y) => Color.white);
@@ -105,18 +105,33 @@ public static class GreyBoxMatchBuilder
         var classes = new List<SoldierClassData> { knight, archer, rogue, mage };
         var defaultMix = new List<SoldierClassData> { knight, archer };
 
+        AbilityData flareVolley = Ability("FlareVolley", "Flare Volley", "Burst area damage", AbilityData.Shape.Area,
+            chargeSeconds: 20f, radius: 1.3f, damageMultiplier: 2.5f, statusChance: 0.35f);
+        AbilityData undertow = Ability("Undertow", "Undertow", "Area damage, pulls enemies back", AbilityData.Shape.Area,
+            chargeSeconds: 18f, radius: 1.1f, damageMultiplier: 1.5f, knockbackDistance: 1.2f, statusChance: 0.35f);
+        AbilityData rockfall = Ability("Rockfall", "Rockfall", "Single-target stun hit", AbilityData.Shape.Single,
+            chargeSeconds: 16f, damageMultiplier: 4f, statusChance: 0.6f);
+        AbilityData galeStrike = Ability("GaleStrike", "Gale Strike", "Long-range pierce", AbilityData.Shape.Line,
+            chargeSeconds: 20f, rangeMultiplier: 2f, radius: 0.35f, damageMultiplier: 2.5f, statusChance: 0.3f);
+        AbilityData scorchedEarth = Ability("ScorchedEarth", "Scorched Earth", "Damage zone on the path", AbilityData.Shape.Zone,
+            chargeSeconds: 22f, radius: 1f, damageMultiplier: 1f, zoneDuration: 5f, statusChance: 0.5f);
+        AbilityData crosswind = Ability("Crosswind", "Crosswind", "Pushes enemies back, applies Dizzy", AbilityData.Shape.Area,
+            chargeSeconds: 20f, radius: 1.3f, damageMultiplier: 1f, knockbackDistance: 1.5f, statusChance: 0.4f);
+
         var roster = new List<CaptainData>
         {
-            Captain("Cinder", Element.Fire, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage",
+            Captain("Cinder", Element.Fire, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage", flareVolley,
                 new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }),
-            Captain("Brine", Element.Water, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back",
+            Captain("Brine", Element.Water, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back", undertow,
                 new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Stable }),
-            Captain("Slate", Element.Earth, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit",
+            Captain("Slate", Element.Earth, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
                 new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }),
-            Captain("Zephyr", Element.Air, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce",
+            Captain("Zephyr", Element.Air, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
                 new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }),
-            Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path",
+            Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
                 new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Stable, CaptainTag.Leaks }),
+            Captain("Skye", Element.Air, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Dizzy", crosswind,
+                new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Stable, CaptainTag.Selling }),
         };
 
         string matchPath = DataFolder + "/GreyBoxMatch.asset";
@@ -130,7 +145,7 @@ public static class GreyBoxMatchBuilder
             m.relocationCost = 25;
             m.waves = BuildWaves(grunt, raider);
         });
-        if (matchExisted) UpgradeMatch(match, classes, defaultMix, grunt, raider);
+        if (matchExisted) UpgradeMatch(match, roster, classes, defaultMix, grunt, raider);
         return match;
     }
 
@@ -176,9 +191,16 @@ public static class GreyBoxMatchBuilder
     // Assets saved before Milestone 2 lack its fields. Fill only what is still unset so
     // designer tuning survives, and leave assets untouched when there is nothing to do.
 
-    static void UpgradeMatch(MatchData match, List<SoldierClassData> classes, List<SoldierClassData> defaultMix, EnemyData grunt, EnemyData raider)
+    static void UpgradeMatch(MatchData match, List<CaptainData> roster, List<SoldierClassData> classes, List<SoldierClassData> defaultMix, EnemyData grunt, EnemyData raider)
     {
         bool changed = false;
+        // Captains added after the match was saved join the end of its roster.
+        foreach (CaptainData captain in roster)
+        {
+            if (match.roster.Contains(captain)) continue;
+            match.roster.Add(captain);
+            changed = true;
+        }
         if (match.availableClasses.Count == 0)
         {
             match.availableClasses = new List<SoldierClassData>(classes);
@@ -254,9 +276,9 @@ public static class GreyBoxMatchBuilder
     }
 
     static CaptainData Captain(string name, Element element, Color color, float power, float range, float speed,
-        string ability, string abilityDescription, CaptainTag[] likes, CaptainTag[] dislikes)
+        string ability, string abilityDescription, AbilityData abilityData, CaptainTag[] likes, CaptainTag[] dislikes)
     {
-        return LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{name}.asset", c =>
+        CaptainData captain = LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{name}.asset", c =>
         {
             c.displayName = name;
             c.element = element;
@@ -267,8 +289,35 @@ public static class GreyBoxMatchBuilder
             c.speed = speed;
             c.abilityName = ability;
             c.abilityDescription = abilityDescription;
+            c.ability = abilityData;
             c.likes = likes;
             c.dislikes = dislikes;
+        });
+        // Captains saved before Milestone 3 have no ability yet.
+        if (captain.ability == null)
+        {
+            captain.ability = abilityData;
+            EditorUtility.SetDirty(captain);
+            Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its ability.");
+        }
+        return captain;
+    }
+
+    static AbilityData Ability(string name, string displayName, string description, AbilityData.Shape shape, float chargeSeconds,
+        float rangeMultiplier = 1f, float radius = 1f, float damageMultiplier = 2f, float knockbackDistance = 0f, float zoneDuration = 4f, float statusChance = 0.3f)
+    {
+        return LoadOrCreate<AbilityData>($"{DataFolder}/Abilities/{name}.asset", a =>
+        {
+            a.displayName = displayName;
+            a.description = description;
+            a.shape = shape;
+            a.chargeSeconds = chargeSeconds;
+            a.rangeMultiplier = rangeMultiplier;
+            a.radius = radius;
+            a.damageMultiplier = damageMultiplier;
+            a.knockbackDistance = knockbackDistance;
+            a.zoneDuration = zoneDuration;
+            a.statusChance = statusChance;
         });
     }
 
