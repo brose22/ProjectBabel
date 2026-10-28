@@ -24,6 +24,11 @@ public class MatchManager : MonoBehaviour
     public int Casualties { get; private set; }
 
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
+    public bool IsHitStopped => hitStopRemaining > 0f;
+
+    // Real-time seconds left on the current ability hit-stop.
+    float hitStopRemaining;
+    CameraShake cameraShake;
 
     // The first roster captain who isn't already on the field.
     public CaptainData NextCaptain
@@ -45,6 +50,11 @@ public class MatchManager : MonoBehaviour
         if (RunState.Current == null)
             RunState.StartNewRun(data.startingHealth, data.startingGold);
         Time.timeScale = GameSpeed;
+
+        // Added at runtime so existing scenes need no rebuild.
+        Camera cam = Camera.main;
+        if (cam != null)
+            cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
     }
 
     void OnEnable()
@@ -53,6 +63,7 @@ public class MatchManager : MonoBehaviour
         GameEvents.EnemyLeaked += OnEnemyLeaked;
         GameEvents.SoldierDied += OnSoldierDied;
         GameEvents.TowerDisabled += OnTowerDisabled;
+        GameEvents.AbilityUsed += OnAbilityUsed;
     }
 
     void OnDisable()
@@ -61,12 +72,15 @@ public class MatchManager : MonoBehaviour
         GameEvents.EnemyLeaked -= OnEnemyLeaked;
         GameEvents.SoldierDied -= OnSoldierDied;
         GameEvents.TowerDisabled -= OnTowerDisabled;
+        GameEvents.AbilityUsed -= OnAbilityUsed;
     }
 
     void OnDestroy() => Time.timeScale = 1f;
 
     void Update()
     {
+        TickHitStop();
+
         if (State == MatchState.WaveActive)
         {
             if (!spawner.IsSpawning && Enemy.Active.Count == 0)
@@ -150,13 +164,34 @@ public class MatchManager : MonoBehaviour
     public void ToggleGameSpeed()
     {
         GameSpeed = GameSpeed > 1f ? 1f : 2f;
-        if (!IsOver) Time.timeScale = GameSpeed;
+        if (!IsOver && !IsHitStopped) Time.timeScale = GameSpeed;
     }
 
     public void RestartRun()
     {
         RunState.StartNewRun(data.startingHealth, data.startingGold);
         SceneManager.LoadScene(gameObject.scene.name);
+    }
+
+    // Jolts the camera and freezes the match for a moment when an ability lands so the hit reads.
+    // Overlapping abilities extend the freeze to the longest one rather than stacking.
+    void OnAbilityUsed(Tower tower)
+    {
+        AbilityData ability = tower.Captain.ability;
+        if (cameraShake != null) cameraShake.Shake(ability.cameraShake, ability.cameraShakeSeconds);
+
+        float seconds = ability.hitStopSeconds;
+        if (seconds <= 0f || IsOver) return;
+        hitStopRemaining = Mathf.Max(hitStopRemaining, seconds);
+        Time.timeScale = 0f;
+    }
+
+    // Counts in unscaled time, since the freeze itself sets timeScale to 0.
+    void TickHitStop()
+    {
+        if (hitStopRemaining <= 0f) return;
+        hitStopRemaining -= Time.unscaledDeltaTime;
+        if (hitStopRemaining <= 0f && !IsOver) Time.timeScale = GameSpeed;
     }
 
     void Finish(MatchState result)

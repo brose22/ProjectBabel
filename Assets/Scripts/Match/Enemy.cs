@@ -22,6 +22,9 @@ public class Enemy : MonoBehaviour
     readonly float[] statusTime = new float[StatusRules.KindCount];
     float burnDamagePerSecond;
     int tintedStatus = -1;
+    // Unscaled time until which the enemy shows the white ability-hit flash.
+    float hitFlashUntil;
+    const int HitFlashTint = -2;
 
     float MoveSpeed => Data.moveSpeed * (HasStatus(StatusKind.Slow) ? StatusRules.SlowSpeedMultiplier : 1f);
     float AttackIntervalMultiplier => HasStatus(StatusKind.Stun) ? StatusRules.StunAttackIntervalMultiplier : 1f;
@@ -42,7 +45,12 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
-        if (!IsTargetable) return;
+        if (!IsTargetable)
+        {
+            // Only reached while lingering after an ability kill; see Remove.
+            if (Time.unscaledTime >= hitFlashUntil) Destroy(gameObject);
+            return;
+        }
 
         TickStatuses();
         if (!IsTargetable) return;
@@ -104,12 +112,22 @@ public class Enemy : MonoBehaviour
             TakeDamage(burnDamagePerSecond * Time.deltaTime);
     }
 
-    // Shows the first active status as a tint on the body so statuses are readable in grey-box.
+    // Flashes white for real-time seconds, so the flash shows during an ability's hit-stop.
+    public void FlashHit(float seconds)
+    {
+        if (seconds <= 0f) return;
+        hitFlashUntil = Mathf.Max(hitFlashUntil, Time.unscaledTime + seconds);
+        UpdateTint(tintedStatus == HitFlashTint ? -1 : tintedStatus);
+    }
+
+    // Shows a hit flash, else the first active status, as a tint on the body so both read in grey-box.
     void UpdateTint(int status)
     {
-        if (status == tintedStatus) return;
-        tintedStatus = status;
-        body.color = status < 0 ? Data.color : Color.Lerp(Data.color, StatusRules.TintOf((StatusKind)status), 0.6f);
+        int tint = Time.unscaledTime < hitFlashUntil ? HitFlashTint : status;
+        if (tint == tintedStatus) return;
+        tintedStatus = tint;
+        if (tint == HitFlashTint) body.color = Color.white;
+        else body.color = tint < 0 ? Data.color : Color.Lerp(Data.color, StatusRules.TintOf((StatusKind)tint), 0.6f);
     }
 
     // A passing hit on its own timer: the enemy keeps walking. It only runs while the enemy walks,
@@ -154,11 +172,16 @@ public class Enemy : MonoBehaviour
         GameEvents.RaiseEnemyLeaked(this);
     }
 
+    // The enemy leaves play at once (no targeting, blocking or wave count), but one still showing
+    // an ability-hit flash stays on screen until the flash, and so the hit-stop, is over.
     void Remove()
     {
         IsTargetable = false;
         Active.Remove(this);
-        Destroy(gameObject);
+        if (Time.unscaledTime < hitFlashUntil)
+            healthBar.gameObject.SetActive(false);
+        else
+            Destroy(gameObject);
     }
 
     void OnDestroy() => Active.Remove(this);
