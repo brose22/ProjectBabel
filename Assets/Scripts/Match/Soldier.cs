@@ -9,6 +9,8 @@ public class Soldier : MonoBehaviour
     const float RespawnDelay = 3f;
     // How far past the tower's range a soldier will chase before giving up.
     const float LeashSlack = 1f;
+    // Size of a shot drawn with the body sprite when no projectile sprite is assigned.
+    const float FallbackProjectileScale = 0.35f;
 
     enum State { Ready, Advancing, Returning, Recovering, Dead }
 
@@ -16,6 +18,8 @@ public class Soldier : MonoBehaviour
 
     [SerializeField] SpriteRenderer body;
     [SerializeField] HealthBar healthBar;
+    [Tooltip("Optional; ranged shots fall back to a shrunken body sprite.")]
+    [SerializeField] Sprite projectileSprite;
 
     public SoldierClassData Class { get; private set; }
     public Tower Tower { get; private set; }
@@ -89,11 +93,56 @@ public class Soldier : MonoBehaviour
             }
         }
 
-        if (MoveTowards(target.transform.position, Class.attackRange))
+        // Ranged and magic soldiers already in reach strike without stepping forward.
+        bool inReach = Class.attackStyle != SoldierClassData.AttackStyle.Melee &&
+            Vector2.Distance(transform.position, target.transform.position) <= Class.attackRange + 0.001f;
+        if (inReach || MoveTowards(target.transform.position, Class.attackRange))
         {
-            target.TakeDamage(Tower.SoldierPower * Class.damageMultiplier);
+            Strike(target);
             target = null;
             SetState(State.Returning);
+        }
+    }
+
+    void Strike(Enemy enemy)
+    {
+        float damage = Tower.SoldierPower * Class.damageMultiplier;
+        switch (Class.attackStyle)
+        {
+            case SoldierClassData.AttackStyle.Ranged:
+                // Fire and forget: the soldier heads home while the shot is in flight.
+                bool hasOwnSprite = projectileSprite != null;
+                Projectile.Launch(transform.position, enemy, damage, Class.projectileSpeed,
+                    hasOwnSprite ? projectileSprite : body.sprite, Class.color,
+                    hasOwnSprite ? 1f : body.transform.lossyScale.x * FallbackProjectileScale,
+                    body.sortingOrder + 1);
+                break;
+            case SoldierClassData.AttackStyle.Magic:
+                SplashDamage(enemy, damage);
+                break;
+            default:
+                enemy.TakeDamage(damage);
+                enemy.Knockback(Class.knockbackDistance);
+                break;
+        }
+    }
+
+    void SplashDamage(Enemy enemy, float damage)
+    {
+        if (Class.splashRadius <= 0f)
+        {
+            enemy.TakeDamage(damage);
+            return;
+        }
+
+        // Copy first: a kill removes the enemy from Enemy.Active mid-loop.
+        Vector3 center = enemy.transform.position;
+        var victims = new List<Enemy>(Enemy.Active);
+        foreach (Enemy victim in victims)
+        {
+            if (victim != null && victim.IsTargetable &&
+                Vector2.Distance(center, victim.transform.position) <= Class.splashRadius)
+                victim.TakeDamage(damage);
         }
     }
 
