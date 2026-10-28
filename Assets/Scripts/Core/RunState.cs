@@ -9,6 +9,10 @@ public class RunState
     public static RunState Current { get; private set; }
 
     readonly Dictionary<CaptainData, int> captainXp = new();
+    // Each captain's highest approval seen this run, for the walkout rule.
+    readonly Dictionary<CaptainData, float> bestApprovalThisRun = new();
+    // Captains who have walked out; they sit out the rest of this run only (GDD).
+    readonly HashSet<CaptainData> departed = new();
 
     public int Health { get; private set; }
     public int MaxHealth { get; private set; }
@@ -38,6 +42,19 @@ public class RunState
     {
         if (amount > 0) captainXp[captain] = XpOf(captain) + amount;
     }
+
+    // The best approval this run, starting from the captain's approval when first seen this run.
+    public float BestApprovalThisRun(CaptainData captain)
+    {
+        float current = ApprovalStore.ApprovalOf(captain);
+        if (!bestApprovalThisRun.TryGetValue(captain, out float best) || current > best)
+            bestApprovalThisRun[captain] = best = current;
+        return best;
+    }
+
+    public bool HasDeparted(CaptainData captain) => departed.Contains(captain);
+
+    public void Depart(CaptainData captain) => departed.Add(captain);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Current = null;
