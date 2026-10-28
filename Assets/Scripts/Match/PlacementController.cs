@@ -100,6 +100,7 @@ public class PlacementController : MonoBehaviour
         if (keyboard.digit2Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.Normal);
         if (keyboard.digit3Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.High);
         if (keyboard.xKey.wasPressedThisFrame) SellSelected();
+        if (keyboard.qKey.wasPressedThisFrame) Selected.TryUseAbility();
     }
 
     public void Select(Tower tower)
