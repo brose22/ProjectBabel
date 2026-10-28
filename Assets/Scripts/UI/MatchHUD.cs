@@ -14,6 +14,7 @@ public class MatchHUD : MonoBehaviour
     [SerializeField] PlacementController placement;
 
     GUIStyle titleStyle;
+    Relationships relationships;
 
     float Scale => Screen.height / ReferenceHeight;
     float ReferenceWidth => Screen.width / Scale;
@@ -27,7 +28,7 @@ public class MatchHUD : MonoBehaviour
         }
     }
     float SoldierSlotsHeight => placement.Selected != null ? placement.Selected.Soldiers.Count * SoldierSlotHeight : 0f;
-    Rect EndRect => new(ReferenceWidth * 0.5f - 150f, ReferenceHeight * 0.5f - 85f, 300f, 170f);
+    Rect EndRect => new(ReferenceWidth * 0.5f - 150f, ReferenceHeight * 0.5f - 100f, 300f, 200f);
 
     // Takes a screen position in Input System coordinates (origin bottom-left).
     public bool IsPointerOverHud(Vector2 screenPosition)
@@ -46,6 +47,7 @@ public class MatchHUD : MonoBehaviour
         DrawTopBar();
         if (placement.Selected != null) DrawSelection(placement.Selected);
         if (placement.IsMoving && placement.Selected != null) DrawMoveHint(placement.Selected);
+        DrawApprovalMessages();
         if (match.IsOver) DrawEndPanel();
 
         GUI.Label(new Rect(ReferenceWidth - 655f, ReferenceHeight - 24f, 650f, 22f),
@@ -250,6 +252,21 @@ public class MatchHUD : MonoBehaviour
         GUI.Box(new Rect(ReferenceWidth * 0.5f - 230f, TopBarHeight + 6f, 460f, 24f), hint);
     }
 
+    // Added to the match at runtime, so it is looked up rather than wired in the scene.
+    Relationships Relationships => relationships != null ? relationships : relationships = match.GetComponent<Relationships>();
+
+    // Recent approval changes, top right under the bar. Labels only, so clicks pass through.
+    void DrawApprovalMessages()
+    {
+        if (Relationships == null) return;
+        float y = TopBarHeight + 4f;
+        foreach (string message in Relationships.RecentMessages)
+        {
+            GUI.Label(new Rect(ReferenceWidth - 320f, y, 315f, 20f), message);
+            y += 18f;
+        }
+    }
+
     void DrawEndPanel()
     {
         GUILayout.BeginArea(EndRect, GUI.skin.box);
@@ -257,6 +274,8 @@ public class MatchHUD : MonoBehaviour
         GUILayout.Label($"Waves cleared {match.WavesCleared}/{match.WaveCount}");
         GUILayout.Label($"Kills {match.Kills}   Leaks {match.Leaks}   Casualties {match.Casualties}");
         GUILayout.Label($"Gold left {RunState.Current.Gold}");
+        if (Relationships != null && Relationships.Walkouts.Count > 0)
+            GUILayout.Label("Walked out for this run: " + string.Join(", ", Relationships.Walkouts.ConvertAll(c => c.displayName)));
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("Start a new run")) match.RestartRun();
         GUILayout.EndArea();

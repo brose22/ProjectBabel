@@ -74,6 +74,7 @@ public class MatchManager : MonoBehaviour
         Camera cam = Camera.main;
         if (cam != null)
             cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
+        if (!TryGetComponent(out Relationships _)) gameObject.AddComponent<Relationships>();
     }
 
     void OnEnable()
@@ -232,6 +233,7 @@ public class MatchManager : MonoBehaviour
         State = result;
         spawner.StopSpawning();
         Time.timeScale = 0f;
+        GameEvents.RaiseMatchEnded(result == MatchState.Won);
     }
 
     // The tower that landed the killing blow earns the XP; a destroyed (sold) tower earns nothing.
