@@ -90,6 +90,59 @@ public static class GreyBoxMatchBuilder
             e.towerAttackInterval = 1.5f;
         });
 
+        EnemyData slinger = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Slinger.asset", e =>
+        {
+            e.displayName = "Slinger";
+            e.color = new Color(0.9f, 0.5f, 0.6f);
+            e.size = 0.5f;
+            e.maxHealth = 25f;
+            e.moveSpeed = 1.3f;
+            e.goldReward = 8;
+            e.xpReward = 10;
+            e.leakDamage = 1;
+            e.attackDamage = 4f;
+            e.attackInterval = 1.5f;
+            e.rangedAttackRange = 2f;
+            e.hasWeakness = true;
+            e.weakness = Element.Earth;
+        });
+
+        EnemyData brute = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Brute.asset", e =>
+        {
+            e.displayName = "Brute";
+            e.color = new Color(0.55f, 0.1f, 0.15f);
+            e.size = 0.85f;
+            e.maxHealth = 120f;
+            e.moveSpeed = 0.8f;
+            e.goldReward = 15;
+            e.xpReward = 25;
+            e.leakDamage = 2;
+            e.attackDamage = 10f;
+            e.attackInterval = 1.2f;
+            e.hasWeakness = true;
+            e.weakness = Element.Water;
+        });
+
+        EnemyData bombard = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Bombard.asset", e =>
+        {
+            e.displayName = "Bombard";
+            e.color = new Color(0.5f, 0.2f, 0.5f);
+            e.size = 0.8f;
+            e.maxHealth = 90f;
+            e.moveSpeed = 0.8f;
+            e.goldReward = 15;
+            e.xpReward = 25;
+            e.leakDamage = 2;
+            e.attackDamage = 8f;
+            e.attackInterval = 2f;
+            e.rangedAttackRange = 2.75f;
+            e.towerDamage = 5f;
+            e.towerAttackRange = 2f;
+            e.towerAttackInterval = 2f;
+            e.hasWeakness = true;
+            e.weakness = Element.Air;
+        });
+
         // GDD cost tiers. Act: Rogue very low, Knight/Archer low, Mage high.
         // Respawn: Rogue/Archer low, Knight medium, Mage high.
         SoldierClassData knight = SoldierClass("Knight", new Color(0.4f, 0.55f, 1f), SoldierClassData.AttackStyle.Melee,
@@ -118,6 +171,19 @@ public static class GreyBoxMatchBuilder
         AbilityData crosswind = Ability("Crosswind", "Crosswind", "Pushes enemies back, applies Dizzy", AbilityData.Shape.Area,
             chargeSeconds: 20f, radius: 1.3f, damageMultiplier: 1f, knockbackDistance: 1.5f, statusChance: 0.4f);
 
+        AbilityData tidalMend = SupportAbility("TidalMend", "Tidal Mend", "Heals tower and soldiers",
+            chargeSeconds: 18f, radius: 0f, healFraction: 0.5f);
+        AbilityData flowState = SupportAbility("FlowState", "Flow State", "Faster soldier acts",
+            chargeSeconds: 18f, radius: 0f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.75f, buffSeconds: 8f);
+        AbilityData kindle = SupportAbility("Kindle", "Kindle", "Damage boost to nearby towers",
+            chargeSeconds: 20f, radius: 2.5f, buffEffect: SupportEffect.Damage, buffAmount: 0.5f, buffSeconds: 8f);
+        AbilityData stoneWard = SupportAbility("StoneWard", "Stone Ward", "Defense boost, towers and soldiers",
+            chargeSeconds: 20f, radius: 2.5f, buffEffect: SupportEffect.Defense, buffAmount: 0.5f, buffSeconds: 8f);
+        AbilityData mendTheLand = SupportAbility("MendTheLand", "Mend the Land", "Area heal plus short shield",
+            chargeSeconds: 22f, radius: 2.5f, healFraction: 0.3f, buffEffect: SupportEffect.Defense, buffAmount: 0.6f, buffSeconds: 3f);
+        AbilityData secondWind = SupportAbility("SecondWind", "Second Wind", "Heal plus speed boost",
+            chargeSeconds: 20f, radius: 2f, healFraction: 0.25f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.5f, buffSeconds: 6f);
+
         var roster = new List<CaptainData>
         {
             Captain("Cinder", Element.Fire, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage", flareVolley,
@@ -132,6 +198,24 @@ public static class GreyBoxMatchBuilder
                 new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Stable, CaptainTag.Leaks }),
             Captain("Skye", Element.Air, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Dizzy", crosswind,
                 new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Stable, CaptainTag.Selling }),
+            Captain("Marin", Element.Water, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", "Heals tower and soldiers", tidalMend,
+                new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties },
+                CaptainRole.Healer, SupportEffect.Heal, 2f),
+            Captain("Rill", Element.Water, new Color(0.35f, 0.6f, 1f), 7f, 2f, 1.1f, "Flow State", "Faster soldier acts", flowState,
+                new[] { CaptainTag.Rogues, CaptainTag.Ability, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Moving },
+                CaptainRole.Buffer, SupportEffect.ActSpeed, 0.5f),
+            Captain("Ember", Element.Fire, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", "Damage boost to nearby towers", kindle,
+                new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Leaks }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Stable },
+                CaptainRole.Buffer, SupportEffect.Damage, 0.5f),
+            Captain("Boulder", Element.Earth, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", "Defense boost, towers and soldiers", stoneWard,
+                new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Casualties },
+                CaptainRole.Buffer, SupportEffect.Defense, 0.4f),
+            Captain("Terra", Element.Earth, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", "Area heal plus short shield", mendTheLand,
+                new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Leaks }, new[] { CaptainTag.Rogues, CaptainTag.Moving, CaptainTag.Casualties },
+                CaptainRole.Healer, SupportEffect.Heal, 1.5f),
+            Captain("Gust", Element.Air, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", "Heal plus speed boost", secondWind,
+                new[] { CaptainTag.Archers, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Casualties },
+                CaptainRole.Healer, SupportEffect.Heal, 1.5f),
         };
 
         string matchPath = DataFolder + "/GreyBoxMatch.asset";
@@ -143,15 +227,16 @@ public static class GreyBoxMatchBuilder
             m.defaultMix = defaultMix;
             m.restoreBaseCost = 15;
             m.relocationCost = 25;
-            m.waves = BuildWaves(grunt, raider);
+            m.waves = BuildWaves(grunt, raider, slinger, brute, bombard);
         });
-        if (matchExisted) UpgradeMatch(match, roster, classes, defaultMix, grunt, raider);
+        if (matchExisted) UpgradeMatch(match, roster, classes, defaultMix, grunt, raider, slinger, brute, bombard);
         return match;
     }
 
     // ~56 enemies over 10 waves (GDD: ~50 kills per match); Raiders join from wave 3 and
-    // follow each wave's Grunts.
-    static List<WaveDefinition> BuildWaves(EnemyData grunt, EnemyData raider)
+    // follow each wave's Grunts. Slingers join from wave 2, Brutes from wave 4 and Bombards from
+    // wave 6, after the Raiders.
+    static List<WaveDefinition> BuildWaves(EnemyData grunt, EnemyData raider, EnemyData slinger, EnemyData brute, EnemyData bombard)
     {
         int[] grunts = { 2, 3, 3, 4, 4, 4, 4, 4, 5, 5 };
         int[] raiders = { 0, 0, 1, 1, 2, 2, 2, 3, 3, 4 };
@@ -162,6 +247,12 @@ public static class GreyBoxMatchBuilder
             wave.groups.Add(new SpawnGroup { enemy = grunt, count = grunts[i], spawnInterval = Mathf.Max(0.6f, 1.4f - 0.08f * i) });
             if (raiders[i] > 0)
                 wave.groups.Add(new SpawnGroup { enemy = raider, count = raiders[i], spawnInterval = 1.5f, delayBefore = 1.5f });
+            if (i >= 1)
+                wave.groups.Add(new SpawnGroup { enemy = slinger, count = 1 + i / 3, spawnInterval = 1.2f, delayBefore = 1.5f });
+            if (i >= 3)
+                wave.groups.Add(new SpawnGroup { enemy = brute, count = 1 + (i - 3) / 3, spawnInterval = 2.5f, delayBefore = 2f });
+            if (i >= 5)
+                wave.groups.Add(new SpawnGroup { enemy = bombard, count = 1 + (i - 5) / 2, spawnInterval = 3f, delayBefore = 2f });
             waves.Add(wave);
         }
         return waves;
@@ -191,7 +282,8 @@ public static class GreyBoxMatchBuilder
     // Assets saved before Milestone 2 lack its fields. Fill only what is still unset so
     // designer tuning survives, and leave assets untouched when there is nothing to do.
 
-    static void UpgradeMatch(MatchData match, List<CaptainData> roster, List<SoldierClassData> classes, List<SoldierClassData> defaultMix, EnemyData grunt, EnemyData raider)
+    static void UpgradeMatch(MatchData match, List<CaptainData> roster, List<SoldierClassData> classes, List<SoldierClassData> defaultMix,
+        EnemyData grunt, EnemyData raider, EnemyData slinger, EnemyData brute, EnemyData bombard)
     {
         bool changed = false;
         // Captains added after the match was saved join the end of its roster.
@@ -224,7 +316,13 @@ public static class GreyBoxMatchBuilder
         }
         if (!match.waves.Exists(w => w.groups.Exists(g => g.enemy != null && g.enemy.towerDamage > 0f)))
         {
-            match.waves = BuildWaves(grunt, raider);
+            match.waves = BuildWaves(grunt, raider, slinger, brute, bombard);
+            changed = true;
+        }
+        // Waves built before ranged enemies existed get rebuilt with them.
+        if (!match.waves.Exists(w => w.groups.Exists(g => g.enemy != null && g.enemy.rangedAttackRange > 0f)))
+        {
+            match.waves = BuildWaves(grunt, raider, slinger, brute, bombard);
             changed = true;
         }
         if (!changed) return;
@@ -276,13 +374,14 @@ public static class GreyBoxMatchBuilder
     }
 
     static CaptainData Captain(string name, Element element, Color color, float power, float range, float speed,
-        string ability, string abilityDescription, AbilityData abilityData, CaptainTag[] likes, CaptainTag[] dislikes)
+        string ability, string abilityDescription, AbilityData abilityData, CaptainTag[] likes, CaptainTag[] dislikes,
+        CaptainRole role = CaptainRole.Attacker, SupportEffect aura = SupportEffect.None, float auraStrength = 0f, float auraFadeSeconds = 60f)
     {
         CaptainData captain = LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{name}.asset", c =>
         {
             c.displayName = name;
             c.element = element;
-            c.role = CaptainRole.Attacker;
+            c.role = role;
             c.color = color;
             c.power = power;
             c.range = range;
@@ -292,6 +391,9 @@ public static class GreyBoxMatchBuilder
             c.ability = abilityData;
             c.likes = likes;
             c.dislikes = dislikes;
+            c.aura = aura;
+            c.auraStrength = auraStrength;
+            c.auraFadeSeconds = auraFadeSeconds;
         });
         // Captains saved before Milestone 3 have no ability yet.
         if (captain.ability == null)
@@ -318,6 +420,25 @@ public static class GreyBoxMatchBuilder
             a.knockbackDistance = knockbackDistance;
             a.zoneDuration = zoneDuration;
             a.statusChance = statusChance;
+        });
+    }
+
+    static AbilityData SupportAbility(string name, string displayName, string description, float chargeSeconds, float radius,
+        float healFraction = 0f, SupportEffect buffEffect = SupportEffect.None, float buffAmount = 0f, float buffSeconds = 0f)
+    {
+        return LoadOrCreate<AbilityData>($"{DataFolder}/Abilities/{name}.asset", a =>
+        {
+            a.displayName = displayName;
+            a.description = description;
+            a.shape = AbilityData.Shape.Support;
+            a.chargeSeconds = chargeSeconds;
+            a.radius = radius;
+            a.statusChance = 0f;
+            a.healFraction = healFraction;
+            a.buffEffect = buffEffect;
+            a.buffAmount = buffAmount;
+            a.buffSeconds = buffSeconds;
+            a.cameraShake = 0.05f;
         });
     }
 
