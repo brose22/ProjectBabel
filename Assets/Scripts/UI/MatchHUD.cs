@@ -15,6 +15,7 @@ public class MatchHUD : MonoBehaviour
 
     GUIStyle titleStyle;
     Relationships relationships;
+    CaptainRequests requests;
 
     float Scale => Screen.height / ReferenceHeight;
     float ReferenceWidth => Screen.width / Scale;
@@ -36,6 +37,9 @@ public class MatchHUD : MonoBehaviour
         var gui = new Vector2(screenPosition.x / Scale, (Screen.height - screenPosition.y) / Scale);
         if (TopBarRect.Contains(gui)) return true;
         if (placement.Selected != null && SelectionRect.Contains(gui)) return true;
+        if (Requests != null)
+            for (int i = 0; i < Requests.Pending.Count; i++)
+                if (RequestRect(i).Contains(gui)) return true;
         return match.IsOver;
     }
 
@@ -48,6 +52,7 @@ public class MatchHUD : MonoBehaviour
         if (placement.Selected != null) DrawSelection(placement.Selected);
         if (placement.IsMoving && placement.Selected != null) DrawMoveHint(placement.Selected);
         DrawApprovalMessages();
+        DrawRequests();
         if (match.IsOver) DrawEndPanel();
 
         GUI.Label(new Rect(ReferenceWidth - 655f, ReferenceHeight - 24f, 650f, 22f),
@@ -236,9 +241,9 @@ public class MatchHUD : MonoBehaviour
             return;
         }
 
-        int cost = match.Data.relocationCost;
+        int cost = match.MoveCost(tower);
         bool wasEnabled = GUI.enabled;
-        GUI.enabled = wasEnabled && match.CanMove(tower) && match.CanAffordMove;
+        GUI.enabled = wasEnabled && match.CanMove(tower) && match.CanAffordMove(tower);
         if (GUILayout.Button(cost > 0 ? $"Move ({cost} Gold)" : "Move (free)")) placement.BeginMove();
         GUI.enabled = wasEnabled;
     }
@@ -248,12 +253,36 @@ public class MatchHUD : MonoBehaviour
     void DrawMoveHint(Tower tower)
     {
         string hint = $"Moving {tower.Captain.displayName}: click a free tile (Esc / right-click to cancel)";
-        if (!match.CanAffordMove) hint += "  - not enough Gold";
+        if (!match.CanAffordMove(tower)) hint += "  - not enough Gold";
         GUI.Box(new Rect(ReferenceWidth * 0.5f - 230f, TopBarHeight + 6f, 460f, 24f), hint);
     }
 
     // Added to the match at runtime, so it is looked up rather than wired in the scene.
     Relationships Relationships => relationships != null ? relationships : relationships = match.GetComponent<Relationships>();
+    CaptainRequests Requests => requests != null ? requests : requests = match.GetComponent<CaptainRequests>();
+
+    // Request cards sit below the move hint, top centre.
+    Rect RequestRect(int index) => new(ReferenceWidth * 0.5f - 280f, TopBarHeight + 34f + index * 30f, 560f, 28f);
+
+    void DrawRequests()
+    {
+        if (Requests == null) return;
+        // Answering removes the request, so draw from a copy.
+        var snapshot = new System.Collections.Generic.List<CaptainRequests.Request>(Requests.Pending);
+        for (int i = 0; i < snapshot.Count; i++)
+        {
+            CaptainRequests.Request request = snapshot[i];
+            if (request.Tower == null) continue;
+            GUILayout.BeginArea(RequestRect(i), GUI.skin.box);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"{request.Tower.Captain.displayName}: \"{request.Text}\"");
+            if (GUILayout.Button("No", GUILayout.Width(44f))) Requests.Answer(request, RequestAnswer.No);
+            if (GUILayout.Button("Some", GUILayout.Width(52f))) Requests.Answer(request, RequestAnswer.Some);
+            if (GUILayout.Button("Yes", GUILayout.Width(44f))) Requests.Answer(request, RequestAnswer.Yes);
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+    }
 
     // Recent approval changes, top right under the bar. Labels only, so clicks pass through.
     void DrawApprovalMessages()

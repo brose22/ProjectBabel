@@ -172,7 +172,7 @@ public class Relationships : MonoBehaviour
     }
 
     // Soldier classes map to tags by name: Knight -> Knights, Archer -> Archers, and so on.
-    static bool TryGetClassTag(SoldierClassData soldierClass, out CaptainTag tag) =>
+    public static bool TryGetClassTag(SoldierClassData soldierClass, out CaptainTag tag) =>
         Enum.TryParse(soldierClass.displayName + "s", out tag) && tag <= CaptainTag.Rogues;
 
     void OnApplicationQuit() => ApprovalStore.Save();
