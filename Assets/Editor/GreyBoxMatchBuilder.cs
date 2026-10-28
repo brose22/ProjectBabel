@@ -187,35 +187,35 @@ public static class GreyBoxMatchBuilder
         var roster = new List<CaptainData>
         {
             Captain("Cinder", Element.Fire, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage", flareVolley,
-                new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }),
+                new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }, refusalTemper: 1.25f),
             Captain("Brine", Element.Water, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back", undertow,
-                new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Stable }),
+                new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Stable }, refusalTemper: 1f),
             Captain("Slate", Element.Earth, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
-                new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }),
+                new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }, refusalTemper: 1f),
             Captain("Zephyr", Element.Air, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
-                new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }),
+                new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Moving }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Selling }, refusalTemper: 1f),
             Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
-                new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Stable, CaptainTag.Leaks }),
+                new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Stable, CaptainTag.Leaks }, refusalTemper: 1.5f),
             Captain("Skye", Element.Air, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Dizzy", crosswind,
-                new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Stable, CaptainTag.Selling }),
+                new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Stable, CaptainTag.Selling }, refusalTemper: 1.25f),
             Captain("Marin", Element.Water, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", "Heals tower and soldiers", tidalMend,
                 new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties },
-                CaptainRole.Healer, SupportEffect.Heal, 2f),
+                CaptainRole.Healer, SupportEffect.Heal, 2f, refusalTemper: 0.75f),
             Captain("Rill", Element.Water, new Color(0.35f, 0.6f, 1f), 7f, 2f, 1.1f, "Flow State", "Faster soldier acts", flowState,
                 new[] { CaptainTag.Rogues, CaptainTag.Ability, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Moving },
-                CaptainRole.Buffer, SupportEffect.ActSpeed, 0.5f),
+                CaptainRole.Buffer, SupportEffect.ActSpeed, 0.5f, refusalTemper: 1f),
             Captain("Ember", Element.Fire, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", "Damage boost to nearby towers", kindle,
                 new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Leaks }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Stable },
-                CaptainRole.Buffer, SupportEffect.Damage, 0.5f),
+                CaptainRole.Buffer, SupportEffect.Damage, 0.5f, refusalTemper: 1.25f),
             Captain("Boulder", Element.Earth, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", "Defense boost, towers and soldiers", stoneWard,
                 new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Casualties },
-                CaptainRole.Buffer, SupportEffect.Defense, 0.4f),
+                CaptainRole.Buffer, SupportEffect.Defense, 0.4f, refusalTemper: 0.75f),
             Captain("Terra", Element.Earth, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", "Area heal plus short shield", mendTheLand,
                 new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Leaks }, new[] { CaptainTag.Rogues, CaptainTag.Moving, CaptainTag.Casualties },
-                CaptainRole.Healer, SupportEffect.Heal, 1.5f),
+                CaptainRole.Healer, SupportEffect.Heal, 1.5f, refusalTemper: 0.75f),
             Captain("Gust", Element.Air, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", "Heal plus speed boost", secondWind,
                 new[] { CaptainTag.Archers, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Casualties },
-                CaptainRole.Healer, SupportEffect.Heal, 1.5f),
+                CaptainRole.Healer, SupportEffect.Heal, 1.5f, refusalTemper: 0.75f),
         };
 
         string matchPath = DataFolder + "/GreyBoxMatch.asset";
@@ -375,7 +375,7 @@ public static class GreyBoxMatchBuilder
 
     static CaptainData Captain(string name, Element element, Color color, float power, float range, float speed,
         string ability, string abilityDescription, AbilityData abilityData, CaptainTag[] likes, CaptainTag[] dislikes,
-        CaptainRole role = CaptainRole.Attacker, SupportEffect aura = SupportEffect.None, float auraStrength = 0f, float auraFadeSeconds = 60f)
+        CaptainRole role = CaptainRole.Attacker, SupportEffect aura = SupportEffect.None, float auraStrength = 0f, float auraFadeSeconds = 60f, float refusalTemper = 1f)
     {
         CaptainData captain = LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{name}.asset", c =>
         {
@@ -394,6 +394,7 @@ public static class GreyBoxMatchBuilder
             c.aura = aura;
             c.auraStrength = auraStrength;
             c.auraFadeSeconds = auraFadeSeconds;
+            c.refusalTemper = refusalTemper;
         });
         // Captains saved before Milestone 3 have no ability yet.
         if (captain.ability == null)
@@ -401,6 +402,13 @@ public static class GreyBoxMatchBuilder
             captain.ability = abilityData;
             EditorUtility.SetDirty(captain);
             Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its ability.");
+        }
+        // Captains saved before bond data existed lack a refusal temper. 1 is a legitimate value, so only a never-saved field counts as unset.
+        if (!IsSerialized(captain, nameof(CaptainData.refusalTemper)))
+        {
+            captain.refusalTemper = refusalTemper;
+            EditorUtility.SetDirty(captain);
+            Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its refusal temper.");
         }
         return captain;
     }
