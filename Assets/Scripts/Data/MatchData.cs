@@ -44,6 +44,10 @@ public class MatchData : ScriptableObject
     [Tooltip("Gold taken from the shared pool to relocate a tower mid-match. 0 makes moving free.")]
     public int relocationCost = 25;
 
+    [Header("Captain XP")]
+    [Tooltip("Most XP a captain can earn from healing and buffing in one wave (GDD: support XP is capped per wave). Kill XP is not capped.")]
+    public int supportXpCapPerWave = 60;
+
     [Header("Waves")]
     [Tooltip("Seconds before the next wave starts on its own. The first wave waits for the player.")]
     public float timeBetweenWaves = 15f;

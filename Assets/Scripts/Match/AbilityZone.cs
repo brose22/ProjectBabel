@@ -20,9 +20,11 @@ public class AbilityZone : MonoBehaviour
     float age;
     float radius;
     float damagePerSecond;
+    // Credited with kills the zone lands.
+    Tower source;
 
     public static AbilityZone Spawn(Vector3 position, float rotationDegrees, Vector3 scale, Sprite sprite, Color color,
-        float lifetime, float popSeconds, float radius = 0f, float damagePerSecond = 0f)
+        float lifetime, float popSeconds, float radius = 0f, float damagePerSecond = 0f, Tower source = null)
     {
         var zoneObject = new GameObject("Ability Effect");
         zoneObject.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, rotationDegrees));
@@ -40,6 +42,7 @@ public class AbilityZone : MonoBehaviour
         zone.lifetime = Mathf.Max(0.05f, lifetime);
         zone.radius = radius;
         zone.damagePerSecond = damagePerSecond;
+        zone.source = source;
         return zone;
     }
 
@@ -64,7 +67,7 @@ public class AbilityZone : MonoBehaviour
             // Snapshot first: damage can kill enemies, which removes them from Enemy.Active.
             foreach (Enemy enemy in new List<Enemy>(Enemy.Active))
                 if (Vector2.Distance(transform.position, enemy.transform.position) <= radius)
-                    enemy.TakeDamage(damagePerSecond * Time.deltaTime);
+                    enemy.TakeDamage(damagePerSecond * Time.deltaTime, source);
         }
 
         if (age >= lifetime) Destroy(gameObject);

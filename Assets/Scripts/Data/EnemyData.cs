@@ -14,6 +14,8 @@ public class EnemyData : ScriptableObject
     public float moveSpeed = 1.2f;
     [Tooltip("Gold added to the shared pool on a kill (GDD: 5-10).")]
     public int goldReward = 7;
+    [Tooltip("XP for the captain whose tower lands the killing blow.")]
+    public int xpReward = 10;
     [Tooltip("Global health lost when this enemy reaches the base.")]
     public int leakDamage = 1;
 

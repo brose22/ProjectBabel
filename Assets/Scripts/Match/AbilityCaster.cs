@@ -78,7 +78,7 @@ public static class AbilityCaster
                     TryApplyStatus(tower, enemy);
                 }
                 AbilityZone.Spawn(at, 0f, Vector3.one * ability.radius, discSprite, color, ability.zoneDuration, pop,
-                    ability.radius, damage);
+                    ability.radius, damage, tower);
                 break;
         }
     }
@@ -90,7 +90,7 @@ public static class AbilityCaster
     static void Hit(Tower tower, Enemy enemy, float damage)
     {
         enemy.FlashHit(tower.Captain.ability.hitStopSeconds);
-        enemy.TakeDamage(damage);
+        enemy.TakeDamage(damage, tower);
         if (!enemy.IsTargetable) return;
         enemy.Knockback(tower.Captain.ability.knockbackDistance);
         TryApplyStatus(tower, enemy);
@@ -99,6 +99,6 @@ public static class AbilityCaster
     static void TryApplyStatus(Tower tower, Enemy enemy)
     {
         if (Random.value < tower.Captain.ability.statusChance)
-            enemy.ApplyStatus(StatusRules.ForElement(tower.Captain.element), tower.SoldierPower);
+            enemy.ApplyStatus(StatusRules.ForElement(tower.Captain.element), tower.SoldierPower, tower);
     }
 }

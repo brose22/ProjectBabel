@@ -13,6 +13,8 @@ public class Enemy : MonoBehaviour
     public float MaxHealth { get; private set; }
     // False once the enemy has died or leaked, even before the GameObject is destroyed.
     public bool IsTargetable { get; private set; }
+    // The tower credited with the kill; null for leaks or kills with no tower behind them.
+    public Tower KilledBy { get; private set; }
 
     Vector3[] path;
     int nextPoint;
@@ -21,6 +23,7 @@ public class Enemy : MonoBehaviour
     // Seconds left on each status, indexed by StatusKind.
     readonly float[] statusTime = new float[StatusRules.KindCount];
     float burnDamagePerSecond;
+    Tower burnSource;
     int tintedStatus = -1;
     // Unscaled time until which the enemy shows the white ability-hit flash.
     float hitFlashUntil;
@@ -85,14 +88,19 @@ public class Enemy : MonoBehaviour
 
     public bool HasStatus(StatusKind kind) => statusTime[(int)kind] > 0f;
 
-    // Reapplying a status refreshes its timer rather than stacking. Burn keeps the strongest caster.
-    public void ApplyStatus(StatusKind kind, float casterPower)
+    // Reapplying a status refreshes its timer rather than stacking. Burn keeps the strongest
+    // caster, who is credited if the burn lands the killing blow.
+    public void ApplyStatus(StatusKind kind, float casterPower, Tower source = null)
     {
         if (!IsTargetable) return;
         if (kind == StatusKind.Burn)
         {
             float damagePerSecond = casterPower * StatusRules.BurnPowerPerSecond;
-            burnDamagePerSecond = HasStatus(StatusKind.Burn) ? Mathf.Max(burnDamagePerSecond, damagePerSecond) : damagePerSecond;
+            if (!HasStatus(StatusKind.Burn) || damagePerSecond >= burnDamagePerSecond)
+            {
+                burnDamagePerSecond = damagePerSecond;
+                burnSource = source;
+            }
         }
         statusTime[(int)kind] = Mathf.Max(statusTime[(int)kind], StatusRules.DurationOf(kind));
     }
@@ -109,7 +117,7 @@ public class Enemy : MonoBehaviour
         UpdateTint(tint);
 
         if (HasStatus(StatusKind.Burn))
-            TakeDamage(burnDamagePerSecond * Time.deltaTime);
+            TakeDamage(burnDamagePerSecond * Time.deltaTime, burnSource);
     }
 
     // Flashes white for real-time seconds, so the flash shows during an ability's hit-stop.
@@ -143,12 +151,16 @@ public class Enemy : MonoBehaviour
         towerAttackTimer = Mathf.Max(0.1f, Data.towerAttackInterval) * AttackIntervalMultiplier;
     }
 
-    public void TakeDamage(float amount)
+    // source is the tower whose soldier, ability or burn dealt the damage, if any; the one that
+    // lands the killing blow is remembered in KilledBy for XP.
+    public void TakeDamage(float amount, Tower source = null)
     {
         if (!IsTargetable) return;
         Health -= amount;
         healthBar.SetFraction(Health / MaxHealth);
-        if (Health <= 0f) Die();
+        if (Health > 0f) return;
+        KilledBy = source;
+        Die();
     }
 
     // Pushes the enemy back along its path (never before the start); it then walks on as usual.

@@ -8,9 +8,10 @@ public class Projectile : MonoBehaviour
 
     Enemy target;
     float damage;
+    Tower source;
     float speed;
 
-    public static Projectile Launch(Vector3 origin, Enemy target, float damage, float speed,
+    public static Projectile Launch(Vector3 origin, Enemy target, float damage, Tower source, float speed,
         Sprite sprite, Color color, float scale, int sortingOrder)
     {
         var shot = new GameObject("Projectile");
@@ -25,6 +26,7 @@ public class Projectile : MonoBehaviour
         var projectile = shot.AddComponent<Projectile>();
         projectile.target = target;
         projectile.damage = damage;
+        projectile.source = source;
         projectile.speed = speed;
         return projectile;
     }
@@ -44,7 +46,7 @@ public class Projectile : MonoBehaviour
             : destination;
         if (Vector2.Distance(transform.position, destination) > HitDistance) return;
 
-        target.TakeDamage(damage);
+        target.TakeDamage(damage, source);
         Destroy(gameObject);
     }
 }
