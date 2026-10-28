@@ -5,6 +5,10 @@ public class Enemy : MonoBehaviour
 {
     public static readonly List<Enemy> Active = new();
 
+    const float WeaknessMarkerSize = 0.15f;
+    const float ShotStreakWidth = 0.05f;
+    const float ShotStreakSeconds = 0.12f;
+
     [SerializeField] SpriteRenderer body;
     [SerializeField] HealthBar healthBar;
 
@@ -42,8 +46,42 @@ public class Enemy : MonoBehaviour
         body.color = data.color;
         body.transform.localScale = Vector3.one * data.size;
         healthBar.SetFraction(1f);
+        if (data.hasWeakness) AddWeaknessMarker();
         IsTargetable = true;
         Active.Add(this);
+    }
+
+    public bool IsWeakTo(Element element) => Data.hasWeakness && Data.weakness == element;
+
+    // A small dot in the weakness element's status colour above the body, so players can read
+    // weaknesses in grey-box. Created at runtime so the enemy prefab needs no change.
+    void AddWeaknessMarker()
+    {
+        var marker = new GameObject("Weakness Marker");
+        marker.transform.SetParent(transform, false);
+        marker.transform.localPosition = new Vector3(-0.3f, 0.45f, 0f);
+        marker.transform.localScale = Vector3.one * WeaknessMarkerSize;
+        var renderer = marker.AddComponent<SpriteRenderer>();
+        renderer.sprite = body.sprite;
+        renderer.color = StatusRules.TintOf(StatusRules.ForElement(Data.weakness));
+        renderer.sortingOrder = body.sortingOrder + 1;
+    }
+
+    // Instant shot at the closest deployed soldier in range while walking, on the soldier attack
+    // timer. A thin streak shows the shot. Only runs while the enemy walks, like tower attacks.
+    void TickRangedAttack()
+    {
+        if (Data.rangedAttackRange <= 0f) return;
+        attackTimer -= Time.deltaTime;
+        if (attackTimer > 0f) return;
+        Soldier target = Soldier.FindDeployedNear(transform.position, Data.rangedAttackRange);
+        if (target == null) return;
+        target.TakeDamage(Data.attackDamage);
+        attackTimer = Data.attackInterval * AttackIntervalMultiplier;
+
+        Vector2 shot = target.transform.position - transform.position;
+        AbilityZone.Spawn((Vector2)transform.position + shot * 0.5f, Mathf.Atan2(shot.y, shot.x) * Mathf.Rad2Deg,
+            new Vector3(shot.magnitude, ShotStreakWidth, 1f), body.sprite, Data.color, ShotStreakSeconds, 0f);
     }
 
     void Update()
@@ -72,6 +110,7 @@ public class Enemy : MonoBehaviour
         }
 
         TickTowerAttack();
+        TickRangedAttack();
 
         float step = MoveSpeed * Time.deltaTime;
         if (HasStatus(StatusKind.Dizzy))
@@ -156,6 +195,7 @@ public class Enemy : MonoBehaviour
     public void TakeDamage(float amount, Tower source = null)
     {
         if (!IsTargetable) return;
+        if (source != null && IsWeakTo(source.Captain.element)) amount *= StatusRules.WeaknessDamageMultiplier;
         Health -= amount;
         healthBar.SetFraction(Health / MaxHealth);
         if (Health > 0f) return;

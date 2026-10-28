@@ -31,4 +31,13 @@ public class EnemyData : ScriptableObject
     [Tooltip("Enemies hit the closest working tower within this many tiles without stopping.")]
     public float towerAttackRange = 1.5f;
     public float towerAttackInterval = 1f;
+
+    [Header("Ranged")]
+    [Tooltip("Shoots deployed soldiers within this many tiles as it walks, using the soldier attack damage and interval. 0 means melee only.")]
+    public float rangedAttackRange;
+
+    [Header("Weakness")]
+    [Tooltip("Takes extra damage from captains of the weakness element, and their statuses land more often.")]
+    public bool hasWeakness;
+    public Element weakness;
 }
