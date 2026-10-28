@@ -9,6 +9,10 @@ public class Tower : MonoBehaviour
 {
     public static readonly List<Tower> All = new();
 
+    static readonly Vector3[] CrossDirections = { Vector3.up, Vector3.right, Vector3.down, Vector3.left };
+    // Far enough that a soldier stands clear of the tower body (0.8 tiles wide).
+    const float SoldierHomeDistance = 0.65f;
+
     [SerializeField] SpriteRenderer body;
     [SerializeField] SpriteRenderer rangeIndicator;
     [SerializeField] HealthBar reserveBar;
@@ -28,6 +32,8 @@ public class Tower : MonoBehaviour
     public int RestorableAfterWave { get; private set; }
 
     readonly List<Soldier> soldiers = new();
+    // Home offset for each soldier slot, kept so a swapped-in soldier stands where the old one did.
+    readonly List<Vector3> slotHomes = new();
     float drawProgress;
 
     public float Range => Captain.range;
@@ -64,16 +70,17 @@ public class Tower : MonoBehaviour
         Health = MaxHealth;
         UpdateHealthBar();
 
+        AssignSlotHomes(slotClasses.Count);
         for (int i = 0; i < slotClasses.Count; i++)
-            soldiers.Add(SpawnSoldier(slotClasses[i], i, slotClasses.Count));
+            soldiers.Add(SpawnSoldier(slotClasses[i], i));
 
         All.Add(this);
     }
 
-    Soldier SpawnSoldier(SoldierClassData soldierClass, int slot, int slotCount)
+    Soldier SpawnSoldier(SoldierClassData soldierClass, int slot)
     {
         Soldier soldier = Instantiate(soldierPrefab, transform);
-        soldier.Init(this, soldierClass, HomeOffset(slot, slotCount));
+        soldier.Init(this, soldierClass, slotHomes[slot]);
         return soldier;
     }
 
@@ -93,15 +100,24 @@ public class Tower : MonoBehaviour
         if (!TrySpendReserve(RespawnCostOf(newClass))) return false;
 
         Destroy(soldiers[slot].gameObject);
-        soldiers[slot] = SpawnSoldier(newClass, slot, soldiers.Count);
+        soldiers[slot] = SpawnSoldier(newClass, slot);
         GameEvents.RaiseSoldierMixChanged(this);
         return true;
     }
 
-    static Vector3 HomeOffset(int index, int count)
+    // Soldiers wait in a cross around the tower; each slot takes a random free arm.
+    // Past four soldiers the arms are reshuffled and reused.
+    void AssignSlotHomes(int count)
     {
-        float angle = Mathf.PI * 2f * index / count + Mathf.PI * 0.25f;
-        return new Vector3(Mathf.Cos(angle), Mathf.Sin(angle)) * 0.3f;
+        slotHomes.Clear();
+        var free = new List<Vector3>();
+        for (int i = 0; i < count; i++)
+        {
+            if (free.Count == 0) free.AddRange(CrossDirections);
+            int pick = Random.Range(0, free.Count);
+            slotHomes.Add(free[pick] * SoldierHomeDistance);
+            free.RemoveAt(pick);
+        }
     }
 
     void Update()

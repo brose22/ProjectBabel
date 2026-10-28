@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -9,9 +10,9 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 using Object = UnityEngine.Object;
 
-// Builds the Milestone 1 grey-box match: placeholder sprites and tiles, starter data assets,
-// prefabs, and the Match scene. Existing data assets and prefabs are kept so tuning survives
-// a rebuild; the scene itself is regenerated.
+// Builds the grey-box match: placeholder sprites and tiles, starter data assets, prefabs, and
+// the Match scene. Existing data assets and prefabs are kept so tuning survives a rebuild (only
+// fields added since they were saved get filled in); the scene itself is regenerated.
 public static class GreyBoxMatchBuilder
 {
     const string ArtFolder = "Assets/Art/Placeholder";
@@ -46,12 +47,16 @@ public static class GreyBoxMatchBuilder
             return dx * dx + dy * dy <= 32f * 32f ? Color.white : Color.clear;
         });
 
+        // A small rounded dot for ranged shots.
+        Sprite dot = CreateSpriteAsset(ArtFolder + "/Dot.png", 4, 16, (x, y) =>
+            (x is 0 or 3) && (y is 0 or 3) ? Color.clear : Color.white);
+
         TileBase groundTile = LoadOrCreate<Tile>(ArtFolder + "/GroundTile.asset", t => { t.sprite = square; t.color = new Color(0.22f, 0.36f, 0.22f); });
         TileBase pathTile = LoadOrCreate<Tile>(ArtFolder + "/PathTile.asset", t => { t.sprite = square; t.color = new Color(0.55f, 0.45f, 0.3f); });
 
         MatchData matchData = CreateData();
         Enemy enemyPrefab = CreateEnemyPrefab(square);
-        Soldier soldierPrefab = CreateSoldierPrefab(square);
+        Soldier soldierPrefab = CreateSoldierPrefab(square, dot);
         Tower towerPrefab = CreateTowerPrefab(square, disc, soldierPrefab);
 
         PopulateScene(scene, square, groundTile, pathTile, matchData, enemyPrefab, towerPrefab);
@@ -69,15 +74,36 @@ public static class GreyBoxMatchBuilder
             e.color = new Color(0.85f, 0.2f, 0.25f);
         });
 
-        SoldierClassData rogue = LoadOrCreate<SoldierClassData>(DataFolder + "/Soldiers/Rogue.asset", s =>
+        // Passes towers and chips at them; Knights that hold it up also keep it off the towers.
+        EnemyData raider = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Raider.asset", e =>
         {
-            s.displayName = "Rogue";
-            s.color = new Color(0.9f, 0.9f, 0.75f);
-            s.actCost = 1;
-            s.respawnCost = 4;
-            s.maxHealth = 20f;
-            s.moveSpeed = 4f;
+            e.displayName = "Raider";
+            e.color = new Color(0.6f, 0.3f, 0.85f);
+            e.size = 0.5f;
+            e.maxHealth = 35f;
+            e.moveSpeed = 1.3f;
+            e.goldReward = 9;
+            e.leakDamage = 1;
+            e.attackDamage = 4f;
+            e.towerDamage = 7.5f;
+            e.towerAttackRange = 1.5f;
+            e.towerAttackInterval = 1.5f;
         });
+
+        // GDD cost tiers. Act: Rogue very low, Knight/Archer low, Mage high.
+        // Respawn: Rogue/Archer low, Knight medium, Mage high.
+        SoldierClassData knight = SoldierClass("Knight", new Color(0.4f, 0.55f, 1f), SoldierClassData.AttackStyle.Melee,
+            actCost: 2, respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, knockback: 0.5f);
+        // Shorter reach than most captains' range, so archers step out a little for far targets.
+        SoldierClassData archer = SoldierClass("Archer", new Color(0.45f, 0.85f, 0.35f), SoldierClassData.AttackStyle.Ranged,
+            actCost: 2, respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f);
+        SoldierClassData rogue = SoldierClass("Rogue", new Color(0.9f, 0.9f, 0.75f), SoldierClassData.AttackStyle.Melee,
+            actCost: 1, respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f);
+        // Weak against lone enemies, strong against the bunched-up late waves.
+        SoldierClassData mage = SoldierClass("Mage", new Color(1f, 0.45f, 0.75f), SoldierClassData.AttackStyle.Magic,
+            actCost: 5, respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, splash: 1f);
+        var classes = new List<SoldierClassData> { knight, archer, rogue, mage };
+        var defaultMix = new List<SoldierClassData> { knight, archer };
 
         var roster = new List<CaptainData>
         {
@@ -93,19 +119,138 @@ public static class GreyBoxMatchBuilder
                 new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Stable, CaptainTag.Leaks }),
         };
 
-        return LoadOrCreate<MatchData>(DataFolder + "/GreyBoxMatch.asset", m =>
+        string matchPath = DataFolder + "/GreyBoxMatch.asset";
+        bool matchExisted = AssetDatabase.LoadAssetAtPath<MatchData>(matchPath) != null;
+        MatchData match = LoadOrCreate<MatchData>(matchPath, m =>
         {
             m.roster = roster;
-            m.defaultSoldierClass = rogue;
-            // 50 enemies over 10 waves, matching the GDD's ~50 kills per match.
-            int[] counts = { 2, 3, 4, 4, 5, 5, 6, 6, 7, 8 };
-            for (int i = 0; i < counts.Length; i++)
-            {
-                var wave = new WaveDefinition { healthMultiplier = 1f + 0.15f * i };
-                wave.groups.Add(new SpawnGroup { enemy = grunt, count = counts[i], spawnInterval = Mathf.Max(0.6f, 1.4f - 0.08f * i) });
-                m.waves.Add(wave);
-            }
+            m.availableClasses = classes;
+            m.defaultMix = defaultMix;
+            m.restoreBaseCost = 15;
+            m.relocationCost = 25;
+            m.waves = BuildWaves(grunt, raider);
         });
+        if (matchExisted) UpgradeMatch(match, classes, defaultMix, grunt, raider);
+        return match;
+    }
+
+    // ~56 enemies over 10 waves (GDD: ~50 kills per match); Raiders join from wave 3 and
+    // follow each wave's Grunts.
+    static List<WaveDefinition> BuildWaves(EnemyData grunt, EnemyData raider)
+    {
+        int[] grunts = { 2, 3, 3, 4, 4, 4, 4, 4, 5, 5 };
+        int[] raiders = { 0, 0, 1, 1, 2, 2, 2, 3, 3, 4 };
+        var waves = new List<WaveDefinition>();
+        for (int i = 0; i < grunts.Length; i++)
+        {
+            var wave = new WaveDefinition { healthMultiplier = 1f + 0.15f * i };
+            wave.groups.Add(new SpawnGroup { enemy = grunt, count = grunts[i], spawnInterval = Mathf.Max(0.6f, 1.4f - 0.08f * i) });
+            if (raiders[i] > 0)
+                wave.groups.Add(new SpawnGroup { enemy = raider, count = raiders[i], spawnInterval = 1.5f, delayBefore = 1.5f });
+            waves.Add(wave);
+        }
+        return waves;
+    }
+
+    static SoldierClassData SoldierClass(string name, Color color, SoldierClassData.AttackStyle style, int actCost, int respawnCost,
+        float maxHealth, float damage, float attackRange, float moveSpeed, float knockback = 0f, float splash = 0f)
+    {
+        return LoadOrCreate<SoldierClassData>($"{DataFolder}/Soldiers/{name}.asset", s =>
+        {
+            s.displayName = name;
+            s.color = color;
+            s.attackStyle = style;
+            s.actCost = actCost;
+            s.respawnCost = respawnCost;
+            s.maxHealth = maxHealth;
+            s.damageMultiplier = damage;
+            s.attackRange = attackRange;
+            s.moveSpeed = moveSpeed;
+            s.knockbackDistance = knockback;
+            s.projectileSpeed = 10f;
+            s.splashRadius = splash;
+        });
+    }
+
+    // ---------- Upgrades ----------
+    // Assets saved before Milestone 2 lack its fields. Fill only what is still unset so
+    // designer tuning survives, and leave assets untouched when there is nothing to do.
+
+    static void UpgradeMatch(MatchData match, List<SoldierClassData> classes, List<SoldierClassData> defaultMix, EnemyData grunt, EnemyData raider)
+    {
+        bool changed = false;
+        if (match.availableClasses.Count == 0)
+        {
+            match.availableClasses = new List<SoldierClassData>(classes);
+            changed = true;
+        }
+        if (match.defaultMix.Count == 0)
+        {
+            match.defaultMix = new List<SoldierClassData>(defaultMix);
+            changed = true;
+        }
+        // 0 is a legitimate "free" setting, so only fields never saved count as unset.
+        if (!IsSerialized(match, nameof(MatchData.restoreBaseCost)))
+        {
+            match.restoreBaseCost = 15;
+            changed = true;
+        }
+        if (!IsSerialized(match, nameof(MatchData.relocationCost)))
+        {
+            match.relocationCost = 25;
+            changed = true;
+        }
+        if (!match.waves.Exists(w => w.groups.Exists(g => g.enemy != null && g.enemy.towerDamage > 0f)))
+        {
+            match.waves = BuildWaves(grunt, raider);
+            changed = true;
+        }
+        if (!changed) return;
+        EditorUtility.SetDirty(match);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with Milestone 2 data.");
+    }
+
+    // Whether the field appears in the asset's text serialization. Fields added to the class
+    // after the asset was last saved are missing until it is saved again.
+    static bool IsSerialized(Object asset, string field)
+    {
+        string path = AssetDatabase.GetAssetPath(asset);
+        return !File.Exists(path) || Regex.IsMatch(File.ReadAllText(path), $@"^\s*{field}:", RegexOptions.Multiline);
+    }
+
+    static Soldier UpgradeSoldierPrefab(Soldier prefab, Sprite projectileSprite)
+    {
+        var so = new SerializedObject(prefab);
+        SerializedProperty property = so.FindProperty("projectileSprite");
+        if (property.objectReferenceValue != null) return prefab;
+        property.objectReferenceValue = projectileSprite;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        PrefabUtility.SavePrefabAsset(prefab.gameObject);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(prefab)} with a projectile sprite.");
+        return prefab;
+    }
+
+    static Tower UpgradeTowerPrefab(Tower prefab, Sprite square)
+    {
+        if (new SerializedObject(prefab).FindProperty("healthBar").objectReferenceValue != null) return prefab;
+
+        string path = AssetDatabase.GetAssetPath(prefab);
+        GameObject root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            Tower tower = root.GetComponent<Tower>();
+            // Reuse a bar left by an earlier, unwired attempt rather than stacking another.
+            Transform existing = root.transform.Find(TowerHealthBarName);
+            HealthBar bar = existing != null && existing.TryGetComponent(out HealthBar found) ? found : AddTowerHealthBar(root.transform, square);
+            Wire(tower, ("healthBar", bar));
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+        Debug.Log($"Upgraded {path} with a tower health bar.");
+        return AssetDatabase.LoadAssetAtPath<Tower>(path);
     }
 
     static CaptainData Captain(string name, Element element, Color color, float power, float range, float speed,
@@ -140,27 +285,44 @@ public static class GreyBoxMatchBuilder
         });
     }
 
-    static Soldier CreateSoldierPrefab(Sprite square)
+    static Soldier CreateSoldierPrefab(Sprite square, Sprite projectileSprite)
     {
-        return LoadOrCreatePrefab<Soldier>(PrefabFolder + "/Soldier.prefab", root =>
+        string path = PrefabFolder + "/Soldier.prefab";
+        bool existed = AssetDatabase.LoadAssetAtPath<Soldier>(path) != null;
+        Soldier prefab = LoadOrCreatePrefab<Soldier>(path, root =>
         {
             SpriteRenderer body = AddSprite("Body", root.transform, square, Color.white, 11, Vector3.zero, Vector3.one * 0.3f);
             HealthBar bar = AddBar(root.transform, square, new Vector3(0f, 0.28f), 0.35f, new Color(0.4f, 0.8f, 1f), true);
             Soldier soldier = root.AddComponent<Soldier>();
-            Wire(soldier, ("body", body), ("healthBar", bar));
+            Wire(soldier, ("body", body), ("healthBar", bar), ("projectileSprite", projectileSprite));
         });
+        return existed ? UpgradeSoldierPrefab(prefab, projectileSprite) : prefab;
     }
 
     static Tower CreateTowerPrefab(Sprite square, Sprite disc, Soldier soldierPrefab)
     {
-        return LoadOrCreatePrefab<Tower>(PrefabFolder + "/Tower.prefab", root =>
+        string path = PrefabFolder + "/Tower.prefab";
+        bool existed = AssetDatabase.LoadAssetAtPath<Tower>(path) != null;
+        Tower prefab = LoadOrCreatePrefab<Tower>(path, root =>
         {
             SpriteRenderer range = AddSprite("RangeIndicator", root.transform, disc, new Color(1f, 1f, 1f, 0.12f), 2, Vector3.zero, Vector3.one);
             SpriteRenderer body = AddSprite("Body", root.transform, square, Color.white, 5, Vector3.zero, Vector3.one * 0.8f);
             HealthBar reserve = AddBar(root.transform, square, new Vector3(0f, -0.45f), 0.8f, new Color(1f, 0.85f, 0.2f), false);
+            HealthBar health = AddTowerHealthBar(root.transform, square);
             Tower tower = root.AddComponent<Tower>();
-            Wire(tower, ("body", body), ("rangeIndicator", range), ("reserveBar", reserve), ("soldierPrefab", soldierPrefab));
+            Wire(tower, ("body", body), ("rangeIndicator", range), ("reserveBar", reserve), ("healthBar", health), ("soldierPrefab", soldierPrefab));
         });
+        return existed ? UpgradeTowerPrefab(prefab, square) : prefab;
+    }
+
+    const string TowerHealthBarName = "HealthBar";
+
+    // Sits just above the reserve bar and only shows once the tower has taken damage.
+    static HealthBar AddTowerHealthBar(Transform parent, Sprite square)
+    {
+        HealthBar bar = AddBar(parent, square, new Vector3(0f, -0.33f), 0.8f, new Color(0.85f, 0.2f, 0.2f), true);
+        bar.gameObject.name = TowerHealthBarName;
+        return bar;
     }
 
     static HealthBar AddBar(Transform parent, Sprite square, Vector3 localPosition, float width, Color fillColor, bool hideWhenFull)
