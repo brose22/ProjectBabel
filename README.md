@@ -20,8 +20,8 @@ Early development. One developer at 20 hours a week, with a vertical slice targe
 | Milestone | Scope | State |
 |---|---|---|
 | M1: grey-box match | Path, waves, global health and Gold, tower placement, Attacker captains, basic soldiers, placeholder HUD | Done (merged) |
-| M2: soldier system | Four soldier classes (Knight knockback), soldier mix, tower damage/disable/restore, relocation | In review (`m2/*` branches) |
-| M3: roles and elements | Buffer and Healer roles, statuses, special-ability meter, levels and XP, enemy types and weaknesses | Planned |
+| M2: soldier system | Four soldier classes (Knight knockback), soldier mix, tower damage/disable/restore, relocation | Done (merged) |
+| M3: roles and elements | Buffer and Healer auras, statuses, special-ability meter, levels and XP, enemy types and weaknesses | Next |
 | M4: relationships | Approval, like/dislike tags, requests, bond ranks D–S | Planned |
 | M5: vertical slice | One city, 3 captains, full match loop, playtest and tuning | Planned |
 
@@ -70,4 +70,14 @@ Assets/
 
 ## Contributing workflow
 
-Each milestone is delivered as a series of small stacked pull requests (`m1/01-…` → `m1/05-…`), each based on the one before it. Review and merge them in order.
+Each milestone is delivered as a series of small stacked pull requests (`m1/01-…` → `m1/05-…`), each based on the one before it. Review and merge them in order: merge the first into `main`, then retarget the next one to `main` before merging it.
+
+### Checking compilation without Unity
+
+`Tools/compile_check.py` compiles a checkout or worktree with the compiler Unity ships, using the settings Unity cached the last time it compiled this project. It's useful for branches that aren't open in the editor.
+
+```
+py -I Tools/compile_check.py <checkout root>
+```
+
+EditMode tests live in `Assets/Tests/EditMode` and run from Unity's Test Runner.
