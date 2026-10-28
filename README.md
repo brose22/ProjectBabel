@@ -22,8 +22,8 @@ Early development. One developer at 20 hours a week, with a vertical slice targe
 | M1: grey-box match | Path, waves, global health and Gold, tower placement, Attacker captains, basic soldiers, placeholder HUD | Done (merged) |
 | M2: soldier system | Four soldier classes (Knight knockback), soldier mix, tower damage/disable/restore, relocation | Done (merged) |
 | M3: roles and elements | Status effects, special abilities and hit-stop, Buffer and Healer auras, levels and XP, enemy types and weaknesses | Done (merged) |
-| M4: relationships | Approval, like/dislike tags, requests, bond ranks D–S | Next |
-| M5: vertical slice | One city, 3 captains, full match loop, playtest and tuning | Planned |
+| M4: relationships | Approval (saved between runs), like/dislike judging, requests, bond ranks D–S, walkouts | Done (merged) |
+| M5: vertical slice | One city, 3 captains, full match loop, playtest and tuning | Next |
 
 Later phases cover the world map and full run, the remaining content, polish, and release prep.
 
