@@ -13,6 +13,11 @@ public static class StatusRules
     public const float BurnPowerPerSecond = 0.3f;
     public const float StunAttackIntervalMultiplier = 2f;
 
+    // An enemy weak to the attacker's element takes this much more damage (GDD: a weakness
+    // raises both damage taken and status chance).
+    public const float WeaknessDamageMultiplier = 1.5f;
+    public const float WeaknessStatusChanceMultiplier = 2f;
+
     public static StatusKind ForElement(Element element) => element switch
     {
         Element.Water => StatusKind.Slow,

@@ -96,9 +96,12 @@ public static class AbilityCaster
         TryApplyStatus(tower, enemy);
     }
 
+    // An enemy weak to the captain's element is more likely to get the status.
     static void TryApplyStatus(Tower tower, Enemy enemy)
     {
-        if (Random.value < tower.Captain.ability.statusChance)
+        float chance = tower.Captain.ability.statusChance;
+        if (enemy.IsWeakTo(tower.Captain.element)) chance *= StatusRules.WeaknessStatusChanceMultiplier;
+        if (Random.value < chance)
             enemy.ApplyStatus(StatusRules.ForElement(tower.Captain.element), tower.SoldierPower, tower);
     }
 }
