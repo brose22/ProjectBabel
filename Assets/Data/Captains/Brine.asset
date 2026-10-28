@@ -18,6 +18,7 @@ MonoBehaviour:
   color: {r: 0.2, g: 0.45, b: 0.9, a: 1}
   abilityName: Undertow
   abilityDescription: Area damage, pulls enemies back
+  ability: {fileID: 11400000, guid: 4583c097bb926db47bc81d5d97b396b0, type: 2}
   power: 9
   range: 2.5
   speed: 1

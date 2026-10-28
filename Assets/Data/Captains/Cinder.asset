@@ -18,6 +18,7 @@ MonoBehaviour:
   color: {r: 0.95, g: 0.45, b: 0.15, a: 1}
   abilityName: Flare Volley
   abilityDescription: Burst area damage
+  ability: {fileID: 11400000, guid: 0d114fad242fd154c9c8915d516b58a8, type: 2}
   power: 12
   range: 2
   speed: 0.8
