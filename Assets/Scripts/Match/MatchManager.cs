@@ -85,6 +85,7 @@ public class MatchManager : MonoBehaviour
         if (!TryGetComponent(out Relationships _)) gameObject.AddComponent<Relationships>();
         if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
         if (!TryGetComponent(out RunScreens _)) gameObject.AddComponent<RunScreens>();
+        if (!TryGetComponent(out MatchStats _)) gameObject.AddComponent<MatchStats>();
     }
 
     void OnEnable()
