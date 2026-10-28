@@ -28,6 +28,7 @@ public class MatchManager : MonoBehaviour
 
     // Real-time seconds left on the current ability hit-stop.
     float hitStopRemaining;
+    CameraShake cameraShake;
 
     // The first roster captain who isn't already on the field.
     public CaptainData NextCaptain
@@ -49,6 +50,11 @@ public class MatchManager : MonoBehaviour
         if (RunState.Current == null)
             RunState.StartNewRun(data.startingHealth, data.startingGold);
         Time.timeScale = GameSpeed;
+
+        // Added at runtime so existing scenes need no rebuild.
+        Camera cam = Camera.main;
+        if (cam != null)
+            cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
     }
 
     void OnEnable()
@@ -167,11 +173,14 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
-    // Freezes the match for a moment when an ability lands so the hit reads. Overlapping
-    // abilities extend the freeze to the longest one rather than stacking.
+    // Jolts the camera and freezes the match for a moment when an ability lands so the hit reads.
+    // Overlapping abilities extend the freeze to the longest one rather than stacking.
     void OnAbilityUsed(Tower tower)
     {
-        float seconds = tower.Captain.ability.hitStopSeconds;
+        AbilityData ability = tower.Captain.ability;
+        if (cameraShake != null) cameraShake.Shake(ability.cameraShake, ability.cameraShakeSeconds);
+
+        float seconds = ability.hitStopSeconds;
         if (seconds <= 0f || IsOver) return;
         hitStopRemaining = Mathf.Max(hitStopRemaining, seconds);
         Time.timeScale = 0f;

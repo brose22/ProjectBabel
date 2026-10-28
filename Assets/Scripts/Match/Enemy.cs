@@ -45,7 +45,12 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
-        if (!IsTargetable) return;
+        if (!IsTargetable)
+        {
+            // Only reached while lingering after an ability kill; see Remove.
+            if (Time.unscaledTime >= hitFlashUntil) Destroy(gameObject);
+            return;
+        }
 
         TickStatuses();
         if (!IsTargetable) return;
@@ -167,11 +172,16 @@ public class Enemy : MonoBehaviour
         GameEvents.RaiseEnemyLeaked(this);
     }
 
+    // The enemy leaves play at once (no targeting, blocking or wave count), but one still showing
+    // an ability-hit flash stays on screen until the flash, and so the hit-stop, is over.
     void Remove()
     {
         IsTargetable = false;
         Active.Remove(this);
-        Destroy(gameObject);
+        if (Time.unscaledTime < hitFlashUntil)
+            healthBar.gameObject.SetActive(false);
+        else
+            Destroy(gameObject);
     }
 
     void OnDestroy() => Active.Remove(this);

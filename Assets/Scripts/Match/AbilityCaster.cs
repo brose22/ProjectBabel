@@ -60,11 +60,12 @@ public static class AbilityCaster
     // Collected up front because damage can remove enemies from Enemy.Active mid-loop.
     static List<Enemy> EnemiesWhere(System.Predicate<Enemy> match) => Enemy.Active.FindAll(match);
 
+    // Flash first, so an enemy this hit kills is still flashing and stays on screen for the hit-stop.
     static void Hit(Tower tower, Enemy enemy, float damage)
     {
+        enemy.FlashHit(tower.Captain.ability.hitStopSeconds);
         enemy.TakeDamage(damage);
         if (!enemy.IsTargetable) return;
-        enemy.FlashHit(tower.Captain.ability.hitStopSeconds);
         enemy.Knockback(tower.Captain.ability.knockbackDistance);
         TryApplyStatus(tower, enemy);
     }

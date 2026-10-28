@@ -44,4 +44,8 @@ public class AbilityData : ScriptableObject
     [Header("Feel")]
     [Tooltip("Real-time seconds the whole match freezes when the ability lands, while its effect plays. 0 turns it off.")]
     public float hitStopSeconds = 0.15f;
+    [Tooltip("How far the camera jolts when the ability is used, in tiles (1 pixel is 0.0625). 0 turns it off.")]
+    public float cameraShake = 0.1f;
+    [Tooltip("Real-time seconds the camera shake takes to settle.")]
+    public float cameraShakeSeconds = 0.25f;
 }
