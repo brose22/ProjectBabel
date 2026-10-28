@@ -22,6 +22,6 @@ MonoBehaviour:
   attackDamage: 4
   attackRange: 0.6
   attackInterval: 1
-  towerDamage: 15
+  towerDamage: 7.5
   towerAttackRange: 1.5
   towerAttackInterval: 1.5

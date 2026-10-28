@@ -31,7 +31,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ab2d5a4fc8edeb24993b3bb754908b4d, type: 2}
   defaultSoldierClass: {fileID: 11400000, guid: ed0e11508e550bf4bb2962b86b14060e, type: 2}
   soldiersPerTower: 2
-  restoreBaseCost: 30
+  restoreBaseCost: 15
   relocationCost: 25
   timeBetweenWaves: 15
   waves:

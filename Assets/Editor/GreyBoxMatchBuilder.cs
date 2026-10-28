@@ -85,7 +85,7 @@ public static class GreyBoxMatchBuilder
             e.goldReward = 9;
             e.leakDamage = 1;
             e.attackDamage = 4f;
-            e.towerDamage = 15f;
+            e.towerDamage = 7.5f;
             e.towerAttackRange = 1.5f;
             e.towerAttackInterval = 1.5f;
         });
@@ -126,7 +126,7 @@ public static class GreyBoxMatchBuilder
             m.roster = roster;
             m.availableClasses = classes;
             m.defaultMix = defaultMix;
-            m.restoreBaseCost = 30;
+            m.restoreBaseCost = 15;
             m.relocationCost = 25;
             m.waves = BuildWaves(grunt, raider);
         });
@@ -192,7 +192,7 @@ public static class GreyBoxMatchBuilder
         // 0 is a legitimate "free" setting, so only fields never saved count as unset.
         if (!IsSerialized(match, nameof(MatchData.restoreBaseCost)))
         {
-            match.restoreBaseCost = 30;
+            match.restoreBaseCost = 15;
             changed = true;
         }
         if (!IsSerialized(match, nameof(MatchData.relocationCost)))
