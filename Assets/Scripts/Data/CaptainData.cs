@@ -25,6 +25,8 @@ public class CaptainData : ScriptableObject
     public Sprite sprite;
     [Tooltip("Tint the sprite with the captain colour (for the shared, pale generic sprite).")]
     public bool tintSprite;
+    [Tooltip("Head-and-shoulders art for menus and dialogue, drawn as painted (never tinted).")]
+    public Sprite portrait;
 
     [Header("Stats")]
     [Tooltip("Base damage of each soldier act, before class and level scaling.")]

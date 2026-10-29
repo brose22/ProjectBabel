@@ -9,6 +9,8 @@ public class SoldierClassData : ScriptableObject
     public Color color = Color.white;
     [Tooltip("Optional art, drawn at 16 px per unit. Without it the soldier is a square in its colour.")]
     public Sprite sprite;
+    [Tooltip("Head-and-shoulders art for menus.")]
+    public Sprite portrait;
 
     [Header("Gold")]
     [Tooltip("Gold taken from the tower reserve each time a soldier leaves to act.")]

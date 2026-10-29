@@ -53,6 +53,8 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
                 DataToolsGUI.SpritePreview(enemy.sprite, enemy.sprite != null ? Color.white : enemy.color, PreviewSize, scale);
                 string note = largest == null || largest == enemy ? "largest enemy" : $"to scale with {largest.name}";
                 GUILayout.Label(note, EditorStyles.centeredGreyMiniLabel, GUILayout.Width(PreviewSize));
+                DataToolsGUI.SpritePreview(enemy.portrait, Color.white, PreviewSize);
+                GUILayout.Label("portrait", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(PreviewSize));
             }
             using (new EditorGUILayout.VerticalScope())
             {
@@ -60,6 +62,7 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
                 DataToolsGUI.Field(so, nameof(EnemyData.displayName));
                 DataToolsGUI.Field(so, nameof(EnemyData.color));
                 DataToolsGUI.Field(so, nameof(EnemyData.sprite));
+                DataToolsGUI.Field(so, nameof(EnemyData.portrait));
                 DataToolsGUI.Field(so, nameof(EnemyData.size));
             }
         }

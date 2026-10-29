@@ -21,6 +21,7 @@ MonoBehaviour:
   ability: {fileID: 11400000, guid: 9c559c25da50cdb44a8277b7783d5c4e, type: 2}
   sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
   tintSprite: 1
+  portrait: {fileID: 21300000, guid: a01a924cb99615e4eab898a0e8411838, type: 3}
   power: 14
   range: 1.75
   speed: 0.6
@@ -29,9 +30,6 @@ MonoBehaviour:
   resourceRegen: 2
   specialChargeRate: 1
   level: 1
-  aura: 0
-  auraStrength: 0
-  auraFadeSeconds: 60
   refusalTemper: 1
   likes: 000000000300000008000000
   dislikes: 020000000900000007000000

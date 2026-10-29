@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: Brute
   color: {r: 0.55, g: 0.1, b: 0.15, a: 1}
   sprite: {fileID: 21300000, guid: ee6d1c9de91c56d42b930d9e29b2ee86, type: 3}
+  portrait: {fileID: 21300000, guid: 2b6d2a656bdfead439a39b4488faf49e, type: 3}
   size: 0.85
   maxHealth: 120
   moveSpeed: 0.8
