@@ -4,15 +4,16 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The match HUD, built in uGUI at runtime: top bar, selected-tower panel, move hint, captain
+// The match HUD, built in uGUI at runtime: top bar, captain widget, move hint, captain
 // requests, approval messages and controls hint (RunScreens shows results). Labels and buttons
-// refresh every frame; the tower panel and request cards rebuild only when their structure changes.
+// refresh every frame; the captain widget and request cards rebuild only when their structure changes.
 public class MatchHUD : MonoBehaviour
 {
     const float TopBarHeight = 32f;
-    const float PanelWidth = 310f;
+    // Left of the request cards, kept clear for the cheat window and captain debug panel.
+    const float LeftColumnWidth = 310f;
     const float MessagesWidth = 240f;
-    const float RequestWidth = UIKit.ReferenceWidth - PanelWidth - MessagesWidth - 4 * UIKit.Pad;
+    const float RequestWidth = UIKit.ReferenceWidth - LeftColumnWidth - MessagesWidth - 4 * UIKit.Pad;
     static readonly Color NoColor = new(0.5f, 0.2f, 0.2f, 1f);
     static readonly Color YesColor = new(0.22f, 0.44f, 0.25f, 1f);
     static readonly Color HintColor = new(0.06f, 0.07f, 0.1f, 0.85f);
@@ -55,9 +56,9 @@ public class MatchHUD : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(moveHintBox, 6, 0, fitContent: true);
         moveHint = UIKit.Shadowed(UIKit.Label(moveHintBox, "", 13, TextAnchor.MiddleCenter, UIKit.AccentColor));
 
-        // Between the tower panel and the approval messages, so none of them overlap.
+        // Between the left column and the approval messages, so none of them overlap.
         requestList = UIKit.Group(canvas.transform, "Requests");
-        UIKit.Place(requestList, new Vector2(0f, 1f), new Vector2(PanelWidth + 2 * UIKit.Pad, -TopBarHeight - 36f), new Vector2(RequestWidth, 0f));
+        UIKit.Place(requestList, new Vector2(0f, 1f), new Vector2(LeftColumnWidth + 2 * UIKit.Pad, -TopBarHeight - 36f), new Vector2(RequestWidth, 0f));
         UIKit.Layout<VerticalLayoutGroup>(requestList, 0, UIKit.Gap, fitContent: true);
 
         messages = UIKit.Shadowed(UIKit.Label(canvas.transform, "", 12, TextAnchor.UpperRight));
@@ -97,7 +98,7 @@ public class MatchHUD : MonoBehaviour
         var parts = new List<string>();
         foreach ((string keys, string action) in new[]
                  {
-                     ("Click", "place / select"), ("Tab", "next captain"), ("Q", "ability"), ("1-3", "Gold draw"),
+                     ("Click", "place / select"), ("Tab", "next captain"), ("Q", "ability"),
                      ("M", "move"), ("X", "sell"), ("Space", "next wave"),
                  })
             parts.Add($"<color={key}>{keys}</color> {action}");

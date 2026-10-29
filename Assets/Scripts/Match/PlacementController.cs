@@ -97,9 +97,13 @@ public class PlacementController : MonoBehaviour
             if (IsMoving) CancelMove();
             else BeginMove();
         }
-        if (keyboard.digit1Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.Low);
-        if (keyboard.digit2Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.Normal);
-        if (keyboard.digit3Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.High);
+        // Gold draw follows captain requests; the keys only set it while the F2 debug panel is open.
+        if (hud.IsDebugPanelOpen)
+        {
+            if (keyboard.digit1Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.Low);
+            if (keyboard.digit2Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.Normal);
+            if (keyboard.digit3Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.High);
+        }
         if (keyboard.xKey.wasPressedThisFrame) SellSelected();
         if (keyboard.qKey.wasPressedThisFrame) Selected.TryUseAbility();
     }
