@@ -10,8 +10,6 @@ public class CaptainWidget
 {
     const float Width = 250f;
     const float SlotLabelWidth = 52f;
-    // Half a map tile, in world units: the widget opens just clear of the captain's tile.
-    const float TowerHalfWidth = 0.5f;
     static readonly string[] DrawRateLabels = { "Low", "Normal", "High" };
 
     readonly Canvas canvas;
@@ -55,16 +53,17 @@ public class CaptainWidget
         PlaceBeside(tower);
     }
 
-    // To the right of the captain when the widget fits there, else to the left; when neither
-    // fits, on the roomier side and pushed back on screen. Vertically centred on the captain,
-    // kept between the top bar and the bottom edge.
+    // Just outside the captain's attack range, so the range circle stays visible: to the right
+    // when the widget fits there, else to the left; when neither fits, on the roomier side and
+    // pushed back on screen. Vertically centred on the captain, kept between the top bar and the
+    // bottom edge.
     void PlaceBeside(Tower tower)
     {
         Camera cam = Camera.main;
         if (cam == null) return;
         Vector2 screen = ((RectTransform)canvas.transform).rect.size;
         Vector2 centre = cam.WorldToScreenPoint(tower.transform.position) / canvas.scaleFactor;
-        float edge = cam.WorldToScreenPoint(tower.transform.position + Vector3.right * TowerHalfWidth).x / canvas.scaleFactor;
+        float edge = cam.WorldToScreenPoint(tower.transform.position + Vector3.right * tower.Range).x / canvas.scaleFactor;
         float gap = edge - centre.x + UIKit.Gap;
         Vector2 size = panel.rect.size;
 
