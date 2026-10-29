@@ -10,6 +10,15 @@ public class WaveSpawner : MonoBehaviour
 
     public void SpawnWave(WaveDefinition wave) => StartCoroutine(Run(wave));
 
+    // One enemy straight onto the road, outside any wave (the enemy base's boss).
+    public Enemy SpawnOne(EnemyData data, float healthMultiplier)
+    {
+        Vector3[] points = path.GetPoints();
+        Enemy enemy = Instantiate(enemyPrefab, points[0], Quaternion.identity);
+        enemy.Init(data, points, healthMultiplier);
+        return enemy;
+    }
+
     public void StopSpawning()
     {
         StopAllCoroutines();

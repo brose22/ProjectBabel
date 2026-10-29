@@ -117,6 +117,7 @@ public static class GreyBoxMatchBuilder
         ApplyArt();
         AssignLayouts(matchData);
         AssignEvents(matchData);
+        AssignBoss(matchData);
         Enemy enemyPrefab = CreateEnemyPrefab(square);
         Soldier soldierPrefab = CreateSoldierPrefab(square, dot);
         Tower towerPrefab = CreateTowerPrefab(square, disc, soldierPrefab);
@@ -631,6 +632,36 @@ public static class GreyBoxMatchBuilder
         match.layouts = layouts;
         EditorUtility.SetDirty(match);
         Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with city layouts.");
+    }
+
+    // ---------- Enemy base boss ----------
+
+    // The very slow boss that walks the whole enemy base match (GDD). It borrows the Brute's art at
+    // twice the size, and its leak damage ends the run. A boss already set on the match is kept.
+    static void AssignBoss(MatchData match)
+    {
+        EnemyData boss = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Warlord.asset", e =>
+        {
+            e.displayName = "Warlord";
+            e.color = new Color(0.35f, 0.05f, 0.1f);
+            e.sprite = ArtSprite("enemy_brute");
+            e.size = 1.5f;
+            e.maxHealth = 6000f;
+            e.moveSpeed = 0.05f;
+            e.goldReward = 200;
+            e.xpReward = 300;
+            e.leakDamage = 999;
+            e.attackDamage = 30f;
+            e.attackRange = 0.9f;
+            e.attackInterval = 1.5f;
+            e.towerDamage = 12f;
+            e.towerAttackRange = 1.75f;
+            e.towerAttackInterval = 1.5f;
+        });
+        if (match.boss != null) return;
+        match.boss = boss;
+        EditorUtility.SetDirty(match);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with the enemy base boss.");
     }
 
     // ---------- World map events ----------
