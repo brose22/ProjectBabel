@@ -91,6 +91,8 @@ public class MatchData : ScriptableObject
     public int eliteExtraRecruitChoices = 1;
     [Tooltip("The enemy base plays its waves this many times over (GDD: double the waves).")]
     public int baseWaveRepeats = 2;
+    [Tooltip("The enemy base's very slow boss (GDD). It walks on with the first wave and the base falls only once it dies. Give it a huge leakDamage so reaching the end loses the run. Empty plays the base without a boss.")]
+    public EnemyData boss;
 
     [Header("Captain XP")]
     [Tooltip("Most XP a captain can earn from healing and buffing in one wave (GDD: support XP is capped per wave). Kill XP is not capped.")]

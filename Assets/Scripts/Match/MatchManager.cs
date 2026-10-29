@@ -24,6 +24,9 @@ public class MatchManager : MonoBehaviour
     public CityLayout CityLayout => City != null && data.layouts.Count > 0 ? data.layouts[City.layout % data.layouts.Count] : null;
     public bool IsBaseMatch => City != null && RunState.Current.Map != null && City.id == RunState.Current.Map.BaseId;
     public bool IsEliteMatch => City != null && City.kind == NodeKind.Elite;
+    // The enemy base's boss once it has walked on; it stays set after it dies.
+    public Enemy Boss { get; private set; }
+    public bool IsBossAlive => Boss != null && Boss.IsTargetable;
     // The match data's waves, scaled for how far into the run this city is.
     List<WaveDefinition> waves;
     // Seconds until the next wave starts by itself, or below zero when waiting for the player.
@@ -137,7 +140,8 @@ public class MatchManager : MonoBehaviour
 
         if (State == MatchState.WaveActive)
         {
-            if (!spawner.IsSpawning && Enemy.Active.Count == 0)
+            // After the last wave the base waits on the boss, which ends the match when it dies.
+            if (WavesCleared < WaveCount && BossRules.IsWaveOver(spawner.IsSpawning, Enemy.Active.Count, IsBossAlive))
                 EndWave();
         }
         else if (State == MatchState.Preparing && NextWaveCountdown > 0f)
@@ -155,6 +159,8 @@ public class MatchManager : MonoBehaviour
         WaveStartTime = Time.time;
         Tower.ClearWaveBoosts();
         spawner.SpawnWave(waves[WavesCleared]);
+        if (IsBaseMatch && data.boss != null && Boss == null)
+            Boss = spawner.SpawnOne(data.boss, RunScaling.HealthMultiplier(City.layer, data.enemyHealthGrowthPerMatch));
         GameEvents.RaiseWaveStarted(WavesCleared + 1);
     }
 
@@ -166,7 +172,7 @@ public class MatchManager : MonoBehaviour
         GameEvents.RaiseWaveEnded(WavesCleared);
         if (WavesCleared >= WaveCount)
         {
-            Finish(MatchState.Won);
+            if (BossRules.IsMatchWon(WavesCleared, WaveCount, IsBossAlive)) Finish(MatchState.Won);
             return;
         }
         State = MatchState.Preparing;
@@ -453,6 +459,7 @@ public class MatchManager : MonoBehaviour
     void OnEnemyKilled(Enemy enemy)
     {
         Kills++;
+        if (enemy == Boss && !IsOver && BossRules.IsMatchWon(WavesCleared, WaveCount, false)) Finish(MatchState.Won);
         if (IsEliteMatch) RunState.Current.AddGold(Mathf.RoundToInt(enemy.Data.goldReward * (data.eliteGoldMultiplier - 1f)));
         if (enemy.KilledBy != null) enemy.KilledBy.GainXp(enemy.Data.xpReward);
     }

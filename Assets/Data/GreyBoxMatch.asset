@@ -62,6 +62,7 @@ MonoBehaviour:
   enemyHealthGrowthPerMatch: 0.12
   enemyCountGrowthPerMatch: 0.08
   baseWaveRepeats: 2
+  boss: {fileID: 11400000, guid: 3aa8be080f4c4667b8946576716da8b3, type: 2}
   supportXpCapPerWave: 60
   timeBetweenWaves: 15
   waves:
