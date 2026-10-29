@@ -26,7 +26,9 @@ CSC = os.path.join(EDITOR, r"sdk\8.0.318\Roslyn\bincore\csc.dll")
 
 def find_dag():
     # Unity names the build folder after a hash, so take whichever holds the editor's rsp files.
-    candidates = glob.glob(os.path.join(PROJECT, "Library", "Bee", "artifacts", "*.dag", "Assembly-CSharp.rsp"))
+    # Player builds leave a folder with only the runtime rsp, so require the editor one too.
+    candidates = [c for c in glob.glob(os.path.join(PROJECT, "Library", "Bee", "artifacts", "*.dag", "Assembly-CSharp.rsp"))
+                  if os.path.exists(os.path.join(os.path.dirname(c), "Assembly-CSharp-Editor.rsp"))]
     if not candidates:
         sys.exit(f"No Assembly-CSharp.rsp under {PROJECT}\\Library\\Bee; open the project in Unity once first.")
     return os.path.dirname(max(candidates, key=os.path.getmtime))
