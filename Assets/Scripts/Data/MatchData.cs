@@ -61,6 +61,8 @@ public class MatchData : ScriptableObject
     public int maxCitiesPerLayer = 3;
     [Tooltip("How many layers of roads past a won city its intel reveals.")]
     public int intelDepth = 2;
+    [Tooltip("Chance of each special node (elite city, rest, shop, event) on the middle layers. The first layer, the layer before the base and the base stay plain cities.")]
+    public NodeOdds nodeOdds = new(0.15f, 0.12f, 0.1f, 0.15f);
     [Tooltip("Extra enemy health per match into the run (0.12 = +12% per layer).")]
     public float enemyHealthGrowthPerMatch = 0.12f;
     [Tooltip("Extra enemies per match into the run (0.08 = +8% per layer, rounded).")]
