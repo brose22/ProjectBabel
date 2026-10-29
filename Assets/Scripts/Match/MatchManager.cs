@@ -408,6 +408,31 @@ public class MatchManager : MonoBehaviour
         Finish(MatchState.Won);
     }
 
+    // Cheat: kills the enemy base's boss on the spot, with no tower credited.
+    public bool CanCheatKillBoss => !IsOver && IsBossAlive;
+
+    public void CheatKillBoss()
+    {
+        if (CanCheatKillBoss) Boss.TakeDamage(Boss.Health + 1f);
+    }
+
+    // Cheats: fill the run's Gold or health.
+    public void CheatAddGold(int amount) => RunState.Current.AddGold(amount);
+
+    public void CheatHealFully() => RunState.Current.Heal(RunState.Current.MaxHealth);
+
+    // Cheat: reveals the whole world map and redraws it.
+    public bool CanCheatRevealMap => RunState.Current.Map != null && RunState.Current.Map.nodes.Exists(n => !n.revealed);
+
+    public void CheatRevealMap()
+    {
+        if (!CanCheatRevealMap) return;
+        foreach (MapNode node in RunState.Current.Map.nodes) node.revealed = true;
+        if (State != MatchState.Map) return;
+        RunSave.Save(RunState.Current);
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
     // Jolts the camera and freezes the match for a moment when an ability lands so the hit reads.
     // Overlapping abilities extend the freeze to the longest one rather than stacking.
     void OnAbilityUsed(Tower tower)
