@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: FlowState
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Flow State
-  description: Faster soldier acts
-  chargeSeconds: 18
+  description: All towers act 25% faster this wave
+  chargeSeconds: 22
   shape: 4
   rangeMultiplier: 1
   radius: 0
@@ -24,8 +24,7 @@ MonoBehaviour:
   statusChance: 0
   healFraction: 0
   buffEffect: 2
-  buffAmount: 0.75
-  buffSeconds: 8
+  buffAmount: 0.25
   hitStopSeconds: 0.15
   cameraShake: 0.05
   cameraShakeSeconds: 0.25

@@ -17,7 +17,7 @@ MonoBehaviour:
   role: 1
   color: {r: 1, g: 0.6, b: 0.3, a: 1}
   abilityName: Kindle
-  abilityDescription: Damage boost to nearby towers
+  abilityDescription: All towers deal 25% more damage this wave
   ability: {fileID: 11400000, guid: bef34b0ff85d81142ad2dc472fe7815f, type: 2}
   sprite: {fileID: 21300000, guid: 790adc967df52cb4cb083b4bae77482e, type: 3}
   tintSprite: 0
@@ -29,9 +29,6 @@ MonoBehaviour:
   resourceRegen: 2
   specialChargeRate: 1
   level: 1
-  aura: 3
-  auraStrength: 0.5
-  auraFadeSeconds: 60
   refusalTemper: 1.25
   likes: 010000000700000004000000
   dislikes: 000000000600000008000000

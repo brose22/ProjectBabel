@@ -2,37 +2,36 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // Resolves a captain's ability. Attack shapes hit enemies, with damage scaling with the tower's
-// soldier power and a chance of the captain's element status; the Support shape heals and
-// boosts friendly towers.
+// soldier power and a chance of the captain's element status; the Support shape heals every
+// tower and soldier and boosts them all for the rest of the wave.
 public static class AbilityCaster
 {
     const float FlashSeconds = 0.35f;
     const float FlashAlpha = 0.55f;
     // Disc sprites are two units across, so a disc scaled by r has radius r.
     const float SingleTargetFlashRadius = 0.45f;
-    // A support ability that only affects its own tower still shows a ring this big.
-    const float MinSupportFlashRadius = 0.6f;
+    // Each tower a support ability reaches shows a ring this big.
+    const float SupportFlashRadius = 0.6f;
     static readonly Color HealColor = new(0.4f, 1f, 0.5f, FlashAlpha);
     static readonly Color BoostColor = new(1f, 0.85f, 0.3f, FlashAlpha);
 
-    // Every working tower within the ability radius of the caster (the caster included) is
-    // healed and gets the timed boost. Returns the total health restored.
+    // Heals every working tower and its soldiers by the ability's fraction of their max health, and
+    // adds its boost to every tower for the rest of the wave (towers placed later in the wave get
+    // it too). Returns the total health restored.
     public static float CastSupport(Tower caster, Sprite discSprite)
     {
         AbilityData ability = caster.Captain.ability;
-        Vector3 origin = caster.transform.position;
+        if (ability.HasBuff) Tower.AddWaveBoost(ability.buffEffect, ability.buffAmount);
+
         float healed = 0f;
+        Color color = ability.healFraction > 0f ? HealColor : BoostColor;
         foreach (Tower tower in Tower.All)
         {
-            bool inRange = tower == caster || Vector2.Distance(origin, tower.transform.position) <= ability.radius;
-            if (tower.IsDisabled || !inRange) continue;
+            if (tower.IsDisabled) continue;
             healed += tower.HealAll(ability.healFraction);
-            tower.AddTimedBoost(ability.buffEffect, ability.buffAmount, ability.buffSeconds);
+            AbilityZone.Spawn(tower.transform.position, 0f, Vector3.one * SupportFlashRadius, discSprite, color,
+                FlashSeconds, ability.hitStopSeconds);
         }
-
-        Color color = ability.healFraction > 0f ? HealColor : BoostColor;
-        AbilityZone.Spawn(origin, 0f, Vector3.one * Mathf.Max(ability.radius, MinSupportFlashRadius), discSprite, color,
-            FlashSeconds, ability.hitStopSeconds);
         return healed;
     }
 

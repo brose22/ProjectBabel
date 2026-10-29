@@ -32,7 +32,7 @@ public class MatchManager : MonoBehaviour
     float hitStopRemaining;
     CameraShake cameraShake;
 
-    // Game time the current wave started; auras fade from here.
+    // Game time the current wave started.
     public float WaveStartTime { get; private set; }
 
     // Roster index the player has cycled to; NextCaptain skips anyone already on the field.
@@ -132,6 +132,7 @@ public class MatchManager : MonoBehaviour
         NextWaveCountdown = -1f;
         State = MatchState.WaveActive;
         WaveStartTime = Time.time;
+        Tower.ClearWaveBoosts();
         spawner.SpawnWave(data.waves[WavesCleared]);
         GameEvents.RaiseWaveStarted(WavesCleared + 1);
     }
@@ -139,6 +140,8 @@ public class MatchManager : MonoBehaviour
     void EndWave()
     {
         WavesCleared++;
+        // Buffer specials last for the rest of the wave.
+        Tower.ClearWaveBoosts();
         GameEvents.RaiseWaveEnded(WavesCleared);
         if (WavesCleared >= WaveCount)
         {
@@ -265,6 +268,7 @@ public class MatchManager : MonoBehaviour
     {
         State = result;
         spawner.StopSpawning();
+        Tower.ClearWaveBoosts();
         Time.timeScale = 0f;
         GameEvents.RaiseMatchEnded(result == MatchState.Won);
     }

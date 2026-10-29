@@ -154,7 +154,6 @@ public class MatchHUD : MonoBehaviour
         UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}", panelRefreshers);
         UIKit.LiveLabel(panel, () => $"Reserve {tower.Reserve}/{captain.resourceCapacity}   " +
             (tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}"), panelRefreshers);
-        UIKit.LiveLabel(panel, () => AuraLabel(tower), panelRefreshers, 12);
         UIKit.LiveLabel(panel, () => BoostLabel(tower), panelRefreshers, 12);
         UIKit.Label(panel, $"Likes: {string.Join(", ", captain.likes)}", 12, color: UIKit.MutedTextColor);
         UIKit.Label(panel, $"Dislikes: {string.Join(", ", captain.dislikes)}", 12, color: UIKit.MutedTextColor);
@@ -218,6 +217,8 @@ public class MatchHUD : MonoBehaviour
         UIKit.Size(UIKit.LiveLabel(row, () => $"{ability.displayName}  {Mathf.FloorToInt(tower.SpecialCharge * 100f)}%", panelRefreshers),
             flexibleWidth: 1f);
         UIKit.LiveButton(row, () => "Use (Q)", () => tower.TryUseAbility(), panelRefreshers, () => tower.CanUseAbility, width: 80f);
+        if (!string.IsNullOrEmpty(ability.description))
+            UIKit.Label(panel, ability.description, 12, color: UIKit.MutedTextColor);
     }
 
     // Slots 3 and 4 open at bond ranks B and S (GDD).
@@ -255,35 +256,16 @@ public class MatchHUD : MonoBehaviour
         }
     }
 
-    // Shows the live boost during a wave, otherwise what the aura will do when one starts.
-    static string AuraLabel(Tower tower)
-    {
-        CaptainData captain = tower.Captain;
-        switch (captain.aura)
-        {
-            case SupportEffect.None:
-                return "Aura: none";
-            case SupportEffect.Heal:
-                return $"Aura: heals soldiers {captain.auraStrength:0.#}/s" + (tower.IsAuraActive ? "" : " in waves");
-            default:
-                return tower.IsAuraActive
-                    ? $"Aura: {captain.aura} +{tower.Boost(captain.aura) * 100f:0}% (fading)"
-                    : $"Aura: {captain.aura} +{captain.auraStrength * 100f:0}% at wave start";
-        }
-    }
-
-    // Total boosts on the tower's soldiers right now (aura plus timed), with time left on timed ones.
+    // Boosts every tower has from Buffer specials cast this wave.
     static string BoostLabel(Tower tower)
     {
         var parts = new List<string>();
         foreach (SupportEffect effect in StatEffects)
         {
             float boost = tower.Boost(effect);
-            if (boost <= 0f) continue;
-            float secondsLeft = tower.TimedBoostSecondsLeft(effect);
-            parts.Add($"{effect} +{boost * 100f:0}%" + (secondsLeft > 0f ? $" ({Mathf.CeilToInt(secondsLeft)}s)" : ""));
+            if (boost > 0f) parts.Add($"{effect} +{boost * 100f:0}%");
         }
-        return parts.Count == 0 ? "Boosts: none" : "Boosts: " + string.Join(", ", parts);
+        return parts.Count == 0 ? "Wave boosts: none" : "Wave boosts: " + string.Join(", ", parts);
     }
 
     void UpdateMoveHint()

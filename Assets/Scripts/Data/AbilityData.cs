@@ -15,8 +15,7 @@ public class AbilityData : ScriptableObject
         Line,
         // A patch of ground at the target that hurts enemies standing in it.
         Zone,
-        // Heals and boosts every working tower within radius of the caster, the caster included,
-        // and their soldiers. Needs no enemy target.
+        // Heals and boosts every working tower on the map and their soldiers. Needs no enemy target.
         Support,
     }
 
@@ -45,13 +44,14 @@ public class AbilityData : ScriptableObject
     [Range(0f, 1f)] public float statusChance = 0.3f;
 
     [Header("Support shape")]
-    [Tooltip("Fraction of max health restored to each tower in range and to its soldiers.")]
+    [Tooltip("Fraction of max health restored to every tower and to each of its soldiers.")]
     [Range(0f, 1f)] public float healFraction;
-    [Tooltip("Stat boost given to each tower in range. Heal and None give no boost.")]
+    [Tooltip("Stat boost given to every tower and its soldiers until the wave ends. Heal and None give no boost.")]
     public SupportEffect buffEffect;
-    [Tooltip("Size of the boost (0.5 = 50%). It stacks with auras but not with itself.")]
+    [Tooltip("Size of the boost (0.5 = 50%). Casting again in the same wave adds to it.")]
     public float buffAmount;
-    public float buffSeconds = 8f;
+
+    public bool HasBuff => buffEffect is not (SupportEffect.None or SupportEffect.Heal) && buffAmount > 0f;
 
     [Header("Feel")]
     [Tooltip("Real-time seconds the whole match freezes when the ability lands, while its effect plays. 0 turns it off.")]

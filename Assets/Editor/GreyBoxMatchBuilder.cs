@@ -195,18 +195,20 @@ public static class GreyBoxMatchBuilder
         AbilityData crosswind = Ability("Crosswind", "Crosswind", "Pushes enemies back, applies Dizzy", AbilityData.Shape.Area,
             chargeSeconds: 20f, radius: 1.3f, damageMultiplier: 1f, knockbackDistance: 1.5f, statusChance: 0.4f);
 
-        AbilityData tidalMend = SupportAbility("TidalMend", "Tidal Mend", "Heals tower and soldiers",
-            chargeSeconds: 18f, radius: 0f, healFraction: 0.5f);
-        AbilityData flowState = SupportAbility("FlowState", "Flow State", "Faster soldier acts",
-            chargeSeconds: 18f, radius: 0f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.75f, buffSeconds: 8f);
-        AbilityData kindle = SupportAbility("Kindle", "Kindle", "Damage boost to nearby towers",
-            chargeSeconds: 20f, radius: 2.5f, buffEffect: SupportEffect.Damage, buffAmount: 0.5f, buffSeconds: 8f);
-        AbilityData stoneWard = SupportAbility("StoneWard", "Stone Ward", "Defense boost, towers and soldiers",
-            chargeSeconds: 20f, radius: 2.5f, buffEffect: SupportEffect.Defense, buffAmount: 0.5f, buffSeconds: 8f);
-        AbilityData mendTheLand = SupportAbility("MendTheLand", "Mend the Land", "Area heal plus short shield",
-            chargeSeconds: 22f, radius: 2.5f, healFraction: 0.3f, buffEffect: SupportEffect.Defense, buffAmount: 0.6f, buffSeconds: 3f);
-        AbilityData secondWind = SupportAbility("SecondWind", "Second Wind", "Heal plus speed boost",
-            chargeSeconds: 20f, radius: 2f, healFraction: 0.25f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.5f, buffSeconds: 6f);
+        // Support specials reach every tower: Healers restore a share of max health, Buffers boost a
+        // stat until the wave ends. The second description is the pre-rework one, for upgrading.
+        AbilityData tidalMend = SupportAbility("TidalMend", "Tidal Mend", "Heals all towers and soldiers 35%",
+            "Heals tower and soldiers", chargeSeconds: 20f, healFraction: 0.35f);
+        AbilityData flowState = SupportAbility("FlowState", "Flow State", "All towers act 25% faster this wave",
+            "Faster soldier acts", chargeSeconds: 22f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.25f);
+        AbilityData kindle = SupportAbility("Kindle", "Kindle", "All towers deal 25% more damage this wave",
+            "Damage boost to nearby towers", chargeSeconds: 22f, buffEffect: SupportEffect.Damage, buffAmount: 0.25f);
+        AbilityData stoneWard = SupportAbility("StoneWard", "Stone Ward", "All towers take 30% less damage this wave",
+            "Defense boost, towers and soldiers", chargeSeconds: 22f, buffEffect: SupportEffect.Defense, buffAmount: 0.3f);
+        AbilityData mendTheLand = SupportAbility("MendTheLand", "Mend the Land", "Heals all 25%, +15% defense this wave",
+            "Area heal plus short shield", chargeSeconds: 24f, healFraction: 0.25f, buffEffect: SupportEffect.Defense, buffAmount: 0.15f);
+        AbilityData secondWind = SupportAbility("SecondWind", "Second Wind", "Heals all 20%, +15% act speed this wave",
+            "Heal plus speed boost", chargeSeconds: 22f, healFraction: 0.2f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.15f);
 
         var allCaptains = new List<CaptainData>
         {
@@ -222,24 +224,24 @@ public static class GreyBoxMatchBuilder
                 new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Stable, CaptainTag.Leaks }, refusalTemper: 1.5f),
             Captain("Skye", Element.Air, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Dizzy", crosswind,
                 new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Stable, CaptainTag.Selling }, refusalTemper: 1.25f),
-            Captain("Marin", Element.Water, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", "Heals tower and soldiers", tidalMend,
+            Captain("Marin", Element.Water, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", tidalMend.description, tidalMend,
                 new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Ability }, new[] { CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties },
-                CaptainRole.Healer, SupportEffect.Heal, 2f, refusalTemper: 0.75f),
-            Captain("Rill", Element.Water, new Color(0.35f, 0.6f, 1f), 7f, 2f, 1.1f, "Flow State", "Faster soldier acts", flowState,
+                CaptainRole.Healer, refusalTemper: 0.75f),
+            Captain("Rill", Element.Water, new Color(0.35f, 0.6f, 1f), 7f, 2f, 1.1f, "Flow State", flowState.description, flowState,
                 new[] { CaptainTag.Rogues, CaptainTag.Ability, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Moving },
-                CaptainRole.Buffer, SupportEffect.ActSpeed, 0.5f, refusalTemper: 1f),
-            Captain("Ember", Element.Fire, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", "Damage boost to nearby towers", kindle,
+                CaptainRole.Buffer, refusalTemper: 1f),
+            Captain("Ember", Element.Fire, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", kindle.description, kindle,
                 new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Leaks }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Stable },
-                CaptainRole.Buffer, SupportEffect.Damage, 0.5f, refusalTemper: 1.25f),
-            Captain("Boulder", Element.Earth, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", "Defense boost, towers and soldiers", stoneWard,
+                CaptainRole.Buffer, refusalTemper: 1.25f),
+            Captain("Boulder", Element.Earth, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", stoneWard.description, stoneWard,
                 new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Stable }, new[] { CaptainTag.Mages, CaptainTag.Moving, CaptainTag.Casualties },
-                CaptainRole.Buffer, SupportEffect.Defense, 0.4f, refusalTemper: 0.75f),
-            Captain("Terra", Element.Earth, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", "Area heal plus short shield", mendTheLand,
+                CaptainRole.Buffer, refusalTemper: 0.75f),
+            Captain("Terra", Element.Earth, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", mendTheLand.description, mendTheLand,
                 new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Leaks }, new[] { CaptainTag.Rogues, CaptainTag.Moving, CaptainTag.Casualties },
-                CaptainRole.Healer, SupportEffect.Heal, 1.5f, refusalTemper: 0.75f),
-            Captain("Gust", Element.Air, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", "Heal plus speed boost", secondWind,
+                CaptainRole.Healer, refusalTemper: 0.75f),
+            Captain("Gust", Element.Air, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", secondWind.description, secondWind,
                 new[] { CaptainTag.Archers, CaptainTag.Moving, CaptainTag.Ability }, new[] { CaptainTag.Knights, CaptainTag.Stable, CaptainTag.Casualties },
-                CaptainRole.Healer, SupportEffect.Heal, 1.5f, refusalTemper: 0.75f),
+                CaptainRole.Healer, refusalTemper: 0.75f),
         };
 
         // The vertical slice runs with one captain of each role (GDD month 12); the other captains
@@ -406,7 +408,7 @@ public static class GreyBoxMatchBuilder
 
     static CaptainData Captain(string name, Element element, Color color, float power, float range, float speed,
         string ability, string abilityDescription, AbilityData abilityData, CaptainTag[] likes, CaptainTag[] dislikes,
-        CaptainRole role = CaptainRole.Attacker, SupportEffect aura = SupportEffect.None, float auraStrength = 0f, float auraFadeSeconds = 60f, float refusalTemper = 1f)
+        CaptainRole role = CaptainRole.Attacker, float refusalTemper = 1f)
     {
         CaptainData captain = LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{name}.asset", c =>
         {
@@ -422,9 +424,6 @@ public static class GreyBoxMatchBuilder
             c.ability = abilityData;
             c.likes = likes;
             c.dislikes = dislikes;
-            c.aura = aura;
-            c.auraStrength = auraStrength;
-            c.auraFadeSeconds = auraFadeSeconds;
             c.refusalTemper = refusalTemper;
         });
         // Captains saved before Milestone 3 have no ability yet.
@@ -433,6 +432,13 @@ public static class GreyBoxMatchBuilder
             captain.ability = abilityData;
             EditorUtility.SetDirty(captain);
             Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its ability.");
+        }
+        // Support captains saved before the aura rework still describe the old special.
+        if (captain.role != CaptainRole.Attacker && captain.ability == abilityData && captain.abilityDescription != abilityDescription)
+        {
+            captain.abilityDescription = abilityDescription;
+            EditorUtility.SetDirty(captain);
+            Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its reworked special's description.");
         }
         // Captains saved before bond data existed lack a refusal temper. 1 is a legitimate value, so only a never-saved field counts as unset.
         if (!IsSerialized(captain, nameof(CaptainData.refusalTemper)))
@@ -462,23 +468,32 @@ public static class GreyBoxMatchBuilder
         });
     }
 
-    static AbilityData SupportAbility(string name, string displayName, string description, float chargeSeconds, float radius,
-        float healFraction = 0f, SupportEffect buffEffect = SupportEffect.None, float buffAmount = 0f, float buffSeconds = 0f)
+    static AbilityData SupportAbility(string name, string displayName, string description, string preReworkDescription,
+        float chargeSeconds, float healFraction = 0f, SupportEffect buffEffect = SupportEffect.None, float buffAmount = 0f)
     {
-        return LoadOrCreate<AbilityData>($"{DataFolder}/Abilities/{name}.asset", a =>
+        void Apply(AbilityData a)
         {
             a.displayName = displayName;
             a.description = description;
             a.shape = AbilityData.Shape.Support;
             a.chargeSeconds = chargeSeconds;
-            a.radius = radius;
             a.statusChance = 0f;
             a.healFraction = healFraction;
             a.buffEffect = buffEffect;
             a.buffAmount = buffAmount;
-            a.buffSeconds = buffSeconds;
             a.cameraShake = 0.05f;
-        });
+        }
+
+        AbilityData ability = LoadOrCreate<AbilityData>($"{DataFolder}/Abilities/{name}.asset", Apply);
+        // Abilities saved before the aura rework were tuned for short, local boosts; one still
+        // carrying its old description gets the map-wide, whole-wave numbers.
+        if (ability.description == preReworkDescription)
+        {
+            Apply(ability);
+            EditorUtility.SetDirty(ability);
+            Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(ability)} to a map-wide support special.");
+        }
+        return ability;
     }
 
     // ---------- Prefabs ----------

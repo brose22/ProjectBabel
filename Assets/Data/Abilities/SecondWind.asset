@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SecondWind
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Second Wind
-  description: Heal plus speed boost
-  chargeSeconds: 20
+  description: Heals all 20%, +15% act speed this wave
+  chargeSeconds: 22
   shape: 4
   rangeMultiplier: 1
   radius: 2
@@ -22,10 +22,9 @@ MonoBehaviour:
   knockbackDistance: 0
   zoneDuration: 4
   statusChance: 0
-  healFraction: 0.25
+  healFraction: 0.2
   buffEffect: 2
-  buffAmount: 0.5
-  buffSeconds: 6
+  buffAmount: 0.15
   hitStopSeconds: 0.15
   cameraShake: 0.05
   cameraShakeSeconds: 0.25
