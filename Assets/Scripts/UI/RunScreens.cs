@@ -347,9 +347,9 @@ public class RunScreens : MonoBehaviour
         layout.childAlignment = TextAnchor.UpperCenter;
 
         UIKit.Label(column, "WORLD MAP", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, $"Match {run.MatchesPlayed + 1}    Health {run.Health}/{run.MaxHealth}    Gold {run.Gold}    " +
-                            "Pick the next stop. Every road leads to the enemy base; each stop reveals the roads beyond it.",
+        UIKit.Label(column, "Pick the next stop. Every road leads to the enemy base; each stop reveals the roads beyond it.",
             12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        BuildRunStats(root, run);
 
         RectTransform area = UIKit.Box(column, "Map", blocksClicks: false);
         UIKit.Size(area, MapArea.x, MapArea.y);
@@ -601,6 +601,28 @@ public class RunScreens : MonoBehaviour
         if (!won || runWon) UIKit.Primary(newRun, refreshers);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 150f, 28f);
     }
+
+    // The run's match number, health (with a meter) and Gold, in a framed box in the top right.
+    void BuildRunStats(RectTransform root, RunState run)
+    {
+        RectTransform box = UIKit.Box(root, "Run Stats", blocksClicks: false);
+        UIKit.Place(box, Vector2.one, new Vector2(-UIKit.Pad, -UIKit.Pad), Vector2.zero);
+        HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(box, 6, 6, fitContent: true);
+        layout.padding.left = layout.padding.right = 10;
+        // Top-aligned, so the captions line up although the health column is taller.
+        layout.childAlignment = TextAnchor.UpperCenter;
+
+        Stat(box, "MATCH", $"{run.MatchesPlayed + 1}");
+        StatRule(box);
+        Text health = Stat(box, "HEALTH", $"{run.Health}/{run.MaxHealth}");
+        if (run.Health * 3 <= run.MaxHealth) health.color = UIKit.BadColor;
+        float healthFraction = run.Health / (float)Mathf.Max(1, run.MaxHealth);
+        UIKit.LiveBar(health.transform.parent, () => healthFraction, () => "", UIKit.HealthBarColor, refreshers, 8f);
+        StatRule(box);
+        Stat(box, "GOLD", $"{run.Gold}").color = UIKit.AccentColor;
+    }
+
+    static void StatRule(Transform parent) => UIKit.Size(UIKit.Panel(parent, "Rule", UIKit.RuleColor, blocksClicks: false), 2f, 34f);
 
     static Text Stat(Transform parent, string caption, string value)
     {
