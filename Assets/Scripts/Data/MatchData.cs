@@ -38,6 +38,10 @@ public class MatchData : ScriptableObject
     [Tooltip("Approval a gift adds to the captain it is given to (approval runs -100 to 100).")]
     public float giftApproval = 10f;
 
+    [Header("Events")]
+    [Tooltip("Events that event nodes on the world map pick from.")]
+    public List<EventData> events = new();
+
     [Header("Towers")]
     public int maxTowers = 5;
     [Tooltip("How many roster captains the player picks to start a run.")]

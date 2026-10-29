@@ -282,6 +282,7 @@ public class RunScreens : MonoBehaviour
         {
             case NodeKind.Rest: BuildRest(panel); break;
             case NodeKind.Shop: BuildShop(panel); break;
+            case NodeKind.Event when match.StopEvent != null: BuildEvent(panel, match.StopEvent); break;
             default: UIKit.Button(panel, "Move on", match.LeaveStop, 220f, 32f); break;
         }
     }
@@ -316,6 +317,17 @@ public class RunScreens : MonoBehaviour
                 () => match.BuyGift(captain), refreshers, () => match.CanBuyGift(captain), width: 400f, height: 26f);
         }
         UIKit.Button(panel, "Leave the shop", match.LeaveStop, 220f, 32f);
+    }
+
+    void BuildEvent(RectTransform panel, EventData data)
+    {
+        StopHeader(panel, data.title.ToUpperInvariant(), data.text);
+        foreach (EventChoice choice in data.choices)
+        {
+            string effects = choice.Describe();
+            UIKit.LiveButton(panel, () => effects.Length > 0 ? $"{choice.label}  ({effects})" : choice.label,
+                () => match.TakeEventChoice(choice), refreshers, () => match.CanTakeEventChoice(choice), width: 460f, height: 28f);
+        }
     }
 
     // ---------- Results ----------
