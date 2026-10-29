@@ -23,6 +23,10 @@ public class RunScreens : MonoBehaviour
     const float RowHeight = 58f;
     static readonly Vector2 MapArea = new(860f, 330f);
     static readonly Vector2 CitySize = new(104f, 34f);
+    // World map party drawer.
+    const float DrawerWidth = 300f;
+    const float DrawerSlideSeconds = 0.2f;
+    static readonly Vector2 DrawerTabSize = new(30f, 110f);
     static readonly Color RoadColor = new(0.55f, 0.45f, 0.3f, 1f);
     static readonly Color ClearedCityColor = new(0.16f, 0.3f, 0.2f, 1f);
     static readonly Color BaseColor = new(0.55f, 0.12f, 0.16f, 1f);
@@ -359,17 +363,83 @@ public class RunScreens : MonoBehaviour
         foreach (MapNode node in map.nodes)
             if (node.revealed) BuildCity(area, map, node, choices.Exists(c => c.id == node.id));
 
-        // One wrapped line so a full party of 8 still fits under the map.
-        var party = new List<string>();
-        foreach (CaptainData captain in run.Party)
-            party.Add($"{captain.displayName} ({captain.role}, Lv {Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)))}, " +
-                      $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}{(run.HasDeparted(captain) ? ", walked out" : "")})");
-        UIKit.Label(column, $"Party: {string.Join("    ", party)}", 12, TextAnchor.MiddleCenter);
-
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
         UIKit.Button(buttons, "Abandon run", match.RestartRun, 160f, 24f);
+
+        BuildPartyDrawer(root, run);
+    }
+
+    // The party in a drawer that slides in from the left. Its tab stays on the screen edge while
+    // it's closed; the tab, the Close button or a click beside the drawer toggles it.
+    void BuildPartyDrawer(RectTransform root, RunState run)
+    {
+        bool open = false;
+        float shown = 0f;
+
+        RectTransform blocker = UIKit.Stretch(UIKit.Panel(root, "Drawer Blocker", new Color(0f, 0f, 0f, 0.4f)));
+        var dismiss = blocker.gameObject.AddComponent<Button>();
+        dismiss.transition = Selectable.Transition.None;
+        dismiss.onClick.AddListener(() => open = false);
+        var blockerFade = blocker.gameObject.AddComponent<CanvasGroup>();
+
+        RectTransform drawer = UIKit.Box(root, "Party Drawer");
+        drawer.anchorMin = Vector2.zero;
+        drawer.anchorMax = new Vector2(0f, 1f);
+        drawer.pivot = new Vector2(0f, 0.5f);
+        drawer.sizeDelta = new Vector2(DrawerWidth, -2f * UIKit.Pad);
+        UIKit.Layout<VerticalLayoutGroup>(drawer, UIKit.Pad, 6);
+
+        Transform title = UIKit.Group(drawer, "Title");
+        UIKit.Layout<HorizontalLayoutGroup>(title, 0, 6);
+        string muted = UIKit.Hex(UIKit.MutedTextColor);
+        Text header = UIKit.Label(title, $"PARTY   <color={muted}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>", 10,
+            color: UIKit.AccentColor);
+        header.fontStyle = FontStyle.Bold;
+        UIKit.Size(header, flexibleWidth: 1f);
+        UIKit.Button(title, "Close", () => open = false, 60f, 22f);
+
+        ScrollRect list = UIKit.ScrollList(drawer, "Captains", UIKit.Gap);
+        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        foreach (CaptainData captain in run.Party)
+            PartyCard(list.content, run, captain);
+
+        // The tab hangs off the drawer's right edge, so it rides along as the drawer slides.
+        Button tab = UIKit.Button(drawer, "", () => open = !open, DrawerTabSize.x, DrawerTabSize.y);
+        tab.GetComponent<LayoutElement>().ignoreLayout = true;
+        UIKit.Place((RectTransform)tab.transform, new Vector2(1f, 0.5f), Vector2.zero, DrawerTabSize);
+        ((RectTransform)tab.transform).pivot = new Vector2(0f, 0.5f);
+        Text tabLabel = tab.GetComponentInChildren<Text>();
+        tabLabel.fontStyle = FontStyle.Bold;
+        UIKit.Place(tabLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, UIKit.Gap / 2f), new Vector2(DrawerTabSize.y, DrawerTabSize.x));
+        tabLabel.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+
+        refreshers.Add(() =>
+        {
+            shown = Mathf.MoveTowards(shown, open ? 1f : 0f, Time.unscaledDeltaTime / DrawerSlideSeconds);
+            float eased = shown * shown * (3f - 2f * shown);
+            // Whole reference pixels, so the frame's texels stay crisp mid-slide.
+            drawer.anchoredPosition = new Vector2(Mathf.Round(Mathf.Lerp(-DrawerWidth, 0f, eased)), 0f);
+            blocker.gameObject.SetActive(shown > 0f);
+            blockerFade.alpha = eased;
+            tabLabel.text = open ? "CLOSE" : "PARTY";
+        });
+    }
+
+    // A captain in the party drawer: the usual details, tagged with their level, or faded with a
+    // note when they've walked out.
+    static void PartyCard(Transform list, RunState run, CaptainData captain)
+    {
+        bool departed = run.HasDeparted(captain);
+        RectTransform card = UIKit.Box(list, captain.displayName, departed ? UIKit.InsetColor : CardColor, blocksClicks: false);
+        UIKit.Layout<VerticalLayoutGroup>(card, 8, 1).padding.top = 6;
+        UIKit.Size(card, flexibleWidth: 1f);
+        int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
+        CaptainDetails(card, captain, departed ? "WALKED OUT" : $"LV {level}", out _, out Text tag);
+        if (!departed) return;
+        tag.color = UIKit.BadColor;
+        card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
     }
 
     // Layers run left to right; cities in a layer are spread evenly top to bottom.
