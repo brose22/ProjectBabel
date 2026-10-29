@@ -24,8 +24,19 @@ Early development. One developer at 20 hours a week, with a vertical slice targe
 | M3: roles and elements | Status effects, special abilities and hit-stop, Buffer and Healer auras, levels and XP, enemy types and weaknesses | Done (merged) |
 | M4: relationships | Approval (saved between runs), like/dislike judging, requests, bond ranks D–S, walkouts | Done (merged) |
 | M5: vertical slice | City map, Cinder / Marin / Ember, run setup and results, uGUI HUD, generated pixel art, stats log and tuning | Done (merged) |
+| M6: world map and run | Branching world map to the enemy base, intel reveals roads, 4 city layouts, scaling difficulty, pick 3 and recruit up to 8, run saved between matches (short 7-match test run) | Done (merged) |
 
-Later phases cover the world map and full run, the remaining content, polish, and release prep.
+Next up (M7): node types on the world map (elite cities, rests, shops, events) and restoring global health during a run. Later phases cover the remaining content, polish, and release prep.
+
+### How a run plays (M6)
+
+1. **Setup:** pick 3 captains from the roster of 12.
+2. **World map:** pick a city on the next layer. Every road leads to the enemy base in the last layer. You only see the roads your intel has revealed; winning a city reveals the next 2 layers beyond it.
+3. **Match:** the city is played on one of 4 layouts (Riverside, Hillfort, Market Square, Long Road). Enemies get tougher and more numerous the further into the run you are, and the enemy base plays its waves twice.
+4. **After a win:** up to 3 captains offer to join; recruit one or decline (the party holds 8, not counting walkouts). Health, Gold, XP and walkouts carry over.
+5. Taking the enemy base wins the run; reaching 0 health loses it.
+
+The run is saved to `run.json` in the persistent data path whenever you're on the map or have just won a city, and it resumes when the match scene starts. **Abandon run** on the map deletes it. Run length, layer sizes, intel depth and difficulty growth are on the match data asset under **World map**.
 
 ## Getting started
 
@@ -55,14 +66,14 @@ Later phases cover the world map and full run, the remaining content, polish, an
 Assets/
   Scripts/
     Core/     Run-wide state (health, Gold) and the GameEvents event bus
-    Data/     ScriptableObject definitions: captains, soldier classes, enemies, matches
+    Data/     ScriptableObject definitions: captains, soldier classes, enemies, matches, city layouts
     Match/    Match simulation: grid, path, enemies, towers, soldiers, waves, placement
     UI/       Grey-box HUD (temporary)
   Editor/     Scene builder for the grey-box match
   Data/       Tunable data assets (captains, enemies, soldier classes, match setup)
   Prefabs/    Enemy, tower and soldier prefabs
   Art/        Placeholder sprites and tiles
-  Scenes/     Match scene
+  Scenes/     Match scene (setup, world map, matches and results all run in it)
 ```
 
 ### Conventions
