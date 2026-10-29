@@ -67,8 +67,7 @@ The run is saved to `run.json` in the persistent data path whenever you're on th
 | Input | Action |
 |---|---|
 | Left-click a free tile | Place the next captain's tower |
-| `Tab` | Choose which captain to place next |
-| `Q` | Fire the selected tower's special when its meter is full |
+| Click a captain in the party bar (bottom) | On the field: fire their special when its meter is full. Not yet placed: make them the next to place |
 | `M` | Move the selected tower (then click a free tile) |
 | Left-click a tower | Select it |
 | `1` / `2` / `3` | Set the selected tower's Gold draw: Low / Normal / High |

@@ -4,7 +4,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The match HUD, built in uGUI at runtime: top bar, captain widget, move hint, captain
+// The match HUD, built in uGUI at runtime: top bar, party bar, captain widget, move hint, captain
 // requests, approval messages and controls hint (RunScreens shows results). Labels and buttons
 // refresh every frame; the captain widget and request cards rebuild only when their structure changes.
 public class MatchHUD : MonoBehaviour
@@ -23,6 +23,7 @@ public class MatchHUD : MonoBehaviour
 
     Relationships relationships;
     CaptainWidget captainWidget;
+    PartyBar partyBar;
     CaptainDebugPanel debugPanel;
     CaptainRequests requests;
     Canvas canvas;
@@ -64,6 +65,7 @@ public class MatchHUD : MonoBehaviour
         messages = UIKit.Shadowed(UIKit.Label(canvas.transform, "", 12, TextAnchor.UpperRight));
         UIKit.Place(messages.rectTransform, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -TopBarHeight - 8f), new Vector2(MessagesWidth, 120f));
 
+        partyBar = new PartyBar(canvas.transform, match);
         BuildControlsHint();
         captainWidget = new CaptainWidget(canvas, TopBarHeight + UIKit.Pad, match, placement);
         // The full captain panel is a testing tool, kept out of release builds.
@@ -76,6 +78,7 @@ public class MatchHUD : MonoBehaviour
         // The run setup screen covers everything; the HUD returns once the run begins.
         canvas.enabled = !match.IsBetweenMatches;
         UIKit.Refresh(barRefreshers);
+        partyBar.Update();
         captainWidget.Update();
         debugPanel?.Update();
         UpdateRequests();
@@ -92,14 +95,14 @@ public class MatchHUD : MonoBehaviour
     void BuildControlsHint()
     {
         RectTransform box = UIKit.Box(canvas.transform, "Controls", HintColor, blocksClicks: false);
-        UIKit.Place(box, new Vector2(1f, 0f), new Vector2(-UIKit.Pad, UIKit.Pad), Vector2.zero);
+        // Above the party bar, which can run the width of the screen.
+        UIKit.Place(box, new Vector2(1f, 0f), new Vector2(-UIKit.Pad, UIKit.Pad + PartyBar.Height + UIKit.Gap), Vector2.zero);
         UIKit.Layout<HorizontalLayoutGroup>(box, 5, 0, fitContent: true);
         string key = UIKit.Hex(UIKit.AccentColor);
         var parts = new List<string>();
         foreach ((string keys, string action) in new[]
                  {
-                     ("Click", "place / select"), ("Tab", "next captain"), ("Q", "ability"),
-                     ("M", "move"), ("X", "sell"), ("Space", "next wave"),
+                     ("Click", "place / select"), ("M", "move"), ("X", "sell"), ("Space", "next wave"),
                  })
             parts.Add($"<color={key}>{keys}</color> {action}");
         UIKit.Label(box, string.Join("   ", parts), 11, TextAnchor.MiddleRight, UIKit.TextColor);
@@ -148,9 +151,6 @@ public class MatchHUD : MonoBehaviour
         Stat(bar, "CASUALTIES", () => $"{match.Casualties}");
         UIKit.Size(UIKit.Group(bar, "Spacer"), flexibleWidth: 1f);
 
-        Button next = UIKit.LiveButton(bar, NextCaptainLabel, match.CycleNextCaptain, barRefreshers,
-            interactable: () => match.CanPlaceTower, width: 190f);
-        next.GetComponentInChildren<Text>().fontSize = 12;
         UIKit.Primary(UIKit.LiveButton(bar, WaveButtonLabel, match.StartNextWave, barRefreshers,
             interactable: () => match.State == MatchState.Preparing, width: 130f), barRefreshers);
         UIKit.LiveButton(bar, () => match.GameSpeed > 1f ? "Speed x2" : "Speed x1", match.ToggleGameSpeed, barRefreshers,
@@ -172,12 +172,6 @@ public class MatchHUD : MonoBehaviour
         if (match.City == null || map == null) return "";
         string name = match.IsBaseMatch ? "Enemy base" : match.CityLayout != null ? match.CityLayout.displayName : "City";
         return $"{name} ({match.City.layer + 1}/{map.layerCount})";
-    }
-
-    string NextCaptainLabel()
-    {
-        CaptainData next = match.NextCaptain;
-        return match.CanPlaceTower && next != null ? $"Next: {next.displayName} ({next.role})  [Tab]" : "No captains to place";
     }
 
     string WaveButtonLabel()

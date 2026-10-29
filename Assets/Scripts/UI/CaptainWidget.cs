@@ -56,7 +56,7 @@ public class CaptainWidget
     // Just outside the captain's attack range, so the range circle stays visible: to the right
     // when the widget fits there, else to the left; when neither fits, on the roomier side and
     // pushed back on screen. Vertically centred on the captain, kept between the top bar and the
-    // bottom edge.
+    // party bar.
     void PlaceBeside(Tower tower)
     {
         Camera cam = Camera.main;
@@ -74,7 +74,7 @@ public class CaptainWidget
         else if (left >= minX) x = left;
         else x = Mathf.Clamp(screen.x - centre.x >= centre.x ? right : left, minX, Mathf.Max(minX, maxX));
 
-        float minY = UIKit.Pad, maxY = screen.y - topMargin - size.y;
+        float minY = UIKit.Pad + PartyBar.Height + UIKit.Gap, maxY = screen.y - topMargin - size.y;
         float y = Mathf.Clamp(centre.y - size.y / 2f, minY, Mathf.Max(minY, maxY));
         // Whole reference pixels keep the pixel-art frame crisp.
         panel.anchoredPosition = new Vector2(Mathf.Round(x), Mathf.Round(y));
