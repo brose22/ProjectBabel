@@ -22,6 +22,14 @@ public static class RunSave
         public float approval;
     }
 
+    // Class asset names per slot; an empty name keeps that slot's default.
+    [Serializable]
+    class CaptainLoadout
+    {
+        public string captain;
+        public List<string> classes = new();
+    }
+
     [Serializable]
     class SaveFile
     {
@@ -34,6 +42,7 @@ public static class RunSave
         public List<string> recruitOffer = new();
         public List<CaptainXp> xp = new();
         public List<CaptainApproval> bestApproval = new();
+        public List<CaptainLoadout> loadouts = new();
         public WorldMap map;
     }
 
@@ -59,6 +68,12 @@ public static class RunSave
             file.xp.Add(new CaptainXp { captain = entry.Key.name, xp = entry.Value });
         foreach (KeyValuePair<CaptainData, float> entry in run.AllBestApprovals)
             file.bestApproval.Add(new CaptainApproval { captain = entry.Key.name, approval = entry.Value });
+        foreach (KeyValuePair<CaptainData, SoldierClassData[]> entry in run.AllLoadouts)
+        {
+            var loadout = new CaptainLoadout { captain = entry.Key.name };
+            foreach (SoldierClassData soldierClass in entry.Value) loadout.classes.Add(soldierClass != null ? soldierClass.name : "");
+            file.loadouts.Add(loadout);
+        }
         try
         {
             File.WriteAllText(FilePath, JsonUtility.ToJson(file, true));
@@ -69,9 +84,9 @@ public static class RunSave
         }
     }
 
-    // Restores the saved run as RunState.Current, looking captains up in the roster. Returns false,
-    // leaving no run, if there is no save or it can't be used.
-    public static bool TryResume(IEnumerable<CaptainData> roster)
+    // Restores the saved run as RunState.Current, looking captains up in the roster and soldier
+    // classes in classes. Returns false, leaving no run, if there is no save or it can't be used.
+    public static bool TryResume(IEnumerable<CaptainData> roster, IEnumerable<SoldierClassData> classes = null)
     {
         if (!Exists) return false;
         SaveFile file;
@@ -104,6 +119,18 @@ public static class RunSave
             if (byName.TryGetValue(entry.captain, out CaptainData captain)) run.AddXp(captain, entry.xp);
         foreach (CaptainApproval entry in file.bestApproval)
             if (byName.TryGetValue(entry.captain, out CaptainData captain)) run.SetBestApproval(captain, entry.approval);
+
+        var classByName = new Dictionary<string, SoldierClassData>();
+        if (classes != null)
+            foreach (SoldierClassData soldierClass in classes)
+                if (soldierClass != null) classByName[soldierClass.name] = soldierClass;
+        foreach (CaptainLoadout entry in file.loadouts ?? new List<CaptainLoadout>())
+        {
+            if (!byName.TryGetValue(entry.captain, out CaptainData captain)) continue;
+            for (int slot = 0; slot < entry.classes.Count; slot++)
+                if (classByName.TryGetValue(entry.classes[slot], out SoldierClassData soldierClass))
+                    run.SetLoadoutClass(captain, slot, soldierClass);
+        }
         return true;
     }
 

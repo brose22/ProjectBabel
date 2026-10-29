@@ -88,7 +88,7 @@ public class MatchManager : MonoBehaviour
     void Awake()
     {
         // Pick up a saved run if there is one, otherwise start fresh.
-        if (RunState.Current == null && !RunSave.TryResume(data.roster))
+        if (RunState.Current == null && !RunSave.TryResume(data.roster, data.availableClasses))
             RunState.StartNewRun(data.startingHealth, data.startingGold);
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
@@ -180,14 +180,18 @@ public class MatchManager : MonoBehaviour
     }
 
     // Bond rank sets how many soldiers a captain fields (GDD); soldiersPerTower is the floor.
-    int SoldierCountFor(CaptainData captain) =>
+    public int SoldierCountFor(CaptainData captain) =>
         Mathf.Max(data.soldiersPerTower, BondMath.SoldierCount(ApprovalStore.RankOf(captain)));
 
     void OnBondRankUp(CaptainData captain)
     {
         Tower tower = Tower.All.Find(t => t.Captain == captain);
-        if (tower != null) tower.GrowSoldierSlots(SoldierCountFor(captain), data.DefaultClassForSlot);
+        if (tower != null) tower.GrowSoldierSlots(SoldierCountFor(captain), slot => ClassForSlot(captain, slot));
     }
+
+    // The class the player picked for this slot on the world map, or the match's default.
+    public SoldierClassData ClassForSlot(CaptainData captain, int slot) =>
+        RunState.Current.LoadoutClass(captain, slot) ?? data.DefaultClassForSlot(slot);
 
     public Tower PlaceTower(Vector2Int cell)
     {
@@ -196,7 +200,7 @@ public class MatchManager : MonoBehaviour
         CaptainData captain = NextCaptain;
         var slotClasses = new SoldierClassData[SoldierCountFor(captain)];
         for (int i = 0; i < slotClasses.Length; i++)
-            slotClasses[i] = data.DefaultClassForSlot(i);
+            slotClasses[i] = ClassForSlot(captain, i);
         tower.Init(this, captain, slotClasses, cell);
         grid.SetOccupant(cell, tower);
         GameEvents.RaiseTowerPlaced(tower);
