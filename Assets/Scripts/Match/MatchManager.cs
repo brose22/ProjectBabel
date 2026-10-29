@@ -319,6 +319,32 @@ public class MatchManager : MonoBehaviour
         RunSave.Save(RunState.Current);
     }
 
+    // The event at this event node, picked from the pool by the node's seed; null with no events.
+    public EventData StopEvent =>
+        State == MatchState.Stop && City.kind == NodeKind.Event && data.events.Count > 0 ? data.events[City.seed % data.events.Count] : null;
+
+    public bool CanTakeEventChoice(EventChoice choice) =>
+        StopEvent != null && choice != null && choice.CanTake(RunState.Current.Gold, RunState.Current.Health);
+
+    // Applies an event choice to the run and moves on.
+    public void TakeEventChoice(EventChoice choice)
+    {
+        if (!CanTakeEventChoice(choice)) return;
+        RunState run = RunState.Current;
+        if (choice.gold >= 0) run.AddGold(choice.gold);
+        else run.TrySpendGold(-choice.gold);
+        if (choice.health >= 0) run.Heal(choice.health);
+        else run.TakeDamage(-choice.health);
+        foreach (CaptainData captain in run.Party)
+        {
+            if (run.HasDeparted(captain)) continue;
+            run.AddXp(captain, choice.xp);
+            if (choice.approval != 0f) ApprovalStore.Change(captain, choice.approval);
+        }
+        if (choice.approval != 0f) ApprovalStore.Save();
+        LeaveStop();
+    }
+
     // Moves on from a rest, shop or event: it counts as visited and the map opens again.
     public void LeaveStop()
     {

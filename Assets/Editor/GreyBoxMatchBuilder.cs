@@ -116,6 +116,7 @@ public static class GreyBoxMatchBuilder
         MatchData matchData = CreateData();
         ApplyArt();
         AssignLayouts(matchData);
+        AssignEvents(matchData);
         Enemy enemyPrefab = CreateEnemyPrefab(square);
         Soldier soldierPrefab = CreateSoldierPrefab(square, dot);
         Tower towerPrefab = CreateTowerPrefab(square, disc, soldierPrefab);
@@ -630,6 +631,66 @@ public static class GreyBoxMatchBuilder
         match.layouts = layouts;
         EditorUtility.SetDirty(match);
         Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with city layouts.");
+    }
+
+    // ---------- World map events ----------
+
+    // (asset name, title, text, choices as (label, gold, health, xp, approval))
+    static readonly (string name, string title, string text, (string label, int gold, int health, int xp, float approval)[] choices)[] Events =
+    {
+        ("AbandonedArmory", "Abandoned Armory", "Racks of old weapons sit in a burned-out outpost.", new[]
+        {
+            ("Sell the scrap", 120, 0, 0, 0f),
+            ("Drill with the old gear", 0, 0, 50, 0f),
+        }),
+        ("Refugees", "Refugees on the Road", "Families fleeing the enemy ask the army for food.", new[]
+        {
+            ("Share the supplies", -80, 0, 0, 6f),
+            ("Turn them away", 0, 0, 0, -4f),
+        }),
+        ("FieldSurgeon", "Field Surgeon", "A travelling surgeon offers to patch up the wounded, for a price.", new[]
+        {
+            ("Pay for treatment", -100, 5, 0, 0f),
+            ("Decline", 0, 0, 0, 0f),
+        }),
+        ("TrainingGrounds", "Training Grounds", "An empty fort with a good practice yard.", new[]
+        {
+            ("Drill hard", 0, -2, 80, 0f),
+            ("Take it easy", 0, 2, 0, 0f),
+        }),
+        ("Tavern", "Roadside Tavern", "The captains eye the tavern hopefully.", new[]
+        {
+            ("Buy a round", -60, 0, 0, 8f),
+            ("March on", 0, 0, 0, -2f),
+        }),
+        ("Ambush", "Ambush", "Bandits block the pass and demand a toll.", new[]
+        {
+            ("Pay the toll", -70, 0, 0, 0f),
+            ("Fight through", 40, -3, 40, 0f),
+            ("Take the long way round", 0, -1, 0, -3f),
+        }),
+    };
+
+    // Creates any missing event assets and gives the match the full pool if it has none. Existing
+    // events are kept so hand edits survive a rebuild.
+    static void AssignEvents(MatchData match)
+    {
+        EnsureFolder(DataFolder + "/Events");
+        var events = new List<EventData>();
+        foreach ((string name, string title, string text, (string label, int gold, int health, int xp, float approval)[] choices) in Events)
+        {
+            events.Add(LoadOrCreate<EventData>($"{DataFolder}/Events/{name}.asset", e =>
+            {
+                e.title = title;
+                e.text = text;
+                foreach ((string label, int gold, int health, int xp, float approval) in choices)
+                    e.choices.Add(new EventChoice { label = label, gold = gold, health = health, xp = xp, approval = approval });
+            }));
+        }
+        if (match.events.Count > 0) return;
+        match.events = events;
+        EditorUtility.SetDirty(match);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with world map events.");
     }
 
     static HashSet<Vector2Int> RoadCells(Vector2Int[] path)
