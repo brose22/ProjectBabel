@@ -10,8 +10,12 @@ public class CaptainWidget
 {
     const float Width = 250f;
     const float SlotLabelWidth = 52f;
+    // Half a map tile, in world units: the widget opens just clear of the captain's tile.
+    const float TowerHalfWidth = 0.5f;
     static readonly string[] DrawRateLabels = { "Low", "Normal", "High" };
 
+    readonly Canvas canvas;
+    readonly float topMargin;
     readonly MatchManager match;
     readonly PlacementController placement;
     readonly RectTransform panel;
@@ -19,13 +23,15 @@ public class CaptainWidget
     readonly CaptainPanelParts parts;
     string key;
 
-    public CaptainWidget(Transform canvas, MatchManager match, PlacementController placement)
+    public CaptainWidget(Canvas canvas, float topMargin, MatchManager match, PlacementController placement)
     {
+        this.canvas = canvas;
+        this.topMargin = topMargin;
         this.match = match;
         this.placement = placement;
         parts = new CaptainPanelParts(match, placement, refreshers);
-        panel = UIKit.Box(canvas, "Captain Widget");
-        UIKit.Place(panel, new Vector2(0f, 0f), new Vector2(UIKit.Pad, UIKit.Pad), new Vector2(Width, 0f));
+        panel = UIKit.Box(canvas.transform, "Captain Widget");
+        UIKit.Place(panel, Vector2.zero, Vector2.zero, new Vector2(Width, 0f));
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 3, fitContent: true);
         panel.gameObject.SetActive(false);
     }
@@ -42,7 +48,37 @@ public class CaptainWidget
             panel.gameObject.SetActive(tower != null);
             if (tower != null) Build(tower);
         }
-        if (tower != null) UIKit.Refresh(refreshers);
+        if (tower == null) return;
+        UIKit.Refresh(refreshers);
+        // Size the box to this frame's text before placing it, so it never pokes off screen.
+        LayoutRebuilder.ForceRebuildLayoutImmediate(panel);
+        PlaceBeside(tower);
+    }
+
+    // To the right of the captain when the widget fits there, else to the left; when neither
+    // fits, on the roomier side and pushed back on screen. Vertically centred on the captain,
+    // kept between the top bar and the bottom edge.
+    void PlaceBeside(Tower tower)
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return;
+        Vector2 screen = ((RectTransform)canvas.transform).rect.size;
+        Vector2 centre = cam.WorldToScreenPoint(tower.transform.position) / canvas.scaleFactor;
+        float edge = cam.WorldToScreenPoint(tower.transform.position + Vector3.right * TowerHalfWidth).x / canvas.scaleFactor;
+        float gap = edge - centre.x + UIKit.Gap;
+        Vector2 size = panel.rect.size;
+
+        float right = centre.x + gap, left = centre.x - gap - size.x;
+        float minX = UIKit.Pad, maxX = screen.x - UIKit.Pad - size.x;
+        float x;
+        if (right <= maxX) x = right;
+        else if (left >= minX) x = left;
+        else x = Mathf.Clamp(screen.x - centre.x >= centre.x ? right : left, minX, Mathf.Max(minX, maxX));
+
+        float minY = UIKit.Pad, maxY = screen.y - topMargin - size.y;
+        float y = Mathf.Clamp(centre.y - size.y / 2f, minY, Mathf.Max(minY, maxY));
+        // Whole reference pixels keep the pixel-art frame crisp.
+        panel.anchoredPosition = new Vector2(Mathf.Round(x), Mathf.Round(y));
     }
 
     // The widget's structure depends on these; anything else changes through refreshers.

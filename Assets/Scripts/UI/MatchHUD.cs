@@ -64,7 +64,7 @@ public class MatchHUD : MonoBehaviour
         UIKit.Place(messages.rectTransform, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -TopBarHeight - 8f), new Vector2(MessagesWidth, 120f));
 
         BuildControlsHint();
-        captainWidget = new CaptainWidget(canvas.transform, match, placement);
+        captainWidget = new CaptainWidget(canvas, TopBarHeight + UIKit.Pad, match, placement);
         // The full captain panel is a testing tool, kept out of release builds.
         if (Debug.isDebugBuild) debugPanel = new CaptainDebugPanel(canvas.transform, match, placement);
     }
