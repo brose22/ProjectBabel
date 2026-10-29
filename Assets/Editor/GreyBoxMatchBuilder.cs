@@ -117,6 +117,7 @@ public static class GreyBoxMatchBuilder
         ApplyArt();
         AssignLayouts(matchData);
         AssignEvents(matchData);
+        AssignPresentation(matchData);
         AssignBoss(matchData);
         Enemy enemyPrefab = CreateEnemyPrefab(square);
         Soldier soldierPrefab = CreateSoldierPrefab(square, dot);
@@ -722,6 +723,27 @@ public static class GreyBoxMatchBuilder
         match.events = events;
         EditorUtility.SetDirty(match);
         Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with world map events.");
+    }
+
+    // Gives the match the element assets and role icons (Icons/Roles/role_attacker) its menus
+    // show, where it has none yet, so hand edits survive a rebuild.
+    static void AssignPresentation(MatchData match)
+    {
+        if (match.elements.Count == 0)
+        {
+            match.elements = new List<ElementData>(LoadAll<ElementData>(DataFolder + "/Elements"));
+            MarkUpgraded(match, "element assets");
+        }
+        var roles = (CaptainRole[])Enum.GetValues(typeof(CaptainRole));
+        if (match.roleIcons == null || match.roleIcons.Length != roles.Length) match.roleIcons = new Sprite[roles.Length];
+        foreach (CaptainRole role in roles)
+        {
+            if (match.roleIcons[(int)role] != null) continue;
+            Sprite icon = ArtSprite("Icons/Roles/role_" + role.ToString().ToLowerInvariant());
+            if (icon == null) continue;
+            match.roleIcons[(int)role] = icon;
+            MarkUpgraded(match, $"the {role} icon");
+        }
     }
 
     static HashSet<Vector2Int> RoadCells(Vector2Int[] path)

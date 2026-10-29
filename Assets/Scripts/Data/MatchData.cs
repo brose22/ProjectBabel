@@ -103,6 +103,16 @@ public class MatchData : ScriptableObject
     public float timeBetweenWaves = 15f;
     public List<WaveDefinition> waves = new();
 
+    [Header("Presentation")]
+    [Tooltip("How each element is shown in menus (name, colour, icon).")]
+    public List<ElementData> elements = new();
+    [Tooltip("Role icons for menus, in CaptainRole order: Attacker, Buffer, Healer.")]
+    public Sprite[] roleIcons = new Sprite[3];
+
+    public ElementData ElementInfo(Element element) => elements.Find(e => e != null && e.element == element);
+
+    public Sprite RoleIcon(CaptainRole role) => roleIcons != null && (int)role < roleIcons.Length ? roleIcons[(int)role] : null;
+
     public IReadOnlyList<SoldierClassData> ChoosableClasses =>
         availableClasses.Count > 0 ? availableClasses
         : defaultSoldierClass != null ? new[] { defaultSoldierClass }
