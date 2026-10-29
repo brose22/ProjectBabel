@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Flare Volley
   description: Burst area damage
+  icon: {fileID: 21300000, guid: b3bdc379830ea3d48a808d8a5f4d51ea, type: 3}
   chargeSeconds: 20
   shape: 0
   rangeMultiplier: 1

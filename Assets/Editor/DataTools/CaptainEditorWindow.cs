@@ -137,6 +137,7 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
             abilityObject.Update();
             DataToolsGUI.Field(abilityObject, nameof(AbilityData.displayName));
             DataToolsGUI.Field(abilityObject, nameof(AbilityData.description));
+            DataToolsGUI.Field(abilityObject, nameof(AbilityData.icon));
             AbilityEditorWindow.DrawFields(abilityObject);
             abilityObject.ApplyModifiedProperties();
         }

@@ -21,6 +21,8 @@ public class AbilityData : ScriptableObject
 
     public string displayName = "Ability";
     [TextArea] public string description;
+    [Tooltip("Small art for the ability button and tooltips, drawn as painted.")]
+    public Sprite icon;
 
     [Header("Meter")]
     [Tooltip("Seconds to fill the meter at a special charge rate of 1. It only fills while enemies are on the field.")]

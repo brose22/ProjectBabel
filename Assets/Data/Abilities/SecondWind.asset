@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Second Wind
   description: Heals all 20%, +15% act speed this wave
+  icon: {fileID: 21300000, guid: 6e3e50a247ef2db4aba31e0703dbc722, type: 3}
   chargeSeconds: 22
   shape: 4
   rangeMultiplier: 1

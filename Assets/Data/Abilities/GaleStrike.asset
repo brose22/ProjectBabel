@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Gale Strike
   description: Long-range pierce
+  icon: {fileID: 21300000, guid: 82794ed02ccbe234f80eaf1123fec0ef, type: 3}
   chargeSeconds: 20
   shape: 2
   rangeMultiplier: 2
@@ -22,3 +23,9 @@ MonoBehaviour:
   knockbackDistance: 0
   zoneDuration: 4
   statusChance: 0.3
+  healFraction: 0
+  buffEffect: 0
+  buffAmount: 0
+  hitStopSeconds: 0.15
+  cameraShake: 0.1
+  cameraShakeSeconds: 0.25
