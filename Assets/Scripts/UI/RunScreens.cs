@@ -170,7 +170,7 @@ public class RunScreens : MonoBehaviour
 
     void FinishRecruiting(CaptainData captain)
     {
-        RunState.Current.Recruit(captain);
+        match.Recruit(captain);
         // Same state, different screen: force a rebuild into the world map.
         shownFor = (MatchState)(-1);
     }

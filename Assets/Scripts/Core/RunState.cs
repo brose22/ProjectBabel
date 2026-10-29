@@ -25,6 +25,19 @@ public class RunState
         return Current;
     }
 
+    // A saved run picked up again (see RunSave), which restores the rest.
+    public static RunState Resume(int health, int maxHealth, int gold, int matchesPlayed)
+    {
+        Current = new RunState { Health = health, MaxHealth = maxHealth, Gold = gold, MatchesPlayed = matchesPlayed };
+        return Current;
+    }
+
+    public IEnumerable<KeyValuePair<CaptainData, int>> AllXp => captainXp;
+    public IEnumerable<KeyValuePair<CaptainData, float>> AllBestApprovals => bestApprovalThisRun;
+    public IEnumerable<CaptainData> Departed => departed;
+
+    public void SetBestApproval(CaptainData captain, float approval) => bestApprovalThisRun[captain] = approval;
+
     public void AddGold(int amount) => Gold += Mathf.Max(0, amount);
 
     public bool TrySpendGold(int amount)
