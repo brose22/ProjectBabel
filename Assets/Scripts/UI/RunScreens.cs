@@ -527,11 +527,10 @@ public class RunScreens : MonoBehaviour
             UIKit.Label(window, captain.ability.description, 12, color: UIKit.MutedTextColor);
 
         UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
-        RectTransform tastes = UIKit.Group(window, "Tastes");
-        UIKit.Layout<HorizontalLayoutGroup>(tastes, 0, 16).childAlignment = TextAnchor.UpperLeft;
-        UIKit.Size(tastes, flexibleWidth: 1f);
-        TagColumn(tastes, "Likes", captain.likes, UIKit.GoodColor);
-        TagColumn(tastes, "Dislikes", captain.dislikes, UIKit.BadColor);
+        TagLine(window, "Likes", captain.likes, UIKit.GoodColor);
+        TagLine(window, "Dislikes", captain.dislikes, UIKit.BadColor);
+
+        BuildLoadout(window, run, captain);
 
         UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
         UIKit.Size(UIKit.Button(window, "Close", () => Destroy(overlay.gameObject)), height: 26f, flexibleWidth: 1f);
@@ -585,14 +584,81 @@ public class RunScreens : MonoBehaviour
         UIKit.Refresh(drawOnce);
     }
 
-    static void TagColumn(Transform parent, string caption, CaptainTag[] tags, Color color)
+    static void TagLine(Transform parent, string caption, CaptainTag[] tags, Color color)
     {
-        RectTransform column = UIKit.Group(parent, caption);
-        UIKit.Layout<VerticalLayoutGroup>(column, 0, 2);
-        UIKit.Size(column, flexibleWidth: 1f);
-        UIKit.Label(column, caption.ToUpperInvariant(), 10, color: color).fontStyle = FontStyle.Bold;
-        foreach (CaptainTag tag in tags)
-            UIKit.Label(column, tag.ToString(), 12);
+        Transform row = UIKit.Group(parent, caption);
+        UIKit.Layout<HorizontalLayoutGroup>(row, 0, 8);
+        Text label = UIKit.Label(row, caption.ToUpperInvariant(), 10, color: color);
+        label.fontStyle = FontStyle.Bold;
+        UIKit.Size(label, 64f);
+        UIKit.Label(row, string.Join(", ", tags), 12);
+    }
+
+    // The soldier class for each slot, saved with the run and used when the captain's tower is
+    // placed. Slots the captain's bond hasn't opened yet say when they open. Class names are
+    // green or red when the captain likes or dislikes that class.
+    void BuildLoadout(Transform window, RunState run, CaptainData captain)
+    {
+        UIKit.Size(UIKit.Header(window, "Soldiers"), flexibleWidth: 1f);
+        var classes = match.Data.ChoosableClasses;
+        int open = match.SoldierCountFor(captain);
+        for (int i = 0; i < RunState.MaxSoldierSlots; i++)
+        {
+            int slot = i;
+            Transform row = UIKit.Group(window, $"Slot {slot + 1}");
+            UIKit.Layout<HorizontalLayoutGroup>(row, 0, 4);
+            UIKit.Size(row, flexibleWidth: 1f);
+            Text label = UIKit.Label(row, $"Slot {slot + 1}", 12, color: UIKit.MutedTextColor);
+            UIKit.Size(label, 64f);
+            if (slot >= open)
+            {
+                UIKit.Size(UIKit.Label(row, $"Opens at bond {BondMath.RankName(RankOpening(slot))}", 12, color: UIKit.DisabledTextColor),
+                    height: 22f, flexibleWidth: 1f);
+                continue;
+            }
+
+            var buttons = new List<(Button button, SoldierClassData soldierClass)>();
+            void Restyle()
+            {
+                SoldierClassData current = match.ClassForSlot(captain, slot);
+                foreach ((Button button, SoldierClassData soldierClass) in buttons)
+                {
+                    bool picked = soldierClass == current;
+                    button.GetComponent<Image>().color = picked ? UIKit.SelectedButtonColor : UIKit.ButtonColor;
+                    button.GetComponentInChildren<Text>().color = picked ? UIKit.SelectedTextColor : TasteColor(captain, soldierClass);
+                }
+            }
+            foreach (SoldierClassData soldierClass in classes)
+            {
+                if (soldierClass == null) continue;
+                SoldierClassData option = soldierClass;
+                Button button = UIKit.Button(row, option.displayName, () =>
+                {
+                    run.SetLoadoutClass(captain, slot, option);
+                    RunSave.Save(run);
+                    Restyle();
+                }, height: 22f);
+                UIKit.Size(button, height: 22f, flexibleWidth: 1f);
+                button.GetComponentInChildren<Text>().fontSize = 12;
+                buttons.Add((button, option));
+            }
+            Restyle();
+        }
+    }
+
+    // The lowest bond rank whose soldier count reaches past this slot.
+    int RankOpening(int slot)
+    {
+        for (int rank = 0; rank <= BondMath.MaxRank; rank++)
+            if (Mathf.Max(match.Data.soldiersPerTower, BondMath.SoldierCount(rank)) > slot) return rank;
+        return BondMath.MaxRank;
+    }
+
+    static Color TasteColor(CaptainData captain, SoldierClassData soldierClass)
+    {
+        if (!Relationships.TryGetClassTag(soldierClass, out CaptainTag tag)) return UIKit.TextColor;
+        if (Array.IndexOf(captain.likes, tag) >= 0) return UIKit.GoodColor;
+        return Array.IndexOf(captain.dislikes, tag) >= 0 ? UIKit.BadColor : UIKit.TextColor;
     }
 
     // Layers run left to right; cities in a layer are spread evenly top to bottom.

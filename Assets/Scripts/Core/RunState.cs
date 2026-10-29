@@ -13,6 +13,11 @@ public class RunState
     readonly Dictionary<CaptainData, float> bestApprovalThisRun = new();
     // Captains who have walked out; they sit out the rest of this run only (GDD).
     readonly HashSet<CaptainData> departed = new();
+    // The soldier class the player picked for each captain's slots, from the party's details
+    // window. A slot with no pick uses the match's default mix.
+    readonly Dictionary<CaptainData, SoldierClassData[]> loadouts = new();
+
+    public const int MaxSoldierSlots = 4;
 
     public int Health { get; private set; }
     public int MaxHealth { get; private set; }
@@ -114,6 +119,20 @@ public class RunState
     // A rest, shop or event left behind: it counts as visited and its intel reveals the roads
     // ahead, but it isn't a match.
     public void CompleteStop(int intelDepth) => Map?.ClearTarget(intelDepth);
+
+    public IEnumerable<KeyValuePair<CaptainData, SoldierClassData[]>> AllLoadouts => loadouts;
+
+    // The class picked for a captain's slot, or null when the slot keeps the default.
+    public SoldierClassData LoadoutClass(CaptainData captain, int slot) =>
+        slot >= 0 && slot < MaxSoldierSlots && loadouts.TryGetValue(captain, out SoldierClassData[] classes) ? classes[slot] : null;
+
+    public void SetLoadoutClass(CaptainData captain, int slot, SoldierClassData soldierClass)
+    {
+        if (captain == null || slot < 0 || slot >= MaxSoldierSlots) return;
+        if (!loadouts.TryGetValue(captain, out SoldierClassData[] classes))
+            loadouts[captain] = classes = new SoldierClassData[MaxSoldierSlots];
+        classes[slot] = soldierClass;
+    }
 
     public bool HasDeparted(CaptainData captain) => departed.Contains(captain);
 
