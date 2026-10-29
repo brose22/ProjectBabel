@@ -21,6 +21,7 @@ public class MatchHUD : MonoBehaviour
     [SerializeField] PlacementController placement;
 
     Relationships relationships;
+    CaptainWidget captainWidget;
     CaptainDebugPanel debugPanel;
     CaptainRequests requests;
     Canvas canvas;
@@ -63,6 +64,7 @@ public class MatchHUD : MonoBehaviour
         UIKit.Place(messages.rectTransform, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -TopBarHeight - 8f), new Vector2(MessagesWidth, 120f));
 
         BuildControlsHint();
+        captainWidget = new CaptainWidget(canvas.transform, match, placement);
         // The full captain panel is a testing tool, kept out of release builds.
         if (Debug.isDebugBuild) debugPanel = new CaptainDebugPanel(canvas.transform, match, placement);
     }
@@ -73,6 +75,7 @@ public class MatchHUD : MonoBehaviour
         // The run setup screen covers everything; the HUD returns once the run begins.
         canvas.enabled = !match.IsBetweenMatches;
         UIKit.Refresh(barRefreshers);
+        captainWidget.Update();
         debugPanel?.Update();
         UpdateRequests();
         UpdateMoveHint();
