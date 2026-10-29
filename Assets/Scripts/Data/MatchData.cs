@@ -26,6 +26,12 @@ public class MatchData : ScriptableObject
     public int startingHealth = 20;
     public int startingGold = 300;
 
+    [Header("Healing")]
+    [Tooltip("Global health restored after every won city (never past the run's max).")]
+    public int healthPerWin = 2;
+    [Tooltip("Share of max health a rest restores (0.3 = 30%).")]
+    [Range(0f, 1f)] public float restHealFraction = 0.3f;
+
     [Header("Towers")]
     public int maxTowers = 5;
     [Tooltip("How many roster captains the player picks to start a run.")]

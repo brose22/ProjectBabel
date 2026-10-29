@@ -288,7 +288,8 @@ public class RunScreens : MonoBehaviour
         UIKit.Label(panel, summary, 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         UIKit.Label(panel, $"Waves {match.WavesCleared}/{match.WaveCount}    Kills {match.Kills}    Leaks {match.Leaks}    Casualties {match.Casualties}",
             13, TextAnchor.MiddleCenter);
-        UIKit.Label(panel, $"Health {run.Health}/{run.MaxHealth}    Gold {run.Gold}", 13, TextAnchor.MiddleCenter);
+        string restored = match.HealthRestored > 0 ? $" (+{match.HealthRestored} for the win)" : "";
+        UIKit.Label(panel, $"Health {run.Health}/{run.MaxHealth}{restored}    Gold {run.Gold}", 13, TextAnchor.MiddleCenter);
 
         UIKit.Label(panel, "Captains", 15, TextAnchor.MiddleCenter);
         foreach (CaptainData captain in run.Party)
