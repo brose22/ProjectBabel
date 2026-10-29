@@ -210,7 +210,7 @@ public class MatchHUD : MonoBehaviour
         }
         UIKit.Label(panel, "Disabled", 13, color: UIKit.SelectedButtonColor);
         UIKit.LiveButton(panel, () => $"Restore ({match.RestoreCost(tower)} Gold)", () => match.TryRestoreTower(tower), panelRefreshers,
-            () => RunState.Current.Gold >= match.RestoreCost(tower));
+            () => RunState.Current.Gold >= match.RestoreCost(tower), width: 145f);
     }
 
     // Meter percentage plus a Use button that only lights up when the ability is ready and usable.

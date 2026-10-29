@@ -155,7 +155,7 @@ public static class UIKit
 
     // A button whose label, enabled state and highlighted ("selected") state follow the game.
     public static Button LiveButton(Transform parent, Func<string> text, Action onClick, List<Action> refreshers,
-        Func<bool> interactable = null, Func<bool> selected = null, float width = -1f, float height = 24f)
+        Func<bool> interactable = null, Func<bool> selected = null, float width = 100f, float height = 24f)
     {
         Button button = Button(parent, text(), onClick, width, height);
         Text label = button.GetComponentInChildren<Text>();
