@@ -833,6 +833,8 @@ public static class GreyBoxMatchBuilder
         scenes.RemoveAll(s => s.path == path);
         scenes.Insert(0, new EditorBuildSettingsScene(path, true));
         EditorBuildSettings.scenes = scenes.ToArray();
+        // The game starts on the main menu, so it stays ahead of the match.
+        MainMenuBuilder.PutMenuFirst();
     }
 
     // ---------- Helpers ----------

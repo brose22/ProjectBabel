@@ -253,6 +253,14 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
+    // Back to the main menu from the setup, map or results screen. The run is already saved
+    // whenever it can be resumed, so nothing is lost.
+    public void ReturnToMenu()
+    {
+        if (!IsBetweenMatches && !IsOver) return;
+        MainMenu.Open();
+    }
+
     // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
     public void BeginRun(IEnumerable<CaptainData> party)
     {

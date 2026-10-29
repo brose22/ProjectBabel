@@ -43,15 +43,23 @@ Next up: the remaining content (toward the ~30-match run), polish, and release p
 4. **After a win:** 2 health comes back, and up to 3 captains offer to join; recruit one or decline (the party holds 8, not counting walkouts). Health, Gold, XP and walkouts carry over.
 5. Taking the enemy base wins the run; reaching 0 health loses it.
 
-The run is saved to `run.json` in the persistent data path whenever you're on the map or have just won a city, and it resumes when the match scene starts. **Abandon run** on the map deletes it. Run length, layer sizes, intel depth, node odds, elite tuning, the boss and difficulty growth are on the match data asset under **World map**; healing, shop prices and the event pool sit under **Healing**, **Shop** and **Events**. Events are `EventData` assets in `Assets/Data/Events`.
+The run is saved to `run.json` in the persistent data path whenever you're on the map or have just won a city. **Resume run** on the main menu picks it up on the world map; **Start run** asks first, then deletes it. **Abandon run** on the map deletes it too, and **Main menu** on the setup, map and results screens goes back to the menu without losing it. Run length, layer sizes, intel depth, node odds, elite tuning, the boss and difficulty growth are on the match data asset under **World map**; healing, shop prices and the event pool sit under **Healing**, **Shop** and **Events**. Events are `EventData` assets in `Assets/Data/Events`.
 
 ## Getting started
 
 **Requirements:** Unity **6000.5.5f1** with the Universal Render Pipeline (2D). Packages are listed in `Packages/manifest.json` and include Tilemap, Aseprite import and the Input System.
 
 1. Clone the repository and open the folder in Unity Hub with editor version 6000.5.5f1.
-2. Open `Assets/Scenes/Match.unity` and press **Play**.
-3. To regenerate the grey-box scene, use the menu **Babel → Build Grey-Box Match Scene**. Existing data assets and prefabs are kept, so your tuning survives a rebuild.
+2. Press **Play**. The game starts on the main menu (`Assets/Scenes/MainMenu.unity`) whichever scene is open, while **Babel → Play From Main Menu** is ticked; untick it to play the open scene directly, such as `Assets/Scenes/Match.unity`.
+3. To regenerate the grey-box scene, use the menu **Babel → Build Grey-Box Match Scene**. Existing data assets and prefabs are kept, so your tuning survives a rebuild. **Babel → Build Main Menu Scene** regenerates the menu scene and keeps it first in Build Settings.
+4. **Babel → Build Windows Player** builds a standalone player into `Builds/Windows`, starting on the main menu.
+
+### Main menu
+
+- **Start run:** a new run, from the captain pick. If a run is saved, you're asked first, since it is deleted.
+- **Resume run:** continues the saved run on the world map (greyed out without one).
+- **Settings:** resolution, window mode (fullscreen, borderless, windowed), VSync, frame-rate cap (used while VSync is off), quality level and master volume. Changes apply at once, are kept in PlayerPrefs and are applied again at every launch. The editor's Game view ignores resolution and window mode.
+- **Exit:** quits the game (stops Play mode in the editor).
 
 ### Controls
 
@@ -77,11 +85,11 @@ Assets/
     Data/     ScriptableObject definitions: captains, soldier classes, enemies, matches, city layouts
     Match/    Match simulation: grid, path, enemies, towers, soldiers, waves, placement
     UI/       Grey-box HUD (temporary)
-  Editor/     Scene builder for the grey-box match
+  Editor/     Scene builders (grey-box match, main menu) and the Windows build
   Data/       Tunable data assets (captains, enemies, soldier classes, match setup)
   Prefabs/    Enemy, tower and soldier prefabs
   Art/        Placeholder sprites and tiles
-  Scenes/     Match scene (setup, world map, matches and results all run in it)
+  Scenes/     MainMenu (title, settings) and Match (setup, world map, matches and results all run in it)
 ```
 
 ### Conventions

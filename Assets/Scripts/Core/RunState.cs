@@ -119,6 +119,9 @@ public class RunState
 
     public void Depart(CaptainData captain) => departed.Add(captain);
 
+    // Forgets the run in memory, so the match scene loads the saved one (or starts afresh) next.
+    public static void Clear() => Current = null;
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Current = null;
 }
