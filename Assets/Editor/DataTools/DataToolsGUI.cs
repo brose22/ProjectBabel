@@ -17,6 +17,8 @@ public static class DataToolsGUI
     public static GUIStyle HeaderLabel => headerLabel ??= new GUIStyle(EditorStyles.miniBoldLabel) { wordWrap = true, alignment = TextAnchor.LowerLeft, clipping = TextClipping.Clip };
     static GUIStyle Chip => chip ??= new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.MiddleCenter, normal = { textColor = Color.black } };
 
+    // A group title for fields without one. Fields carrying a [Header] draw their own title, so
+    // windows only call this where the data class has none.
     public static void Section(string title)
     {
         EditorGUILayout.Space(6f);

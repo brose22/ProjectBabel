@@ -56,10 +56,8 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
     public static void DrawFields(SerializedObject so)
     {
         var ability = (AbilityData)so.targetObject;
-        DataToolsGUI.Section("Meter");
         DataToolsGUI.Field(so, nameof(AbilityData.chargeSeconds));
 
-        DataToolsGUI.Section("Targeting");
         SerializedProperty shapeProperty = DataToolsGUI.Field(so, nameof(AbilityData.shape));
         var shape = (AbilityData.Shape)shapeProperty.enumValueIndex;
         if (shape == AbilityData.Shape.Support)
@@ -67,7 +65,6 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
         else
             DrawAttackFields(so, shape);
 
-        DataToolsGUI.Section("Feel");
         DataToolsGUI.Field(so, nameof(AbilityData.hitStopSeconds));
         DataToolsGUI.Field(so, nameof(AbilityData.cameraShake));
         DataToolsGUI.Field(so, nameof(AbilityData.cameraShakeSeconds));
@@ -84,7 +81,6 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
         if (shape != AbilityData.Shape.Single)
             DataToolsGUI.Field(so, nameof(AbilityData.radius), shape == AbilityData.Shape.Line ? "Half Width" : "Radius");
 
-        DataToolsGUI.Section("Effect");
         DataToolsGUI.Field(so, nameof(AbilityData.damageMultiplier), shape == AbilityData.Shape.Zone ? "Damage Per Second Multiplier" : null);
         // A zone only burns; it never pushes enemies.
         if (shape == AbilityData.Shape.Zone)
@@ -96,7 +92,6 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
 
     static void DrawSupportFields(SerializedObject so)
     {
-        DataToolsGUI.Section("Support");
         DataToolsGUI.Field(so, nameof(AbilityData.healFraction));
         SerializedProperty effect = DataToolsGUI.Field(so, nameof(AbilityData.buffEffect));
         var buff = (SupportEffect)effect.enumValueIndex;

@@ -64,14 +64,12 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
             }
         }
 
-        DataToolsGUI.Section("Stats");
         DataToolsGUI.Field(so, nameof(EnemyData.maxHealth));
         DataToolsGUI.Field(so, nameof(EnemyData.moveSpeed));
         DataToolsGUI.Field(so, nameof(EnemyData.goldReward));
         DataToolsGUI.Field(so, nameof(EnemyData.xpReward));
         DataToolsGUI.Field(so, nameof(EnemyData.leakDamage));
 
-        DataToolsGUI.Section("Attacking Soldiers");
         DataToolsGUI.Field(so, nameof(EnemyData.attackDamage));
         DataToolsGUI.Field(so, nameof(EnemyData.attackRange));
         DataToolsGUI.Field(so, nameof(EnemyData.attackInterval));
@@ -80,7 +78,6 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
             ? $"{PerSecond(enemy.attackDamage, enemy.attackInterval)} damage per second; shoots soldiers within {enemy.rangedAttackRange:0.##} tiles while walking"
             : $"{PerSecond(enemy.attackDamage, enemy.attackInterval)} damage per second, melee only");
 
-        DataToolsGUI.Section("Attacking Towers");
         DataToolsGUI.Field(so, nameof(EnemyData.towerDamage));
         using (new EditorGUI.DisabledScope(enemy.towerDamage <= 0f))
         {
@@ -104,7 +101,6 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
 
     void DrawWeakness(SerializedObject so, EnemyData enemy)
     {
-        DataToolsGUI.Section("Weakness");
         DataToolsGUI.Field(so, nameof(EnemyData.hasWeakness));
         if (!enemy.hasWeakness) return;
 
