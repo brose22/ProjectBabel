@@ -27,6 +27,8 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
     protected virtual void OnCreated(T asset) { }
     // Extra text the search box matches, beyond the file and display names.
     protected virtual string SearchText(T asset) => "";
+    // Called when assets anywhere in the project change, for windows that cache lookups.
+    protected virtual void OnAssetsChanged() { }
 
     [SerializeField] string search = "";
     [SerializeField] bool tableMode;
@@ -73,6 +75,7 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
     {
         RefreshAssets();
         if (Selected == null) Select(null);
+        OnAssetsChanged();
         Repaint();
     }
 
@@ -89,12 +92,7 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
     void RefreshAssets()
     {
         assets.Clear();
-        foreach (string guid in AssetDatabase.FindAssets($"t:{typeof(T).Name}", new[] { "Assets" }))
-        {
-            var asset = AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guid));
-            if (asset != null) assets.Add(asset);
-        }
-        assets.Sort((a, b) => string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase));
+        assets.AddRange(DataToolsGUI.LoadAll<T>());
         foreach (T gone in serialized.Keys.Where(k => k == null || !assets.Contains(k)).ToList())
         {
             serialized[gone]?.Dispose();

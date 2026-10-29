@@ -128,6 +128,18 @@ public static class DataToolsGUI
             array.GetArrayElementAtIndex(i).intValue = chosen[i];
     }
 
+    public static List<TAsset> LoadAll<TAsset>() where TAsset : UnityEngine.Object
+    {
+        var found = new List<TAsset>();
+        foreach (string guid in AssetDatabase.FindAssets($"t:{typeof(TAsset).Name}", new[] { "Assets" }))
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<TAsset>(AssetDatabase.GUIDToAssetPath(guid));
+            if (asset != null) found.Add(asset);
+        }
+        found.Sort((a, b) => string.Compare(a.name, b.name, StringComparison.OrdinalIgnoreCase));
+        return found;
+    }
+
     // Every data asset under Assets that references the target directly.
     public static List<UnityEngine.Object> FindUsers(UnityEngine.Object target)
     {
