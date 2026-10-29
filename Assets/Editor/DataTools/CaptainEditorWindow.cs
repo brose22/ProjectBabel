@@ -81,7 +81,7 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
         DataToolsGUI.Field(so, nameof(CaptainData.resourceRegen));
         DataToolsGUI.Field(so, nameof(CaptainData.specialChargeRate));
         DataToolsGUI.Field(so, nameof(CaptainData.level));
-        EditorGUILayout.LabelField(" ", $"{captain.power * captain.speed:0.#} damage per second per soldier, before class and level scaling", EditorStyles.miniLabel);
+        DataToolsGUI.Note($"{captain.power * captain.speed:0.#} damage per second per soldier, before class and level scaling");
 
         DrawAbility(so, captain);
         DrawRelationship(so);

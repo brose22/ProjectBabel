@@ -102,7 +102,7 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
             StatusKind.Stun => $"attacks {StatusRules.StunAttackIntervalMultiplier:0.##}× slower",
             _ => "walks the wrong way",
         };
-        EditorGUILayout.LabelField(" ", $"In game: {kind} for {StatusRules.DurationOf(kind):0.#}s, the enemy {effect}", EditorStyles.miniLabel);
+        DataToolsGUI.Note($"In game: {kind} for {StatusRules.DurationOf(kind):0.#}s, the enemy {effect}");
         if (element.statusName != kind.ToString())
         {
             using (new EditorGUILayout.HorizontalScope())

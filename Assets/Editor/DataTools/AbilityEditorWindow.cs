@@ -160,19 +160,7 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
     void DrawUsers()
     {
         captains ??= DataToolsGUI.LoadAll<CaptainData>();
-        List<CaptainData> users = captains.Where(c => c != null && c.ability == Selected).ToList();
         DataToolsGUI.Section("Used by");
-        if (users.Count == 0)
-        {
-            EditorGUILayout.LabelField("No captain uses this ability.", EditorStyles.miniLabel);
-            return;
-        }
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            foreach (CaptainData captain in users)
-                if (GUILayout.Button(captain.name, EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
-                    CaptainEditorWindow.OpenFor(captain);
-            GUILayout.FlexibleSpace();
-        }
+        DataToolsGUI.AssetButtons("Captains", captains.Where(c => c != null && c.ability == Selected), CaptainEditorWindow.OpenFor, "Nobody");
     }
 }
