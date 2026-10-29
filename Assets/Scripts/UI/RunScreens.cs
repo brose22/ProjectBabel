@@ -194,7 +194,7 @@ public class RunScreens : MonoBehaviour
                             "Pick the next stop. Every road leads to the enemy base; each stop reveals the roads beyond it.",
             12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
-        RectTransform area = UIKit.Panel(column, "Map", UIKit.PanelColor, blocksClicks: false);
+        RectTransform area = UIKit.Box(column, "Map", blocksClicks: false);
         UIKit.Size(area, MapArea.x, MapArea.y);
 
         var choices = map.Choices();
@@ -277,7 +277,7 @@ public class RunScreens : MonoBehaviour
     void BuildStop()
     {
         RectTransform root = NewScreen("Stop");
-        RectTransform panel = UIKit.Panel(root, "Panel", UIKit.PanelColor);
+        RectTransform panel = UIKit.Box(root, "Panel");
         UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(panel, 16, 8, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
@@ -342,7 +342,7 @@ public class RunScreens : MonoBehaviour
         RunState run = RunState.Current;
 
         RectTransform root = NewScreen("Results");
-        RectTransform panel = UIKit.Panel(root, "Panel", UIKit.PanelColor);
+        RectTransform panel = UIKit.Box(root, "Panel");
         UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(460f, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(panel, 16, 6, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;

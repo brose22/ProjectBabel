@@ -13,14 +13,124 @@ public static class UIKit
     public const float ReferenceWidth = 960f;
     public const float ReferenceHeight = 540f;
 
-    public static readonly Color PanelColor = new(0.07f, 0.08f, 0.11f, 0.9f);
-    public static readonly Color ButtonColor = new(0.2f, 0.24f, 0.32f, 1f);
-    public static readonly Color SelectedButtonColor = new(0.85f, 0.62f, 0.2f, 1f);
-    public static readonly Color TextColor = new(0.93f, 0.92f, 0.86f, 1f);
-    public static readonly Color MutedTextColor = new(0.62f, 0.64f, 0.68f, 1f);
+    // Spacing scale, in reference pixels: gaps between widgets, and padding inside panels.
+    public const int Gap = 4;
+    public const int Pad = 8;
+
+    public static readonly Color PanelColor = new(0.1f, 0.11f, 0.16f, 0.97f);
+    public static readonly Color InsetColor = new(0.05f, 0.06f, 0.09f, 1f);
+    public static readonly Color ButtonColor = new(0.24f, 0.29f, 0.4f, 1f);
+    public static readonly Color SelectedButtonColor = new(0.91f, 0.67f, 0.24f, 1f);
+    public static readonly Color TextColor = new(0.95f, 0.93f, 0.86f, 1f);
+    public static readonly Color MutedTextColor = new(0.66f, 0.68f, 0.73f, 1f);
+    public static readonly Color DisabledTextColor = new(0.5f, 0.52f, 0.57f, 1f);
+    // Dark text for the gold "selected" fill, which cream text can't be read on.
+    public static readonly Color SelectedTextColor = new(0.14f, 0.1f, 0.05f, 1f);
+    public static readonly Color AccentColor = new(0.96f, 0.76f, 0.36f, 1f);
+    public static readonly Color GoodColor = new(0.5f, 0.84f, 0.45f, 1f);
+    public static readonly Color BadColor = new(0.94f, 0.42f, 0.38f, 1f);
+    public static readonly Color RuleColor = new(0.3f, 0.34f, 0.44f, 1f);
+
+    public static readonly Color HealthBarColor = new(0.36f, 0.78f, 0.38f, 1f);
+    public static readonly Color ReserveBarColor = new(0.9f, 0.7f, 0.25f, 1f);
+    public static readonly Color XpBarColor = new(0.38f, 0.58f, 0.95f, 1f);
+    public static readonly Color ChargeBarColor = new(0.62f, 0.45f, 0.95f, 1f);
 
     static Font font;
     public static Font Font => font != null ? font : font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+    public static Color ElementColor(Element element) => element switch
+    {
+        Element.Fire => new Color(1f, 0.58f, 0.36f, 1f),
+        Element.Water => new Color(0.45f, 0.72f, 1f, 1f),
+        Element.Earth => new Color(0.78f, 0.7f, 0.42f, 1f),
+        _ => new Color(0.7f, 0.92f, 0.9f, 1f),
+    };
+
+    // Rich-text colour tag for a colour, for mixing colours inside one label.
+    public static string Hex(Color color) => "#" + ColorUtility.ToHtmlStringRGB(color);
+
+    // ---------- Pixel-art frames ----------
+
+    // Panels and buttons use tiny 9-sliced sprites drawn here rather than imported, so the UI
+    // needs no art assets. Each texel is drawn TexelSize reference pixels wide, which lands on
+    // whole screen pixels at 1080p and up, like the 16 PPU world art.
+    const float TexelSize = 2f;
+    static Sprite boxSprite, buttonSprite, outlineSprite;
+
+    // A dark outline, a light top rim and a shaded bottom rim around a slightly dimmed fill.
+    static Sprite BoxSprite => boxSprite != null ? boxSprite : boxSprite = MakeSprite(new[]
+    {
+        "........",
+        ".WWWWWW.",
+        ".W####S.",
+        ".W####S.",
+        ".W####S.",
+        ".W####S.",
+        ".SSSSSS.",
+        "........",
+    }, 2);
+
+    // Like the box, with a thicker shaded lip at the bottom so buttons read as raised.
+    static Sprite ButtonSprite => buttonSprite != null ? buttonSprite : buttonSprite = MakeSprite(new[]
+    {
+        "........",
+        ".WWWWWW.",
+        ".W####W.",
+        ".W####W.",
+        ".W####W.",
+        ".SSSSSS.",
+        ".SSSSSS.",
+        "........",
+    }, 3);
+
+    // A one-texel ring with an empty centre, laid over a widget to mark it as selected.
+    static Sprite OutlineSprite => outlineSprite != null ? outlineSprite : outlineSprite = MakeSprite(new[]
+    {
+        "WWWW",
+        "W  W",
+        "W  W",
+        "WWWW",
+    }, 1);
+
+    // Rows run top to bottom. '.' is the outline, 'W' white, '#' the fill, 'S' shade, ' ' clear.
+    static Sprite MakeSprite(string[] rows, int border)
+    {
+        int size = rows.Length;
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+            hideFlags = HideFlags.DontSave,
+        };
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            texture.SetPixel(x, size - 1 - y, rows[y][x] switch
+            {
+                '.' => new Color(0.02f, 0.02f, 0.04f, 1f),
+                'W' => Color.white,
+                '#' => new Color(0.84f, 0.84f, 0.84f, 1f),
+                'S' => new Color(0.62f, 0.62f, 0.62f, 1f),
+                _ => Color.clear,
+            });
+        }
+        texture.Apply();
+        var sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0,
+            SpriteMeshType.FullRect, new Vector4(border, border, border, border));
+        sprite.hideFlags = HideFlags.DontSave;
+        return sprite;
+    }
+
+    static void UseSprite(Image image, Sprite sprite, bool fillCenter = true)
+    {
+        image.sprite = sprite;
+        image.type = Image.Type.Sliced;
+        image.fillCenter = fillCenter;
+        // Canvas reference pixels per unit is 100, like the sprite, so 1 texel is 1 reference
+        // pixel before this.
+        image.pixelsPerUnitMultiplier = 1f / TexelSize;
+    }
 
     public static Canvas CreateCanvas(string name, int sortingOrder)
     {
@@ -74,6 +184,68 @@ public static class UIKit
         image.color = color;
         image.raycastTarget = blocksClicks;
         return (RectTransform)panel.transform;
+    }
+
+    // A panel with a pixel-art frame, for windows and cards.
+    public static RectTransform Box(Transform parent, string name, Color? color = null, bool blocksClicks = true)
+    {
+        RectTransform box = Panel(parent, name, color ?? PanelColor, blocksClicks);
+        UseSprite(box.GetComponent<Image>(), BoxSprite);
+        return box;
+    }
+
+    // A ring laid over a widget's edges; colour it to mark selection, or clear to hide it.
+    public static Image Outline(Transform parent, Color color)
+    {
+        RectTransform ring = Stretch(Panel(parent, "Outline", color, blocksClicks: false));
+        var image = ring.GetComponent<Image>();
+        UseSprite(image, OutlineSprite, fillCenter: false);
+        ring.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        return image;
+    }
+
+    // A soft drop shadow, for text drawn over the world or a busy background.
+    public static T Shadowed<T>(T graphic) where T : Graphic
+    {
+        var shadow = graphic.gameObject.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.75f);
+        shadow.effectDistance = new Vector2(1f, -1f);
+        return graphic;
+    }
+
+    // A section title in small accent capitals with a rule running to the right edge.
+    public static RectTransform Header(Transform parent, string text)
+    {
+        RectTransform row = Group(parent, "Header");
+        HorizontalLayoutGroup layout = Layout<HorizontalLayoutGroup>(row, 0, 6);
+        layout.padding.top = Gap;
+        Label(row, text.ToUpperInvariant(), 10, color: AccentColor).fontStyle = FontStyle.Bold;
+        RectTransform rule = Panel(row, "Rule", RuleColor, blocksClicks: false);
+        Size(rule, height: TexelSize, flexibleWidth: 1f);
+        return row;
+    }
+
+    // A meter: an inset track, a fill that follows fraction (0 to 1), and centred text over it.
+    public static RectTransform LiveBar(Transform parent, Func<float> fraction, Func<string> text, Color color,
+        List<Action> refreshers, float height = 14f)
+    {
+        RectTransform track = Box(parent, "Bar", InsetColor, blocksClicks: false);
+        Size(track, height: height, flexibleWidth: 1f);
+        RectTransform fill = Panel(track, "Fill", color, blocksClicks: false);
+        fill.anchorMin = Vector2.zero;
+        fill.pivot = new Vector2(0f, 0.5f);
+        fill.offsetMin = new Vector2(TexelSize, TexelSize);
+        fill.offsetMax = new Vector2(-TexelSize, -TexelSize);
+        Text label = Shadowed(Label(track, text(), 10, TextAnchor.MiddleCenter));
+        Stretch(label.rectTransform);
+        refreshers.Add(() =>
+        {
+            float amount = Mathf.Clamp01(fraction());
+            fill.anchorMax = new Vector2(amount, 1f);
+            fill.gameObject.SetActive(amount > 0f);
+            label.text = text();
+        });
+        return track;
     }
 
     // An invisible container, for grouping and layout only.
@@ -140,15 +312,21 @@ public static class UIKit
     public static Button Button(Transform parent, string text, Action onClick, float width = -1f, float height = 24f)
     {
         RectTransform rect = Panel(parent, "Button", ButtonColor);
+        UseSprite(rect.GetComponent<Image>(), ButtonSprite);
         var button = rect.gameObject.AddComponent<Button>();
         var colors = button.colors;
-        colors.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
-        colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
-        colors.disabledColor = new Color(0.55f, 0.55f, 0.55f, 0.6f);
+        colors.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f);
+        colors.selectedColor = Color.white;
+        colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
+        // Opaque, so a disabled button doesn't let the map show through; the label greys out too.
+        colors.disabledColor = new Color(0.55f, 0.55f, 0.6f, 1f);
+        colors.fadeDuration = 0.05f;
         button.colors = colors;
         button.onClick.AddListener(() => onClick());
         Text label = Label(rect, text, 13, TextAnchor.MiddleCenter);
-        Stretch(label.rectTransform);
+        // The bottom lip is part of the button, so the label sits on the face above it.
+        Stretch(label.rectTransform).offsetMin = new Vector2(Gap, TexelSize * 2f);
+        label.rectTransform.offsetMax = new Vector2(-Gap, 0f);
         Size(rect, width, height);
         return button;
     }
@@ -164,8 +342,26 @@ public static class UIKit
         {
             label.text = text();
             if (interactable != null) button.interactable = interactable();
-            if (selected != null) image.color = selected() ? SelectedButtonColor : ButtonColor;
+            bool isSelected = selected != null && selected();
+            if (selected != null) image.color = isSelected ? SelectedButtonColor : ButtonColor;
+            label.color = isSelected ? SelectedTextColor : button.interactable ? TextColor : DisabledTextColor;
         });
+        return button;
+    }
+
+    // Marks a button as the screen's main action: gold while it can be pressed.
+    public static Button Primary(Button button, List<Action> refreshers)
+    {
+        var image = button.GetComponent<Image>();
+        Text label = button.GetComponentInChildren<Text>();
+        label.fontStyle = FontStyle.Bold;
+        void Apply()
+        {
+            image.color = button.interactable ? SelectedButtonColor : ButtonColor;
+            label.color = button.interactable ? SelectedTextColor : DisabledTextColor;
+        }
+        Apply();
+        refreshers.Add(Apply);
         return button;
     }
 
