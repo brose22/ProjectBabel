@@ -878,6 +878,7 @@ public static class GreyBoxMatchBuilder
     // Gives generated art (named after the asset: captain_cinder, soldier_knight, enemy_grunt) to
     // data that has no sprite yet, so art set by hand is kept and a second run changes nothing.
     // Captains without their own art share a pale generic sprite tinted with the captain colour.
+    // Portraits come from the Portraits subfolder under the same names, with no shared fallback.
     static void ApplyArt()
     {
         foreach (CaptainData captain in LoadAll<CaptainData>(DataFolder + "/Captains"))
@@ -890,19 +891,27 @@ public static class GreyBoxMatchBuilder
             captain.tintSprite = own == null;
             MarkUpgraded(captain, "its sprite");
         }
+        foreach (CaptainData captain in LoadAll<CaptainData>(DataFolder + "/Captains"))
+            UseArt(captain, captain.portrait, "Portraits/captain_", "its portrait", s => captain.portrait = s);
         foreach (SoldierClassData soldierClass in LoadAll<SoldierClassData>(DataFolder + "/Soldiers"))
-            UseArt(soldierClass, soldierClass.sprite, "soldier_", s => soldierClass.sprite = s);
+        {
+            UseArt(soldierClass, soldierClass.sprite, "soldier_", "its sprite", s => soldierClass.sprite = s);
+            UseArt(soldierClass, soldierClass.portrait, "Portraits/soldier_", "its portrait", s => soldierClass.portrait = s);
+        }
         foreach (EnemyData enemy in LoadAll<EnemyData>(DataFolder + "/Enemies"))
-            UseArt(enemy, enemy.sprite, "enemy_", s => enemy.sprite = s);
+        {
+            UseArt(enemy, enemy.sprite, "enemy_", "its sprite", s => enemy.sprite = s);
+            UseArt(enemy, enemy.portrait, "Portraits/enemy_", "its portrait", s => enemy.portrait = s);
+        }
     }
 
-    static void UseArt(Object asset, Sprite current, string prefix, Action<Sprite> assign)
+    static void UseArt(Object asset, Sprite current, string prefix, string what, Action<Sprite> assign)
     {
         if (current != null) return;
         Sprite sprite = ArtSprite(prefix + asset.name.ToLowerInvariant());
         if (sprite == null) return;
         assign(sprite);
-        MarkUpgraded(asset, "its sprite");
+        MarkUpgraded(asset, what);
     }
 
     static void MarkUpgraded(Object asset, string what)

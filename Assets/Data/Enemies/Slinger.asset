@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: Slinger
   color: {r: 0.9, g: 0.5, b: 0.6, a: 1}
   sprite: {fileID: 21300000, guid: 1aa5e43f7bc2b3941918f6d9ded904b9, type: 3}
+  portrait: {fileID: 21300000, guid: 7d3813181ef4c0246b9727e16812fe6f, type: 3}
   size: 0.5
   maxHealth: 25
   moveSpeed: 1.3

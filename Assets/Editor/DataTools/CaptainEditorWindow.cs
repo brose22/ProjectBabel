@@ -54,6 +54,8 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
             {
                 DataToolsGUI.SpritePreview(captain.sprite, Tint(captain), PreviewSize);
                 DataToolsGUI.ChipLayout(captain.element.ToString(), DataToolsGUI.ElementColor(captain.element), PreviewSize);
+                DataToolsGUI.SpritePreview(captain.portrait, Color.white, PreviewSize);
+                GUILayout.Label("portrait", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(PreviewSize));
             }
             using (new EditorGUILayout.VerticalScope())
             {
@@ -63,6 +65,7 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
                 DataToolsGUI.Field(so, nameof(CaptainData.color));
                 DataToolsGUI.Field(so, nameof(CaptainData.sprite));
                 DataToolsGUI.Field(so, nameof(CaptainData.tintSprite));
+                DataToolsGUI.Field(so, nameof(CaptainData.portrait));
             }
         }
 

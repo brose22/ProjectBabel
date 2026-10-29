@@ -4,9 +4,9 @@ Usage: python -I Tools/pixel_art.py [<preview png>]
 
 Each sprite is a grid of characters; '.' is transparent and every other character looks up a
 colour in that sprite's palette (merged over COMMON). Tiles are generated from a seeded noise
-pattern instead. Output goes to Assets/Art/Sprites, where an editor AssetPostprocessor imports
-them as 16 pixels-per-unit point-filtered sprites. Pass a path to also write an enlarged preview
-sheet of everything.
+pattern instead. Output goes to Assets/Art/Sprites (portraits to its Portraits subfolder), where an
+editor AssetPostprocessor imports them as 16 pixels-per-unit point-filtered sprites. Pass a path to
+also write enlarged preview sheets: the sprites there, and the portraits beside it as <name>_portraits.png.
 """
 import os
 import random
@@ -299,6 +299,475 @@ SPRITES.update({
 })
 
 
+# ---------- Portraits (32x32 busts, for UI). Drawn as the left half and mirrored, then layered:
+# headgear overlays replace the base where they aren't '.', and '_' clears a pixel back to
+# transparent. Each has its colours baked in, so generic captains get their own colour here. ----------
+
+def mirror(half):
+    return [row + row[::-1] for row in half]
+
+
+def layer(base, *overlays):
+    rows = [list(row) for row in base]
+    for over in overlays:
+        rows += [["."] * len(rows[0]) for _ in range(len(over) - len(rows))]
+        for y, row in enumerate(over):
+            for x, ch in enumerate(row):
+                if ch == "_":
+                    rows[y][x] = "."
+                elif ch != ".":
+                    rows[y][x] = ch
+    return ["".join(row) for row in rows]
+
+
+def stamp(rows, glyph, x, y):
+    """Lays a small asymmetric glyph (such as an element emblem) over a grid at x, y."""
+    blank = ["." * len(rows[0])] * len(rows)
+    over = [list(row) for row in blank]
+    for gy, row in enumerate(glyph):
+        for gx, ch in enumerate(row):
+            over[y + gy][x + gx] = ch
+    return layer(rows, ["".join(row) for row in over])
+
+
+# A person facing forward: S skin, s skin shadow, p blush, W eye shine, m mouth, C clothes,
+# c clothes shadow, A trim.
+PERSON = mirror([
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "..........kkkkkk",
+    ".........kSSSSSS",
+    "........kSSSSSSS",
+    "........kSSSSSSS",
+    "........kSSSSSSS",
+    "........kSSSSSSS",
+    "........kSSkkkSS",
+    "........kSSSSSSS",
+    "........kSSWkSSS",
+    "........kSSkkSSS",
+    "........kSpSSSSS",
+    "........kSSSSSSs",
+    "........kSSSSSSS",
+    "........kSSSSSmm",
+    ".........kSSSSSS",
+    "..........kkSSSS",
+    "............ksSS",
+    ".......kkkkkksSS",
+    ".....kkCCCCCCkSS",
+    "....kCCCCCCCCAkS",
+    "...kCCCCCCCCCCAk",
+    "...kCCCCCCCCCCCA",
+    "..kCCCCcCCCCCCCC",
+    "..kCCCCcCCCCCCCC",
+    "..kCCCCcCCCCCCCC",
+    "..kCCCCcCCCCCCCC",
+    "..kCCCCcCCCCCCCC",
+])
+
+# An enemy: R hide, D armour, y eyes, w teeth, pointed ears.
+BRUTE_FACE = mirror([
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "..........kkkkkk",
+    "........kkRRRRRR",
+    ".......kRRRRRRRR",
+    ".......kRRRRRRRR",
+    "..kk...kRRRRRRRR",
+    "..kRkk.kRRRRRRRR",
+    "...kRRkkRkkRRRRR",
+    "....kRRRRRRkkRRR",
+    ".....kkRRyyykRRR",
+    ".......kRRkkkRRR",
+    ".......kRRRRRRRR",
+    ".......kRRRRRRRk",
+    ".......kRRRRRRRR",
+    ".......kRRkkkkkk",
+    "........kRkwkwkk",
+    ".........kRkkkkk",
+    "..........kkRRRR",
+    ".......kkkkkkRRR",
+    ".....kkDDDDDDkkk",
+    "....kDDDDDDDDDDD",
+    "...kDDkDDDDDDDDD",
+    "...kDDDDDDDDDDDD",
+    "..kDDDDDDDDDDDDD",
+    "..kDDDDdDDDDDDDD",
+    "..kDDDDdDDDDDDDD",
+    "..kDDDDdDDDDDDDD",
+    "..kDDDDdDDDDDDDD",
+])
+
+HAIR_SHORT = mirror([
+    "................",
+    "................",
+    "................",
+    "...........kkkkk",
+    ".........kkHHHHH",
+    "........kHHHHHHH",
+    "........kHHHhHHH",
+    ".......kHHHhHHHH",
+    ".......kHHHHHHHH",
+    ".......kHHHHHHHH",
+    ".......kHH..HHHH",
+    "........kH......",
+])
+
+HAIR_LONG = layer(HAIR_SHORT, mirror([
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "......kH........",
+    "......kHk.......",
+    "......kHk.......",
+    "......kHk.......",
+    "......kHk.......",
+    "......kHk.......",
+    "......kHk.......",
+    "......kHk.......",
+    "......kHk.......",
+    "......kHHk......",
+    "......kHHHk.....",
+    "......kHHHHk....",
+    ".......kkkk.....",
+]))
+
+HAIR_SPIKY = mirror([
+    "................",
+    "........k...k...",
+    "........kk.kHk.k",
+    ".........kkHHkkH",
+    "......k.kHHHHHHH",
+    "......kkHHHHHHHH",
+    ".......kHHHhHHHH",
+    ".......kHHhHHHHH",
+    "......kHHHHHHHHH",
+    ".......kHHHHHHHH",
+    ".......kHkHHkHHH",
+    "........kk..k.kk",
+])
+
+# A headband over short hair: B band, with a knot-free front.
+BAND = mirror([
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    ".......kBBBBBBBB",
+    ".......kBBBBBBBB",
+])
+
+HOOD = mirror([
+    "................",
+    "................",
+    "...........kkkkk",
+    ".........kkHHHHH",
+    "........kHHHHHHH",
+    ".......kHHHhHHHH",
+    "......kHHhHHHHHH",
+    "......kHHHkkkkkk",
+    "......kHHk......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHk.......",
+    ".....kHHHk......",
+    ".....kHHHHkk....",
+    "....kHHHHHHHkk..",
+    "...kHHHHHHHHHHkk",
+])
+
+# The lower face hidden behind a scarf (the rogue).
+MASK = mirror([
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "........kMMMMMMM",
+    "........kMMMMMMM",
+    "........kMMMmMMM",
+    "........kMMMMMMM",
+    ".........kMMMMMM",
+    "..........kkMMMM",
+])
+
+HELM = mirror([
+    "................",
+    "................",
+    "...........kkkkk",
+    ".........kkGGGGG",
+    "........kGGGgGGG",
+    ".......kGGGgGGGG",
+    ".......kGGgGGGGG",
+    ".......kGGGGGGGG",
+    ".......kGGGGGGGG",
+    ".......kGGGGGGGG",
+    ".......kGGGGGGGG",
+    ".......kGGGGGGGG",
+    ".......kGGkkkkkk",
+    ".......kGGkkkkkk",
+    ".......kGGGGGGkG",
+    ".......kGGGGGGGG",
+    ".......kGGGGkGkG",
+    ".......kGGGGGGGG",
+    ".......kGGGGkGkG",
+    ".......kGGGGGGGG",
+    "........kGGGGGGG",
+    ".........kkGGGGG",
+    "...........kkkkk",
+])
+
+# An open-faced helmet with a crest (Cinder's).
+CREST_HELM = mirror([
+    "..............kk",
+    ".............kXX",
+    "...........kkkXX",
+    ".........kkGGkXX",
+    "........kGGGgkXX",
+    ".......kGGGgGGkk",
+    ".......kGGgGGGGG",
+    ".......kGGGGGGGG",
+    ".......kGGGGGGGG",
+    ".......kGGkkkkkk",
+    ".......kGk......",
+    ".......kGk......",
+    ".......kGk......",
+    ".......kGk......",
+    ".......kGk......",
+    ".......kGGk.....",
+    "........kk......",
+])
+
+WIZARD_HAT = mirror([
+    "..............kk",
+    ".............kHH",
+    ".............kHH",
+    "............kHHH",
+    "............kHHH",
+    "...........kHHHH",
+    "...........kHHHH",
+    "..........kHHHHH",
+    "..........kHHhHH",
+    ".........kHHHHHH",
+    "....kkkkkkkkkkkk",
+    "...kBBBBBBBBBBBB",
+    "....kkkkkkkkkkkk",
+    "........kH......",
+])
+
+HORNS = mirror([
+    "................",
+    "..kk............",
+    "..kNk...........",
+    "..kNNk..........",
+    "...kNNk.........",
+    "...kNNNk........",
+    "....kNNNk.......",
+    ".....kNNNk......",
+    "......kkkk......",
+])
+
+CROWN = mirror([
+    "................",
+    "................",
+    "................",
+    "..........k...k.",
+    ".........kGk.kGk",
+    ".........kGGkGGG",
+    ".........kGGGGGG",
+    ".........kGjGGjG",
+    ".........kkkkkkk",
+])
+
+# Pauldrons over the shoulders: P plate, with a lighter rim.
+PAULDRONS = mirror([
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "....kkkkk.......",
+    "..kkPPPPPkk.....",
+    ".kPPPPPPPPPk....",
+    ".kPPPPPPPPPk....",
+    ".kpPPPPPPPpk....",
+    "..kkkkkkkkk.....",
+])
+
+# Element emblems for the chest, 5x5 in the 'e' colour, worn on a dark medallion.
+MEDALLION = [
+    ".kkkkk.",
+    "kkkkkkk",
+    "kkkkkkk",
+    "kkkkkkk",
+    "kkkkkkk",
+    "kkkkkkk",
+    ".kkkkk.",
+]
+EMBLEMS = {
+    "water": [
+        "..e..",
+        ".eee.",
+        "eeeee",
+        "eeWee",
+        ".eee.",
+    ],
+    "fire": [
+        "..e..",
+        ".ee..",
+        ".eee.",
+        "eeyee",
+        ".eye.",
+    ],
+    "earth": [
+        ".....",
+        "..e..",
+        ".eee.",
+        "eeeee",
+        "eeeee",
+    ],
+    "air": [
+        "eeee.",
+        "....e",
+        ".eee.",
+        "e....",
+        ".eeee",
+    ],
+}
+ELEMENT_COLOURS = {"water": "3fa7f2", "fire": "ff7a1f", "earth": "8bb24a", "air": "dff4f0"}
+
+SKIN = {
+    "light": {"S": "f1c27d", "s": "d9a066", "p": "e8967a"},
+    "pale": {"S": "ffdbac", "s": "e8b98a", "p": "f0a38c"},
+    "tan": {"S": "c68642", "s": "a0662f", "p": "b56a3c"},
+    "dark": {"S": "8d5524", "s": "6b3e1a", "p": "7d4420"},
+}
+FACE = {"W": "f4f6f7", "m": "9c4a3a"}
+
+
+def shade(value, factor):
+    r, g, b = (int(value[i:i + 2], 16) for i in (0, 2, 4))
+    return "".join(f"{max(0, min(255, int(c * factor))):02x}" for c in (r, g, b))
+
+
+def captain_portrait(headgear, element, skin, hair, clothes, trim, extra=None):
+    rows = stamp(stamp(layer(PERSON, *headgear), MEDALLION, 13, 25), EMBLEMS[element], 14, 26)
+    palette = {**SKIN[skin], **FACE, "H": hair, "h": shade(hair, 1.3), "C": clothes, "c": shade(clothes, 0.75),
+               "A": trim, "e": ELEMENT_COLOURS[element], "y": "ffe066"}
+    return rows, {**palette, **(extra or {})}
+
+
+PORTRAITS = {
+    # The slice captains keep the colours of their tower art.
+    "captain_cinder": captain_portrait([HAIR_SHORT, CREST_HELM], "fire", "light", "d9442b", "ef7d22", "f2c14e",
+                                       {"G": "dfe6ee", "g": "ffffff", "X": "d9442b"}),
+    "captain_ember": captain_portrait([HAIR_SPIKY], "fire", "tan", "8e3b1f", "f4b33d", "8a5a12"),
+    "captain_marin": captain_portrait([HOOD], "water", "pale", "2e86c1", "5dade2", "f4f6f7"),
+    # The rest wear their captain colour.
+    "captain_boulder": captain_portrait([HAIR_SHORT, PAULDRONS], "earth", "dark", "2b1d16", "99734d", "5a3a28",
+                                        {"P": "7d6a55", "p": "a89580"}),
+    "captain_brine": captain_portrait([HAIR_LONG], "water", "light", "1f3a5a", "3373e6", "f4f6f7"),
+    "captain_gust": captain_portrait([HAIR_SPIKY], "air", "pale", "e9e9e9", "bff2d9", "5a8a78"),
+    "captain_pyre": captain_portrait([HAIR_LONG, BAND], "fire", "dark", "1b1416", "bf261a", "f2c14e",
+                                     {"B": "f2c14e"}),
+    "captain_rill": captain_portrait([HAIR_SHORT, BAND], "water", "tan", "3a2a1e", "5999ff", "f4f6f7",
+                                     {"B": "f4f6f7"}),
+    "captain_skye": captain_portrait([HAIR_LONG], "air", "light", "f2d06b", "ccccff", "7a7ab8"),
+    "captain_slate": captain_portrait([HAIR_SHORT, PAULDRONS], "earth", "pale", "6d6d6d", "8c8073", "3a3a3a",
+                                      {"P": "8d8d8d", "p": "b5b5b5"}),
+    "captain_terra": captain_portrait([HAIR_LONG, BAND], "earth", "tan", "6d4c2f", "80b359", "3f6b2a",
+                                      {"B": "3f9b4a"}),
+    "captain_zephyr": captain_portrait([HOOD], "air", "dark", "99e6e6", "6fb8b8", "f4f6f7"),
+}
+
+
+def soldier_portrait(headgear, skin, clothes, trim, extra):
+    rows = layer(PERSON, *headgear)
+    palette = {**SKIN[skin], **FACE, "C": clothes, "c": shade(clothes, 0.75), "A": trim}
+    return rows, {**palette, **extra}
+
+
+PORTRAITS.update({
+    "soldier_knight": soldier_portrait([HELM, PAULDRONS], "light", "3b6fd6", "c9d3dc",
+                                       {"G": "c9d3dc", "g": "f4f6f7", "P": "c9d3dc", "p": "f4f6f7"}),
+    "soldier_archer": soldier_portrait([HOOD], "tan", "3f9b4a", "9a6a3a",
+                                       {"H": "3f9b4a", "h": "5fbf6a"}),
+    "soldier_rogue": soldier_portrait([HOOD, MASK], "light", "6c3b8f", "dfe6ee",
+                                      {"H": "6c3b8f", "h": "8a55b0", "M": "39424e", "m": "1b1416"}),
+    "soldier_mage": soldier_portrait([HAIR_LONG, WIZARD_HAT], "pale", "7e6bd6", "b9f2ff",
+                                     {"H": "4b3fbf", "h": "6a5ee0", "B": "b9f2ff"}),
+})
+
+
+def enemy_portrait(headgear, colours):
+    rows = layer(BRUTE_FACE, *headgear)
+    palette = {"R": colours["R"], "D": colours["D"], "d": shade(colours["D"], 0.7), "y": colours["y"], "w": "f4f6f7",
+               "N": "e9d8b4", "P": shade(colours["D"], 1.4), "p": shade(colours["D"], 1.8)}
+    return rows, {**palette, **colours.get("extra", {})}
+
+
+PORTRAITS.update({
+    "enemy_grunt": enemy_portrait([], {"R": "d64545", "D": "8f2a2a", "y": "ffe066"}),
+    "enemy_raider": enemy_portrait([BAND], {"R": "9b59b6", "D": "5e3370", "y": "ffe066", "extra": {"B": "dfe6ee"}}),
+    "enemy_slinger": enemy_portrait([HOOD], {"R": "e88aa6", "D": "a24c68", "y": "ffe066",
+                                             "extra": {"H": "8e5b34", "h": "b07a4a"}}),
+    "enemy_brute": enemy_portrait([HORNS, PAULDRONS], {"R": "8b2e2e", "D": "5a1a1a", "y": "ff6b3d"}),
+    "enemy_bombard": enemy_portrait([HORNS], {"R": "5b2c6f", "D": "3b1c48", "y": "7ff0ff"}),
+    "enemy_warlord": enemy_portrait([HORNS, CROWN, PAULDRONS], {"R": "59101a", "D": "2b0a0e", "y": "ff3d3d",
+                                                               "extra": {"G": "f2c14e", "j": "d64545"}}),
+})
+
+
 # ---------- Tiles: seeded noise so they tile without obvious repeats inside one tile ----------
 
 def noise_tile(seed, base, specks):
@@ -363,6 +832,27 @@ def write_png(path, pixels, scale=1):
         f.write(png)
 
 
+def preview_sheet(path, images, cell, background, per_row, scale):
+    """Every image centred in a cell over the background cell, per_row cells to a row."""
+    cells = []
+    for pixels in images.values():
+        sheet_cell = [list(row) for row in background]
+        oy, ox = (cell - len(pixels)) // 2, (cell - len(pixels[0])) // 2
+        for y, row in enumerate(pixels):
+            for x, p in enumerate(row):
+                if p[3]:
+                    sheet_cell[oy + y][ox + x] = p
+        cells.append(sheet_cell)
+    sheet = []
+    for start in range(0, len(cells), per_row):
+        group = cells[start:start + per_row]
+        group += [[[(20, 20, 24, 255)] * cell for _ in range(cell)]] * (per_row - len(group))
+        for y in range(cell):
+            sheet.append([p for c in group for p in c[y]])
+    write_png(path, sheet, scale=scale)
+    print("preview:", path)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     images = {}
@@ -370,33 +860,21 @@ def main():
         images[name] = grid_to_pixels(rows, palette, name)
     for name, grid in TILES.items():
         images[name] = [[hex_rgba(c) for c in row] for row in grid]
+    portraits = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in PORTRAITS.items()}
 
     for name, pixels in images.items():
         write_png(os.path.join(OUT, name + ".png"), pixels)
-    print(f"wrote {len(images)} sprites to {OUT}")
+    os.makedirs(os.path.join(OUT, "Portraits"), exist_ok=True)
+    for name, pixels in portraits.items():
+        write_png(os.path.join(OUT, "Portraits", name + ".png"), pixels)
+    print(f"wrote {len(images)} sprites and {len(portraits)} portraits to {OUT}")
 
     if len(sys.argv) > 1:
-        # Preview: every image padded to 16x16 on a grass background, 6 per row, 6x scale.
-        grass = images["tile_grass"]
-        cells = []
-        for name, pixels in images.items():
-            cell = [list(row) for row in grass]
-            oy, ox = (16 - len(pixels)) // 2, (16 - len(pixels[0])) // 2
-            for y, row in enumerate(pixels):
-                for x, p in enumerate(row):
-                    if p[3]:
-                        cell[oy + y][ox + x] = p
-            cells.append(cell)
-        per_row = 6
-        sheet = []
-        for start in range(0, len(cells), per_row):
-            group = cells[start:start + per_row]
-            group += [[[(20, 20, 24, 255)] * 16 for _ in range(16)]] * (per_row - len(group))
-            for y in range(16):
-                sheet.append([p for cell in group for p in cell[y]])
-        write_png(sys.argv[1], sheet, scale=6)
-        print("preview:", sys.argv[1])
-
+        # Sprites padded to 16x16 on grass, 6 per row at 6x; portraits on a dark panel, 6 per row at 4x.
+        preview_sheet(sys.argv[1], images, 16, images["tile_grass"], 6, 6)
+        panel = [[(46, 52, 64, 255)] * 34 for _ in range(34)]
+        base, _ = os.path.splitext(sys.argv[1])
+        preview_sheet(base + "_portraits.png", portraits, 34, panel, 6, 4)
 
 if __name__ == "__main__":
     main()

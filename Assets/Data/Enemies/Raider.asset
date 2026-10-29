@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: Raider
   color: {r: 0.6, g: 0.3, b: 0.85, a: 1}
   sprite: {fileID: 21300000, guid: 0980860ebda2e92429372a8876764e65, type: 3}
+  portrait: {fileID: 21300000, guid: 6abb942c1b240934690237d9186263bd, type: 3}
   size: 0.5
   maxHealth: 35
   moveSpeed: 1.3

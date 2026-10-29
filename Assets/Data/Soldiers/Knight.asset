@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: Knight
   color: {r: 0.4, g: 0.55, b: 1, a: 1}
   sprite: {fileID: 21300000, guid: d7cb0beeb82c2ce48b9dd62776fef133, type: 3}
+  portrait: {fileID: 21300000, guid: ac1aa9420f8f3d84ca1458e1a6c32ece, type: 3}
   actCost: 2
   respawnCost: 8
   maxHealth: 50

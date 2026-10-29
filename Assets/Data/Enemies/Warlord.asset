@@ -15,6 +15,7 @@ MonoBehaviour:
   displayName: Warlord
   color: {r: 0.35, g: 0.05, b: 0.1, a: 1}
   sprite: {fileID: 21300000, guid: ee6d1c9de91c56d42b930d9e29b2ee86, type: 3}
+  portrait: {fileID: 21300000, guid: cf671e210a666b1438860923f0afa02b, type: 3}
   size: 1.5
   maxHealth: 6000
   moveSpeed: 0.05
