@@ -25,18 +25,25 @@ Early development. One developer at 20 hours a week, with a vertical slice targe
 | M4: relationships | Approval (saved between runs), like/dislike judging, requests, bond ranks D–S, walkouts | Done (merged) |
 | M5: vertical slice | City map, Cinder / Marin / Ember, run setup and results, uGUI HUD, generated pixel art, stats log and tuning | Done (merged) |
 | M6: world map and run | Branching world map to the enemy base, intel reveals roads, 4 city layouts, scaling difficulty, pick 3 and recruit up to 8, run saved between matches (short 7-match test run) | Done (merged) |
+| M7: map stops and the boss | Elite cities, rests, shops (approval gifts) and events on the world map, health back after wins and at rests, the enemy base's very slow boss | Done (merged) |
 
-Next up (M7): node types on the world map (elite cities, rests, shops, events) and restoring global health during a run. Later phases cover the remaining content, polish, and release prep.
+Next up: the remaining content (toward the ~30-match run), polish, and release prep.
 
-### How a run plays (M6)
+### How a run plays (M7)
 
 1. **Setup:** pick 3 captains from the roster of 12.
-2. **World map:** pick a city on the next layer. Every road leads to the enemy base in the last layer. You only see the roads your intel has revealed; winning a city reveals the next 2 layers beyond it.
-3. **Match:** the city is played on one of 4 layouts (Riverside, Hillfort, Market Square, Long Road). Enemies get tougher and more numerous the further into the run you are, and the enemy base plays its waves twice.
-4. **After a win:** up to 3 captains offer to join; recruit one or decline (the party holds 8, not counting walkouts). Health, Gold, XP and walkouts carry over.
+2. **World map:** pick a stop on the next layer. Every road leads to the enemy base in the last layer. You only see the roads your intel has revealed; each stop reveals the next 2 layers beyond it. Besides plain cities, the middle layers hold:
+   - **Elite cities:** play 2 layers tougher, pay double Gold for kills, and offer one extra captain to recruit.
+   - **Rests:** restore 30% of max health.
+   - **Shops:** buy approval gifts for party captains (75 Gold for +10 approval).
+   - **Events:** a short scene with 2–3 choices that change Gold, health, the party's XP or approval.
+
+   Rests, shops and events take the place of a match: no fight, but no match XP or Gold either.
+3. **Match:** the city is played on one of 4 layouts (Riverside, Hillfort, Market Square, Long Road). Enemies get tougher and more numerous the further into the run you are. The enemy base plays its waves twice, and its boss, the Warlord, walks on with the first wave: very slow and very tough. The base falls only once every wave is cleared and the Warlord is dead; if it reaches the end of the road, the run is lost.
+4. **After a win:** 2 health comes back, and up to 3 captains offer to join; recruit one or decline (the party holds 8, not counting walkouts). Health, Gold, XP and walkouts carry over.
 5. Taking the enemy base wins the run; reaching 0 health loses it.
 
-The run is saved to `run.json` in the persistent data path whenever you're on the map or have just won a city, and it resumes when the match scene starts. **Abandon run** on the map deletes it. Run length, layer sizes, intel depth and difficulty growth are on the match data asset under **World map**.
+The run is saved to `run.json` in the persistent data path whenever you're on the map or have just won a city, and it resumes when the match scene starts. **Abandon run** on the map deletes it. Run length, layer sizes, intel depth, node odds, elite tuning, the boss and difficulty growth are on the match data asset under **World map**; healing, shop prices and the event pool sit under **Healing**, **Shop** and **Events**. Events are `EventData` assets in `Assets/Data/Events`.
 
 ## Getting started
 
@@ -59,6 +66,7 @@ The run is saved to `run.json` in the persistent data path whenever you're on th
 | `X` | Sell the selected tower (returns its reserve) |
 | `Space` | Start the next wave |
 | `Esc` or right-click | Deselect |
+| `F1` | Cheat window, editor and development builds only (win the match, kill the boss, +500 Gold, full health, reveal the map) |
 
 ## Project layout
 
