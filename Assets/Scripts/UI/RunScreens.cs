@@ -30,6 +30,13 @@ public class RunScreens : MonoBehaviour
     // Art drawn at whole multiples so its pixels stay square: 32 px portraits at 2x, 16 px icons at 1x.
     const float PortraitSize = 64f;
     const float IconSize = 16f;
+    // Captain details window.
+    const float DetailsWidth = 560f;
+    const float DetailsPortraitSize = 96f;
+    // Opaque, so the map never shows through the window.
+    static readonly Color WindowColor = new(UIKit.PanelColor.r, UIKit.PanelColor.g, UIKit.PanelColor.b, 1f);
+    // Darker than the accent gold, so the meter's white text stays readable on it.
+    static readonly Color BondBarColor = new(0.62f, 0.45f, 0.16f, 1f);
     static readonly Color RoadColor = new(0.55f, 0.45f, 0.3f, 1f);
     static readonly Color ClearedCityColor = new(0.16f, 0.3f, 0.2f, 1f);
     static readonly Color BaseColor = new(0.55f, 0.12f, 0.16f, 1f);
@@ -440,6 +447,7 @@ public class RunScreens : MonoBehaviour
         HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(card, 6, 8);
         layout.childAlignment = TextAnchor.UpperLeft;
         UIKit.Size(card, flexibleWidth: 1f);
+        UIKit.Clickable(card, () => ShowCaptainDetails(run, captain));
 
         // The 32 px portraits at 2x, inset like a picture frame.
         RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
@@ -478,6 +486,113 @@ public class RunScreens : MonoBehaviour
         UIKit.Label(special, captain.ability != null ? captain.ability.displayName : "No special", 12);
 
         if (departed) card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
+    }
+
+    // A window over the map with everything about one captain. A click beside it, or Close,
+    // dismisses it; rebuilding the screen does too.
+    void ShowCaptainDetails(RunState run, CaptainData captain)
+    {
+        RectTransform overlay = UIKit.Stretch(UIKit.Panel(screen, "Captain Details", new Color(0f, 0f, 0f, 0.55f)));
+        var dismiss = overlay.gameObject.AddComponent<Button>();
+        dismiss.transition = Selectable.Transition.None;
+        dismiss.onClick.AddListener(() => Destroy(overlay.gameObject));
+
+        RectTransform window = UIKit.Box(overlay, "Window", WindowColor);
+        // Swallows clicks on the window, which would otherwise bubble up to the overlay and close it.
+        window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
+        UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(DetailsWidth, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
+
+        int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
+        DetailsHeader(window, run, captain, level);
+
+        UIKit.Size(UIKit.Header(window, "Stats"), flexibleWidth: 1f);
+        RectTransform stats = UIKit.Group(window, "Stats");
+        UIKit.Layout<HorizontalLayoutGroup>(stats, 0, 8).childAlignment = TextAnchor.UpperCenter;
+        UIKit.Size(stats, flexibleWidth: 1f);
+        Stat(stats, "POWER", $"{captain.power * LevelMath.StatFactor(level):0}");
+        Stat(stats, "RANGE", $"{captain.range:0.#}");
+        Stat(stats, "SPEED", $"{captain.speed:0.##}");
+        Stat(stats, "HEALTH", $"{captain.health}");
+        Stat(stats, "RESERVE", $"{captain.resourceCapacity}");
+        Stat(stats, "DRAW", $"{captain.resourceRegen:0.#}/s");
+
+        UIKit.Size(UIKit.Header(window, "Special"), flexibleWidth: 1f);
+        Transform special = UIKit.Group(window, "Special");
+        UIKit.Layout<HorizontalLayoutGroup>(special, 0, 6);
+        UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, 32f);
+        Text specialName = UIKit.Label(special, captain.ability != null ? captain.ability.displayName : "No special ability", 14);
+        specialName.fontStyle = FontStyle.Bold;
+        if (captain.ability != null && !string.IsNullOrEmpty(captain.ability.description))
+            UIKit.Label(window, captain.ability.description, 12, color: UIKit.MutedTextColor);
+
+        UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
+        RectTransform tastes = UIKit.Group(window, "Tastes");
+        UIKit.Layout<HorizontalLayoutGroup>(tastes, 0, 16).childAlignment = TextAnchor.UpperLeft;
+        UIKit.Size(tastes, flexibleWidth: 1f);
+        TagColumn(tastes, "Likes", captain.likes, UIKit.GoodColor);
+        TagColumn(tastes, "Dislikes", captain.dislikes, UIKit.BadColor);
+
+        UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
+        UIKit.Size(UIKit.Button(window, "Close", () => Destroy(overlay.gameObject)), height: 26f, flexibleWidth: 1f);
+    }
+
+    // Portrait, then name, level and XP, element (with its status), role and bond.
+    void DetailsHeader(Transform window, RunState run, CaptainData captain, int level)
+    {
+        RectTransform top = UIKit.Group(window, "Top");
+        UIKit.Layout<HorizontalLayoutGroup>(top, 0, 12).childAlignment = TextAnchor.UpperLeft;
+        UIKit.Size(top, flexibleWidth: 1f);
+        RectTransform frame = UIKit.Box(top, "Portrait", UIKit.InsetColor, blocksClicks: false);
+        UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
+        UIKit.Icon(frame, captain.portrait, DetailsPortraitSize);
+
+        RectTransform info = UIKit.Group(top, "Info");
+        UIKit.Layout<VerticalLayoutGroup>(info, 0, 3);
+        UIKit.Size(info, flexibleWidth: 1f);
+
+        Transform title = UIKit.Group(info, "Title");
+        UIKit.Layout<HorizontalLayoutGroup>(title, 0, 6);
+        Text name = UIKit.Shadowed(UIKit.Label(title, captain.displayName, 20));
+        name.fontStyle = FontStyle.Bold;
+        UIKit.Size(name, flexibleWidth: 1f);
+        if (run.HasDeparted(captain))
+            UIKit.Label(title, "WALKED OUT", 10, TextAnchor.MiddleRight, UIKit.BadColor).fontStyle = FontStyle.Bold;
+
+        // Nothing here changes while the window is open, so the meters are drawn once rather than
+        // joining the screen's refreshers, which would outlive the window.
+        var drawOnce = new List<Action>();
+        int xp = run.XpOf(captain);
+        bool maxLevel = level >= LevelMath.MaxLevel;
+        int from = LevelMath.XpForLevel(level), to = LevelMath.XpForLevel(level + 1);
+        UIKit.LiveBar(info, () => maxLevel ? 1f : (xp - from) / (float)Mathf.Max(1, to - from),
+            () => maxLevel ? $"Level {level}  (max)" : $"Level {level}   XP {xp}/{to}", UIKit.XpBarColor, drawOnce);
+
+        ElementData element = match.Data.ElementInfo(captain.element);
+        Transform elementRow = UIKit.Group(info, "Element");
+        UIKit.Layout<HorizontalLayoutGroup>(elementRow, 0, 4);
+        UIKit.Icon(elementRow, element != null ? element.icon : null, IconSize);
+        UIKit.Label(elementRow, element != null ? element.displayName : captain.element.ToString(), 12, color: UIKit.ElementColor(captain.element));
+        if (element != null && !string.IsNullOrEmpty(element.statusName))
+            UIKit.Label(elementRow, $"inflicts {element.statusName}", 12, color: UIKit.MutedTextColor);
+        UIKit.Size(UIKit.Group(elementRow, "Gap"), 6f);
+        UIKit.Icon(elementRow, match.Data.RoleIcon(captain.role), IconSize);
+        UIKit.Label(elementRow, captain.role.ToString(), 12);
+
+        float approval = ApprovalStore.ApprovalOf(captain);
+        UIKit.LiveBar(info, () => (approval - BondMath.MinApproval) / (BondMath.MaxApproval - BondMath.MinApproval),
+            () => $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {approval:0}", BondBarColor, drawOnce);
+        UIKit.Refresh(drawOnce);
+    }
+
+    static void TagColumn(Transform parent, string caption, CaptainTag[] tags, Color color)
+    {
+        RectTransform column = UIKit.Group(parent, caption);
+        UIKit.Layout<VerticalLayoutGroup>(column, 0, 2);
+        UIKit.Size(column, flexibleWidth: 1f);
+        UIKit.Label(column, caption.ToUpperInvariant(), 10, color: color).fontStyle = FontStyle.Bold;
+        foreach (CaptainTag tag in tags)
+            UIKit.Label(column, tag.ToString(), 12);
     }
 
     // Layers run left to right; cities in a layer are spread evenly top to bottom.
