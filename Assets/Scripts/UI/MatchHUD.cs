@@ -11,8 +11,14 @@ public class MatchHUD : MonoBehaviour
 {
     const float TopBarHeight = 32f;
     const float PanelWidth = 310f;
+    const float MessagesWidth = 240f;
+    const float RequestWidth = UIKit.ReferenceWidth - PanelWidth - MessagesWidth - 4 * UIKit.Pad;
+    const float SlotLabelWidth = 52f;
     static readonly string[] DrawRateLabels = { "Low", "Normal", "High" };
     static readonly SupportEffect[] StatEffects = { SupportEffect.ActSpeed, SupportEffect.Damage, SupportEffect.Defense };
+    static readonly Color NoColor = new(0.5f, 0.2f, 0.2f, 1f);
+    static readonly Color YesColor = new(0.22f, 0.44f, 0.25f, 1f);
+    static readonly Color HintColor = new(0.06f, 0.07f, 0.1f, 0.85f);
 
     [SerializeField] MatchManager match;
     [SerializeField] PlacementController placement;
@@ -27,6 +33,7 @@ public class MatchHUD : MonoBehaviour
 
     RectTransform towerPanel;
     RectTransform requestList;
+    RectTransform moveHintBox;
     Text moveHint;
     Text messages;
     string towerPanelKey;
@@ -45,23 +52,23 @@ public class MatchHUD : MonoBehaviour
         BuildTopBar();
 
         towerPanel = UIKit.Box(canvas.transform, "Tower Panel");
-        UIKit.Place(towerPanel, new Vector2(0f, 0f), new Vector2(8f, 8f), new Vector2(PanelWidth, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(towerPanel, 8, 3, fitContent: true);
+        UIKit.Place(towerPanel, new Vector2(0f, 0f), new Vector2(UIKit.Pad, UIKit.Pad), new Vector2(PanelWidth, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(towerPanel, UIKit.Pad, 3, fitContent: true);
 
-        moveHint = UIKit.Label(canvas.transform, "", 13, TextAnchor.MiddleCenter, UIKit.SelectedButtonColor);
-        UIKit.Place(moveHint.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -TopBarHeight - 6f), new Vector2(520f, 22f));
+        moveHintBox = UIKit.Box(canvas.transform, "Move Hint", HintColor, blocksClicks: false);
+        UIKit.Place(moveHintBox, new Vector2(0.5f, 1f), new Vector2(0f, -TopBarHeight - 6f), Vector2.zero);
+        UIKit.Layout<HorizontalLayoutGroup>(moveHintBox, 6, 0, fitContent: true);
+        moveHint = UIKit.Shadowed(UIKit.Label(moveHintBox, "", 13, TextAnchor.MiddleCenter, UIKit.AccentColor));
 
+        // Between the tower panel and the approval messages, so none of them overlap.
         requestList = UIKit.Group(canvas.transform, "Requests");
-        UIKit.Place(requestList, new Vector2(0.5f, 1f), new Vector2(0f, -TopBarHeight - 30f), new Vector2(600f, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(requestList, 0, 4, fitContent: true);
+        UIKit.Place(requestList, new Vector2(0f, 1f), new Vector2(PanelWidth + 2 * UIKit.Pad, -TopBarHeight - 36f), new Vector2(RequestWidth, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(requestList, 0, UIKit.Gap, fitContent: true);
 
-        messages = UIKit.Label(canvas.transform, "", 12, TextAnchor.UpperRight);
-        UIKit.Place(messages.rectTransform, new Vector2(1f, 1f), new Vector2(-8f, -TopBarHeight - 6f), new Vector2(330f, 120f));
+        messages = UIKit.Shadowed(UIKit.Label(canvas.transform, "", 12, TextAnchor.UpperRight));
+        UIKit.Place(messages.rectTransform, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -TopBarHeight - 8f), new Vector2(MessagesWidth, 120f));
 
-        Text hint = UIKit.Label(canvas.transform,
-            "Click: place / select    Tab: next captain    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave",
-            11, TextAnchor.LowerRight, UIKit.TextColor);
-        UIKit.Place(hint.rectTransform, new Vector2(1f, 0f), new Vector2(-8f, 6f), new Vector2(640f, 18f));
+        BuildControlsHint();
     }
 
     void LateUpdate()
@@ -73,12 +80,47 @@ public class MatchHUD : MonoBehaviour
         UpdateTowerPanel();
         UpdateRequests();
         UpdateMoveHint();
-        messages.text = Relationships != null ? string.Join("\n", Relationships.RecentMessages) : "";
+        messages.text = Relationships != null ? MessagesText(Relationships.RecentMessages) : "";
     }
 
     void OnDestroy()
     {
         if (canvas != null) Destroy(canvas.gameObject);
+    }
+
+    // Keys in the accent colour, each followed by what it does.
+    void BuildControlsHint()
+    {
+        RectTransform box = UIKit.Box(canvas.transform, "Controls", HintColor, blocksClicks: false);
+        UIKit.Place(box, new Vector2(1f, 0f), new Vector2(-UIKit.Pad, UIKit.Pad), Vector2.zero);
+        UIKit.Layout<HorizontalLayoutGroup>(box, 5, 0, fitContent: true);
+        string key = UIKit.Hex(UIKit.AccentColor);
+        var parts = new List<string>();
+        foreach ((string keys, string action) in new[]
+                 {
+                     ("Click", "place / select"), ("Tab", "next captain"), ("Q", "ability"), ("1-3", "Gold draw"),
+                     ("M", "move"), ("X", "sell"), ("Space", "next wave"),
+                 })
+            parts.Add($"<color={key}>{keys}</color> {action}");
+        UIKit.Label(box, string.Join("   ", parts), 11, TextAnchor.MiddleRight, UIKit.TextColor);
+    }
+
+    // Approval changes end in a signed number; colour it so gains and losses read at a glance.
+    static string MessagesText(IEnumerable<string> recent)
+    {
+        var lines = new List<string>();
+        foreach (string message in recent)
+        {
+            int split = message.LastIndexOf(' ');
+            string amount = split >= 0 ? message.Substring(split + 1) : "";
+            if (amount.Length > 1 && (amount[0] == '+' || amount[0] == '-'))
+            {
+                Color color = amount[0] == '+' ? UIKit.GoodColor : UIKit.BadColor;
+                lines.Add($"{message.Substring(0, split)} <color={UIKit.Hex(color)}>{amount}</color>");
+            }
+            else lines.Add(message);
+        }
+        return string.Join("\n", lines);
     }
 
     // ---------- Top bar ----------
@@ -90,21 +132,38 @@ public class MatchHUD : MonoBehaviour
         bar.anchorMax = Vector2.one;
         bar.pivot = new Vector2(0.5f, 1f);
         bar.sizeDelta = new Vector2(0f, TopBarHeight);
-        UIKit.Layout<HorizontalLayoutGroup>(bar, 4, 10);
+        HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(bar, 3, 12);
+        layout.padding.left = 10;
+        layout.padding.right = 6;
 
         RunState run() => RunState.Current;
-        UIKit.Size(UIKit.LiveLabel(bar, () => $"Health {run().Health}/{run().MaxHealth}", barRefreshers), 90f);
-        UIKit.Size(UIKit.LiveLabel(bar, () => $"Gold {run().Gold}", barRefreshers), 80f);
-        UIKit.Size(UIKit.LiveLabel(bar, CityLabel, barRefreshers), 120f);
-        UIKit.Size(UIKit.LiveLabel(bar, () => $"Wave {Mathf.Min(match.WavesCleared + 1, match.WaveCount)}/{match.WaveCount}", barRefreshers), 64f);
-        UIKit.Size(UIKit.LiveLabel(bar, () => $"Towers {Tower.All.Count}/{match.Data.maxTowers}", barRefreshers), 66f);
-        UIKit.LiveButton(bar, NextCaptainLabel, match.CycleNextCaptain, barRefreshers,
-            interactable: () => match.CanPlaceTower, width: 200f);
-        UIKit.Size(UIKit.LiveLabel(bar, () => $"Kills {match.Kills}  Leaks {match.Leaks}  Casualties {match.Casualties}",
-            barRefreshers, 12, color: UIKit.MutedTextColor), flexibleWidth: 1f);
-        UIKit.LiveButton(bar, WaveButtonLabel, match.StartNextWave, barRefreshers,
-            interactable: () => match.State == MatchState.Preparing, width: 120f);
-        UIKit.LiveButton(bar, () => match.GameSpeed > 1f ? "Speed x2" : "Speed x1", match.ToggleGameSpeed, barRefreshers, width: 76f);
+        Text health = Stat(bar, "HEALTH", () => $"{run().Health}/{run().MaxHealth}");
+        barRefreshers.Add(() => health.color = run().Health * 3 <= run().MaxHealth ? UIKit.BadColor : UIKit.TextColor);
+        Stat(bar, "GOLD", () => $"{run().Gold}").color = UIKit.AccentColor;
+        Stat(bar, "CITY", CityLabel);
+        Stat(bar, "WAVE", () => $"{Mathf.Min(match.WavesCleared + 1, match.WaveCount)}/{match.WaveCount}");
+        Stat(bar, "TOWERS", () => $"{Tower.All.Count}/{match.Data.maxTowers}");
+        Stat(bar, "KILLS", () => $"{match.Kills}");
+        Stat(bar, "LEAKS", () => $"{match.Leaks}");
+        Stat(bar, "CASUALTIES", () => $"{match.Casualties}");
+        UIKit.Size(UIKit.Group(bar, "Spacer"), flexibleWidth: 1f);
+
+        Button next = UIKit.LiveButton(bar, NextCaptainLabel, match.CycleNextCaptain, barRefreshers,
+            interactable: () => match.CanPlaceTower, width: 190f);
+        next.GetComponentInChildren<Text>().fontSize = 12;
+        UIKit.Primary(UIKit.LiveButton(bar, WaveButtonLabel, match.StartNextWave, barRefreshers,
+            interactable: () => match.State == MatchState.Preparing, width: 130f), barRefreshers);
+        UIKit.LiveButton(bar, () => match.GameSpeed > 1f ? "Speed x2" : "Speed x1", match.ToggleGameSpeed, barRefreshers,
+            selected: () => match.GameSpeed > 1f, width: 72f);
+    }
+
+    // A small caption over a live value.
+    Text Stat(Transform bar, string caption, Func<string> value)
+    {
+        RectTransform stat = UIKit.Group(bar, caption);
+        UIKit.Layout<VerticalLayoutGroup>(stat, 0, -2f);
+        UIKit.Label(stat, caption, 9, color: UIKit.MutedTextColor).fontStyle = FontStyle.Bold;
+        return UIKit.LiveLabel(stat, value, barRefreshers, 13);
     }
 
     string CityLabel()
@@ -157,77 +216,104 @@ public class MatchHUD : MonoBehaviour
         CaptainData captain = tower.Captain;
         Transform panel = towerPanel;
 
-        UIKit.LiveLabel(panel, () => $"{captain.displayName}  Lv {tower.Level}  Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})",
-            panelRefreshers, 15);
-        UIKit.Label(panel, $"{captain.element} {captain.role}", 12, color: UIKit.MutedTextColor);
-        UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}   Range {captain.range:0.#}   Speed {captain.speed:0.##}", panelRefreshers);
-        UIKit.LiveLabel(panel, () => $"Reserve {tower.Reserve}/{captain.resourceCapacity}   " +
-            (tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}"), panelRefreshers);
-        UIKit.LiveLabel(panel, () => BoostLabel(tower), panelRefreshers, 12);
-        UIKit.Label(panel, $"Likes: {string.Join(", ", captain.likes)}", 12, color: UIKit.MutedTextColor);
-        UIKit.Label(panel, $"Dislikes: {string.Join(", ", captain.dislikes)}", 12, color: UIKit.MutedTextColor);
+        Transform title = Row(panel);
+        Text name = UIKit.Label(title, captain.displayName, 16);
+        name.fontStyle = FontStyle.Bold;
+        UIKit.Size(name, flexibleWidth: 1f);
+        UIKit.LiveLabel(title, () => $"Lv {tower.Level}", panelRefreshers, 14, TextAnchor.MiddleRight, UIKit.AccentColor);
+        string element = $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{captain.element}</color>";
+        UIKit.LiveLabel(panel, () => $"{element} {captain.role}   ·   Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})",
+            panelRefreshers, 12, color: UIKit.MutedTextColor);
 
         BuildCondition(panel, tower);
+        UIKit.LiveBar(panel, () => tower.Reserve / (float)Mathf.Max(1, captain.resourceCapacity),
+            () => $"Reserve {tower.Reserve}/{captain.resourceCapacity}", UIKit.ReserveBarColor, panelRefreshers);
+        UIKit.LiveBar(panel, () => tower.IsMaxLevel ? 1f : tower.Xp / (float)Mathf.Max(1, tower.XpForNextLevel),
+            () => tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}", UIKit.XpBarColor, panelRefreshers);
+
+        UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}    Range {captain.range:0.#}    Speed {captain.speed:0.##}", panelRefreshers, 12);
+        Text boosts = UIKit.LiveLabel(panel, () => BoostLabel(tower), panelRefreshers, 12);
+        panelRefreshers.Add(() => boosts.color = HasBoosts(tower) ? UIKit.GoodColor : UIKit.MutedTextColor);
+        TagLine(panel, "Likes", captain.likes, UIKit.GoodColor);
+        TagLine(panel, "Dislikes", captain.dislikes, UIKit.BadColor);
+
         BuildAbility(panel, tower);
         BuildSoldierSlots(panel, tower);
 
-        UIKit.Label(panel, "Gold draw", 12, color: UIKit.MutedTextColor);
+        UIKit.Header(panel, "Gold draw");
         Transform drawRow = Row(panel);
         for (int i = 0; i < DrawRateLabels.Length; i++)
         {
             var rate = (DrawRate)i;
-            UIKit.LiveButton(drawRow, () => DrawRateLabels[(int)rate], () => tower.SetDrawRate(rate), panelRefreshers,
-                selected: () => tower.DrawRate == rate, width: 96f);
+            Flexible(UIKit.LiveButton(drawRow, () => DrawRateLabels[(int)rate], () => tower.SetDrawRate(rate), panelRefreshers,
+                selected: () => tower.DrawRate == rate, height: 22f));
         }
 
+        UIKit.Size(UIKit.Group(panel, "Gap"), height: 2f);
         Transform actions = Row(panel);
         if (placement.IsMoving)
-            UIKit.Button(actions, "Cancel move", placement.CancelMove, 145f);
+            Flexible(UIKit.Button(actions, "Cancel move", placement.CancelMove));
         else
-            UIKit.LiveButton(actions, () => match.MoveCost(tower) > 0 ? $"Move ({match.MoveCost(tower)} Gold)" : "Move (free)",
-                placement.BeginMove, panelRefreshers, () => match.CanMove(tower) && match.CanAffordMove(tower), width: 145f);
-        UIKit.Button(actions, "Sell (returns reserve)", placement.SellSelected, 145f);
+            Flexible(UIKit.LiveButton(actions, () => match.MoveCost(tower) > 0 ? $"Move ({match.MoveCost(tower)} Gold)" : "Move (free)",
+                placement.BeginMove, panelRefreshers, () => match.CanMove(tower) && match.CanAffordMove(tower)));
+        Flexible(UIKit.Button(actions, "Sell (returns reserve)", placement.SellSelected));
     }
 
+    // A row that spans the panel, for buttons that share its width.
     static Transform Row(Transform parent)
     {
         RectTransform row = UIKit.Group(parent, "Row");
-        UIKit.Layout<HorizontalLayoutGroup>(row, 0, 4);
+        UIKit.Layout<HorizontalLayoutGroup>(row, 0, 3);
+        UIKit.Size(row, flexibleWidth: 1f);
         return row;
     }
+
+    static void Flexible(Button button, float height = 24f) => UIKit.Size(button, height: height, flexibleWidth: 1f);
+
+    static void TagLine(Transform panel, string caption, CaptainTag[] tags, Color color) =>
+        UIKit.Label(panel, $"<color={UIKit.Hex(color)}>{caption}</color>  {string.Join(", ", tags)}", 11, color: UIKit.MutedTextColor);
 
     void BuildCondition(Transform panel, Tower tower)
     {
         if (!tower.IsDisabled)
         {
-            UIKit.LiveLabel(panel, () => $"Health {Mathf.CeilToInt(tower.Health)}/{Mathf.CeilToInt(tower.MaxHealth)}", panelRefreshers);
+            UIKit.LiveBar(panel, () => tower.Health / tower.MaxHealth,
+                () => $"Health {Mathf.CeilToInt(tower.Health)}/{Mathf.CeilToInt(tower.MaxHealth)}", UIKit.HealthBarColor, panelRefreshers);
             return;
         }
         if (!match.CanRestore(tower))
         {
-            UIKit.Label(panel, $"Disabled (restorable after wave {tower.RestorableAfterWave})", 13, color: UIKit.SelectedButtonColor);
-            return;
-        }
-        UIKit.Label(panel, "Disabled", 13, color: UIKit.SelectedButtonColor);
-        UIKit.LiveButton(panel, () => $"Restore ({match.RestoreCost(tower)} Gold)", () => match.TryRestoreTower(tower), panelRefreshers,
-            () => RunState.Current.Gold >= match.RestoreCost(tower), width: 145f);
-    }
-
-    // Meter percentage plus a Use button that only lights up when the ability is ready and usable.
-    void BuildAbility(Transform panel, Tower tower)
-    {
-        AbilityData ability = tower.Captain.ability;
-        if (ability == null)
-        {
-            UIKit.Label(panel, "No special ability", 13, color: UIKit.MutedTextColor);
+            UIKit.Label(panel, $"DISABLED  (restorable after wave {tower.RestorableAfterWave})", 12, color: UIKit.BadColor).fontStyle = FontStyle.Bold;
             return;
         }
         Transform row = Row(panel);
-        UIKit.Size(UIKit.LiveLabel(row, () => $"{ability.displayName}  {Mathf.FloorToInt(tower.SpecialCharge * 100f)}%", panelRefreshers),
-            flexibleWidth: 1f);
-        UIKit.LiveButton(row, () => "Use (Q)", () => tower.TryUseAbility(), panelRefreshers, () => tower.CanUseAbility, width: 80f);
+        Text disabled = UIKit.Label(row, "DISABLED", 12, color: UIKit.BadColor);
+        disabled.fontStyle = FontStyle.Bold;
+        UIKit.Size(disabled, flexibleWidth: 1f);
+        UIKit.LiveButton(row, () => $"Restore ({match.RestoreCost(tower)} Gold)", () => match.TryRestoreTower(tower), panelRefreshers,
+            () => RunState.Current.Gold >= match.RestoreCost(tower), width: 160f, height: 22f);
+    }
+
+    // Name and Use button, a charge meter, then what the special does.
+    void BuildAbility(Transform panel, Tower tower)
+    {
+        UIKit.Header(panel, "Special");
+        AbilityData ability = tower.Captain.ability;
+        if (ability == null)
+        {
+            UIKit.Label(panel, "No special ability", 12, color: UIKit.MutedTextColor);
+            return;
+        }
+        Transform row = Row(panel);
+        Text name = UIKit.Label(row, ability.displayName, 13);
+        name.fontStyle = FontStyle.Bold;
+        UIKit.Size(name, flexibleWidth: 1f);
+        UIKit.LiveButton(row, () => "Use (Q)", () => tower.TryUseAbility(), panelRefreshers, () => tower.CanUseAbility,
+            selected: () => tower.CanUseAbility, width: 80f, height: 22f);
+        UIKit.LiveBar(panel, () => tower.SpecialCharge,
+            () => tower.IsSpecialReady ? "Ready" : $"Charge {Mathf.FloorToInt(tower.SpecialCharge * 100f)}%", UIKit.ChargeBarColor, panelRefreshers, 12f);
         if (!string.IsNullOrEmpty(ability.description))
-            UIKit.Label(panel, ability.description, 12, color: UIKit.MutedTextColor);
+            UIKit.Label(panel, ability.description, 11, color: UIKit.MutedTextColor);
     }
 
     // Slots 3 and 4 open at bond ranks B and S (GDD).
@@ -238,31 +324,47 @@ public class MatchHUD : MonoBehaviour
         _ => $"Slot {slot + 1}",
     };
 
-    // Per slot: its class and state, then a button per class. Other classes show the reserve cost
-    // of switching and grey out when the reserve can't cover it or the tower is disabled.
+    // Per slot: its label (red when the soldier is down), then a button per class. The current
+    // class is gold; others show the reserve cost of switching in gold and grey out when the
+    // reserve can't cover it or the tower is disabled.
     void BuildSoldierSlots(Transform panel, Tower tower)
     {
+        UIKit.Header(panel, "Soldiers");
         var classes = match.Data.ChoosableClasses;
+        string cost = UIKit.Hex(UIKit.AccentColor), unaffordable = UIKit.Hex(UIKit.DisabledTextColor);
         for (int i = 0; i < tower.Soldiers.Count; i++)
         {
             int slot = i;
-            UIKit.LiveLabel(panel, () =>
-            {
-                Soldier soldier = tower.Soldiers[slot];
-                return $"{SlotLabel(slot)}: {soldier.Class.displayName} ({(soldier.IsDead ? "dead" : "alive")})";
-            }, panelRefreshers, 12);
             Transform row = Row(panel);
+            Text label = UIKit.LiveLabel(row, () => tower.Soldiers[slot].IsDead ? $"{SlotLabel(slot)}\n<size=9>down</size>" : SlotLabel(slot),
+                panelRefreshers, 11);
+            UIKit.Size(label, SlotLabelWidth);
+            panelRefreshers.Add(() => label.color = tower.Soldiers[slot].IsDead ? UIKit.BadColor : UIKit.MutedTextColor);
             foreach (SoldierClassData soldierClass in classes)
             {
                 if (soldierClass == null) continue;
                 SoldierClassData option = soldierClass;
-                UIKit.LiveButton(row,
-                    () => tower.Soldiers[slot].Class == option ? option.displayName : $"{option.displayName} - ({tower.RespawnCostOf(option)}g)",
-                    () => tower.SetSlotClass(slot, option), panelRefreshers,
-                    () => tower.Soldiers[slot].Class == option || (!tower.IsDisabled && tower.Reserve >= tower.RespawnCostOf(option)),
-                    () => tower.Soldiers[slot].Class == option, width: 70f, height: 22f);
+                bool current() => tower.Soldiers[slot].Class == option;
+                bool affordable() => !tower.IsDisabled && tower.Reserve >= tower.RespawnCostOf(option);
+                Button button = UIKit.LiveButton(row,
+                    () => current() ? option.displayName
+                        : $"{option.displayName} <size=9><color={(affordable() ? cost : unaffordable)}>{tower.RespawnCostOf(option)}g</color></size>",
+                    () => tower.SetSlotClass(slot, option), panelRefreshers, () => current() || affordable(), current, height: 22f);
+                Flexible(button, 22f);
+                Text text = button.GetComponentInChildren<Text>();
+                text.fontSize = 11;
+                text.horizontalOverflow = HorizontalWrapMode.Overflow;
+                text.rectTransform.offsetMin = new Vector2(1f, text.rectTransform.offsetMin.y);
+                text.rectTransform.offsetMax = new Vector2(-1f, 0f);
             }
         }
+    }
+
+    static bool HasBoosts(Tower tower)
+    {
+        foreach (SupportEffect effect in StatEffects)
+            if (tower.Boost(effect) > 0f) return true;
+        return false;
     }
 
     // Boosts every tower has from Buffer specials cast this wave.
@@ -280,11 +382,9 @@ public class MatchHUD : MonoBehaviour
     void UpdateMoveHint()
     {
         Tower tower = placement.Selected;
-        if (!placement.IsMoving || tower == null)
-        {
-            moveHint.text = "";
-            return;
-        }
+        bool moving = placement.IsMoving && tower != null;
+        moveHintBox.gameObject.SetActive(moving);
+        if (!moving) return;
         moveHint.text = $"Moving {tower.Captain.displayName}: click a free tile (Esc / right-click to cancel)" +
                         (match.CanAffordMove(tower) ? "" : "  - not enough Gold");
     }
@@ -301,17 +401,25 @@ public class MatchHUD : MonoBehaviour
 
         requestRefreshers.Clear();
         UIKit.Clear(requestList);
+        string accent = UIKit.Hex(UIKit.AccentColor);
         foreach (CaptainRequests.Request request in Requests.Pending)
         {
             if (request.Tower == null) continue;
             RectTransform card = UIKit.Box(requestList, "Request");
-            UIKit.Size(card, 600f, 30f);
-            UIKit.Layout<HorizontalLayoutGroup>(card, 4, 6);
-            UIKit.Size(UIKit.Label(card, $"{request.Tower.Captain.displayName}: \"{request.Text}\""), flexibleWidth: 1f);
-            UIKit.Button(card, "No", () => Requests.Answer(request, RequestAnswer.No), 44f);
-            UIKit.Button(card, "Some", () => Requests.Answer(request, RequestAnswer.Some), 52f);
-            UIKit.Button(card, "Yes", () => Requests.Answer(request, RequestAnswer.Yes), 44f);
+            UIKit.Size(card, RequestWidth).minHeight = 32f;
+            UIKit.Layout<HorizontalLayoutGroup>(card, 5, 4);
+            UIKit.Size(UIKit.Label(card, $"<color={accent}>{request.Tower.Captain.displayName}</color>  \"{request.Text}\"", 12),
+                flexibleWidth: 1f);
+            AnswerButton(card, request, "No", RequestAnswer.No, NoColor, 40f);
+            AnswerButton(card, request, "Some", RequestAnswer.Some, UIKit.ButtonColor, 50f);
+            AnswerButton(card, request, "Yes", RequestAnswer.Yes, YesColor, 40f);
         }
+    }
+
+    void AnswerButton(Transform card, CaptainRequests.Request request, string text, RequestAnswer answer, Color color, float width)
+    {
+        Button button = UIKit.Button(card, text, () => Requests.Answer(request, answer), width, 22f);
+        button.GetComponent<Image>().color = color;
     }
 
 }
