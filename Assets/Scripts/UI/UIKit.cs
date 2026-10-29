@@ -364,6 +364,23 @@ public static class UIKit
         return button;
     }
 
+    // Makes a panel (a card, say) clickable, with the same hover and press tints as buttons.
+    public static Button Clickable(RectTransform panel, Action onClick)
+    {
+        var image = panel.GetComponent<Image>();
+        image.raycastTarget = true;
+        var button = panel.gameObject.AddComponent<Button>();
+        button.targetGraphic = image;
+        var colors = button.colors;
+        colors.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f);
+        colors.selectedColor = Color.white;
+        colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
+        colors.fadeDuration = 0.05f;
+        button.colors = colors;
+        button.onClick.AddListener(() => onClick());
+        return button;
+    }
+
     // Marks a button as the screen's main action: gold while it can be pressed.
     public static Button Primary(Button button, List<Action> refreshers)
     {
