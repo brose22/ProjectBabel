@@ -37,7 +37,7 @@ public class MatchHUD : MonoBehaviour
     CaptainRequests Requests => requests != null ? requests : requests = match.GetComponent<CaptainRequests>();
 
     // Takes a screen position in Input System coordinates; kept for PlacementController.
-    public bool IsPointerOverHud(Vector2 screenPosition) => match.IsOver || match.State == MatchState.Setup || UIKit.IsPointerOverUI();
+    public bool IsPointerOverHud(Vector2 screenPosition) => match.IsOver || match.IsBetweenMatches || UIKit.IsPointerOverUI();
 
     void Start()
     {
@@ -68,7 +68,7 @@ public class MatchHUD : MonoBehaviour
     {
         if (canvas == null) return;
         // The run setup screen covers everything; the HUD returns once the run begins.
-        canvas.enabled = match.State != MatchState.Setup;
+        canvas.enabled = !match.IsBetweenMatches;
         UIKit.Refresh(barRefreshers);
         UpdateTowerPanel();
         UpdateRequests();
@@ -95,6 +95,7 @@ public class MatchHUD : MonoBehaviour
         RunState run() => RunState.Current;
         UIKit.Size(UIKit.LiveLabel(bar, () => $"Health {run().Health}/{run().MaxHealth}", barRefreshers), 90f);
         UIKit.Size(UIKit.LiveLabel(bar, () => $"Gold {run().Gold}", barRefreshers), 80f);
+        UIKit.Size(UIKit.LiveLabel(bar, CityLabel, barRefreshers), 120f);
         UIKit.Size(UIKit.LiveLabel(bar, () => $"Wave {Mathf.Min(match.WavesCleared + 1, match.WaveCount)}/{match.WaveCount}", barRefreshers), 64f);
         UIKit.Size(UIKit.LiveLabel(bar, () => $"Towers {Tower.All.Count}/{match.Data.maxTowers}", barRefreshers), 66f);
         UIKit.LiveButton(bar, NextCaptainLabel, match.CycleNextCaptain, barRefreshers,
@@ -104,6 +105,14 @@ public class MatchHUD : MonoBehaviour
         UIKit.LiveButton(bar, WaveButtonLabel, match.StartNextWave, barRefreshers,
             interactable: () => match.State == MatchState.Preparing, width: 120f);
         UIKit.LiveButton(bar, () => match.GameSpeed > 1f ? "Speed x2" : "Speed x1", match.ToggleGameSpeed, barRefreshers, width: 76f);
+    }
+
+    string CityLabel()
+    {
+        WorldMap map = RunState.Current.Map;
+        if (match.City == null || map == null) return "";
+        string name = match.IsBaseMatch ? "Enemy base" : match.CityLayout != null ? match.CityLayout.displayName : "City";
+        return $"{name} ({match.City.layer + 1}/{map.layerCount})";
     }
 
     string NextCaptainLabel()

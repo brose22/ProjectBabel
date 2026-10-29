@@ -50,6 +50,20 @@ public class MatchData : ScriptableObject
     [Tooltip("Map templates the world map's cities are played on. Empty keeps the scene's own road.")]
     public List<CityLayout> layouts = new();
 
+    [Header("World map")]
+    [Tooltip("Matches in a run, the enemy base included (GDD: about 30; short for testing).")]
+    public int matchesPerRun = 7;
+    public int minCitiesPerLayer = 2;
+    public int maxCitiesPerLayer = 3;
+    [Tooltip("How many layers of roads past a won city its intel reveals.")]
+    public int intelDepth = 2;
+    [Tooltip("Extra enemy health per match into the run (0.12 = +12% per layer).")]
+    public float enemyHealthGrowthPerMatch = 0.12f;
+    [Tooltip("Extra enemies per match into the run (0.08 = +8% per layer, rounded).")]
+    public float enemyCountGrowthPerMatch = 0.08f;
+    [Tooltip("The enemy base plays its waves this many times over (GDD: double the waves).")]
+    public int baseWaveRepeats = 2;
+
     [Header("Captain XP")]
     [Tooltip("Most XP a captain can earn from healing and buffing in one wave (GDD: support XP is capped per wave). Kill XP is not capped.")]
     public int supportXpCapPerWave = 60;
