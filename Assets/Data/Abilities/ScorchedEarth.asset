@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Scorched Earth
   description: Damage zone on the path
+  icon: {fileID: 21300000, guid: 110f358264acf4c4f9c0ae63f39e37b8, type: 3}
   chargeSeconds: 22
   shape: 3
   rangeMultiplier: 1
@@ -22,3 +23,9 @@ MonoBehaviour:
   knockbackDistance: 0
   zoneDuration: 5
   statusChance: 0.5
+  healFraction: 0
+  buffEffect: 0
+  buffAmount: 0
+  hitStopSeconds: 0.15
+  cameraShake: 0.1
+  cameraShakeSeconds: 0.25

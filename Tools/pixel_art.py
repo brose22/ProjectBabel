@@ -4,9 +4,10 @@ Usage: python -I Tools/pixel_art.py [<preview png>]
 
 Each sprite is a grid of characters; '.' is transparent and every other character looks up a
 colour in that sprite's palette (merged over COMMON). Tiles are generated from a seeded noise
-pattern instead. Output goes to Assets/Art/Sprites (portraits to its Portraits subfolder), where an
-editor AssetPostprocessor imports them as 16 pixels-per-unit point-filtered sprites. Pass a path to
-also write enlarged preview sheets: the sprites there, and the portraits beside it as <name>_portraits.png.
+pattern instead. Output goes to Assets/Art/Sprites (portraits to Portraits, ability icons to
+Icons/Abilities), where an editor AssetPostprocessor imports them as 16 pixels-per-unit point-filtered
+sprites. Pass a path to also write enlarged preview sheets: the sprites there, and the portraits and
+icons beside it as <name>_portraits.png and <name>_icons.png.
 """
 import os
 import random
@@ -768,6 +769,277 @@ PORTRAITS.update({
 })
 
 
+# ---------- Ability icons (16x16, for UI). A symbol on a plate in the dark of the captain's element:
+# e element, E its highlight, d its shade. Support specials show a plus to heal (g) and a gold
+# arrow (G) to boost, so the symbols leave the top-right corner free for the arrow. ----------
+
+PLATE = [".kkkkkkkkkkkkkk."] + ["kbbbbbbbbbbbbbbk"] * 14 + [".kkkkkkkkkkkkkk."]
+
+BOOST = [
+    "................",
+    "............G...",
+    "...........GGG..",
+    "..........GGGGG.",
+    "............G...",
+    "............G...",
+]
+
+ELEMENT_ICON_COLOURS = {
+    "water": {"b": "15324f", "e": "3fa7f2", "E": "a8ddff", "d": "1f6fb0"},
+    "fire": {"b": "4a1a10", "e": "ff7a1f", "E": "ffe066", "d": "c23b14"},
+    "earth": {"b": "2e2a1a", "e": "a07850", "E": "c9a77a", "d": "6d4c2f"},
+    "air": {"b": "1f3a3a", "e": "cfeee8", "E": "ffffff", "d": "7fb8b0"},
+}
+
+ICON_SYMBOLS = {
+    # Area: a fiery burst.
+    "flarevolley": ("fire", [
+        "................",
+        "................",
+        ".......ee.......",
+        "...e...ee...e...",
+        "....e..ee..e....",
+        ".....eEEEEe.....",
+        "....eEyyyyEe....",
+        "..eeeEyyyyEeee..",
+        "..eeeEyyyyEeee..",
+        "....eEyyyyEe....",
+        ".....eEEEEe.....",
+        "....e..ee..e....",
+        "...e...ee...e...",
+        ".......ee.......",
+        "................",
+        "................",
+    ]),
+    # Area that pulls back: a whirlpool.
+    "undertow": ("water", [
+        "................",
+        "................",
+        "....eeeeeee.....",
+        "...e.......e....",
+        "..e..EEEEE..e...",
+        "..e.E.....E..e..",
+        ".e..E.ddd..E.e..",
+        ".e.E.d...d.E.e..",
+        ".e.E.d.E.d.E.e..",
+        ".e.E.d..d..E.e..",
+        ".e.E..dd...E..e.",
+        "..e.E.....E...e.",
+        "..e..EEEEE...e..",
+        "...e........e...",
+        "....eeeeeeee....",
+        "................",
+    ]),
+    # Single target: a boulder dropping onto its mark.
+    "rockfall": ("earth", [
+        "................",
+        "....E..E..E.....",
+        "....E..E..E.....",
+        "......dddd......",
+        "....ddeeeedd....",
+        "...deeEEeeeed...",
+        "...deEEeeeeed...",
+        "...deeeeeeded...",
+        "...ddeeeeeddd...",
+        ".....dddddd.....",
+        "................",
+        "...rr......rr...",
+        "...r...rr...r...",
+        ".......rr.......",
+        "...r........r...",
+        "...rr......rr...",
+    ]),
+    # Line: a piercing arrow of wind.
+    "galestrike": ("air", [
+        "................",
+        "................",
+        ".........EEEEE..",
+        "..........EEEE..",
+        ".........eEE.E..",
+        "........eEe..E..",
+        ".......eEe......",
+        "......eEe.......",
+        ".....eEe..d.....",
+        "....eEe..d......",
+        "...eEe..d...d...",
+        "..eEe..d...d....",
+        "..ee..d...d.....",
+        "................",
+        "................",
+        "................",
+    ]),
+    # Zone: flames rising from a ring of scorched ground.
+    "scorchedearth": ("fire", [
+        "................",
+        "................",
+        "........e.......",
+        ".......ee.......",
+        "...e...eEe...e..",
+        "...ee..eEe..ee..",
+        "...eEe.eyEe.eEe.",
+        "..eEye.eyEe.eyE.",
+        "..eyEeeyyEeeyEe.",
+        "..deyyEyyyEyyed.",
+        ".ddeyyyyyyyyedd.",
+        ".d..deeeeeed..d.",
+        ".dd..........dd.",
+        "..dddddddddddd..",
+        "................",
+        "................",
+    ]),
+    # Area that pushes back: gusting wind.
+    "crosswind": ("air", [
+        "................",
+        "................",
+        "................",
+        "........EEE.....",
+        ".......E...E....",
+        "...........E....",
+        "..EEEEEEEEE.....",
+        "................",
+        ".eeeeeeeeeeeee..",
+        "................",
+        "..EEEEEEEEEE....",
+        "............E...",
+        "........E...E...",
+        ".........EEE....",
+        "................",
+        "................",
+    ]),
+    # Heal: a drop of water with a plus.
+    "tidalmend": ("water", [
+        "................",
+        ".......ee.......",
+        "......eeee......",
+        ".....eEeeee.....",
+        "....eEeeeeee....",
+        "...eEeeewweee...",
+        "...eEeeewweee...",
+        "..eEeewwwwwwee..",
+        "..eeeewwwwwwee..",
+        "..eeeeeewweeee..",
+        "..eeeeeewweeee..",
+        "...eeeeeeeeee...",
+        "....eeeeeeee....",
+        ".....dddddd.....",
+        "................",
+        "................",
+    ]),
+    # Boost act speed: flowing fast-forward chevrons.
+    "flowstate": ("water", [
+        "................",
+        "................",
+        "................",
+        "..E....E........",
+        "..EE...EE.......",
+        "...ee...ee......",
+        "....ee...ee.....",
+        ".....ee...ee....",
+        "......ee...ee...",
+        ".....ee...ee....",
+        "....ee...ee.....",
+        "...ee...ee......",
+        "..dd...dd.......",
+        "..d....d........",
+        "................",
+        "................",
+    ]),
+    # Boost damage: a burning sword.
+    "kindle": ("fire", [
+        "................",
+        "......ww........",
+        "......wE........",
+        "....e.wE.e......",
+        "....eewEee......",
+        "...eyewEeye.....",
+        "...eyewEeye.....",
+        "....eewEee......",
+        "......wE........",
+        "...dddddddd.....",
+        "......dd........",
+        "......dd........",
+        ".....dddd.......",
+        "................",
+        "................",
+        "................",
+    ]),
+    # Boost defense: a stone shield.
+    "stoneward": ("earth", [
+        "................",
+        "................",
+        "..dddddddddd....",
+        "..deEEEeeeed....",
+        "..dEeeeeddde....",
+        "..dEeeeedeee....",
+        "..deeddeeeee....",
+        "..deeedeeeed....",
+        "..deeeedeeed....",
+        "...deeeeeed.....",
+        "....deeeed......",
+        ".....deed.......",
+        "......dd........",
+        "................",
+        "................",
+        "................",
+    ]),
+    # Heal and boost defense: a shield with a green plus.
+    "mendtheland": ("earth", [
+        "................",
+        "................",
+        "..dddddddddd....",
+        "..deEEEeeeed....",
+        "..dEeeggeeed....",
+        "..dEeeggeeed....",
+        "..dggggggggd....",
+        "..dggggggggd....",
+        "..deeeggeeed....",
+        "...deeggeed.....",
+        "....deeeed......",
+        ".....deed.......",
+        "......dd........",
+        "................",
+        "................",
+        "................",
+    ]),
+    # Heal and boost act speed: wind around a green plus.
+    "secondwind": ("air", [
+        "................",
+        "................",
+        "......EEE.......",
+        ".....E...E......",
+        ".........E......",
+        "EEEEEEEEE.......",
+        "...........gg...",
+        ".eeeeeeee..gg...",
+        ".........gggggg.",
+        "..EEEEEE.gggggg.",
+        "...........gg...",
+        "........E..gg...",
+        ".....E..E.......",
+        "......EE........",
+        "................",
+        "................",
+    ]),
+}
+
+
+def ability_icon(name, element, symbol, boost):
+    for y, row in enumerate(symbol):
+        if len(row) != 16:
+            sys.exit(f"{name}: icon row {y} is {len(row)} wide, expected 16")
+    rows = layer(PLATE, symbol, BOOST if boost else [])
+    palette = {**ELEMENT_ICON_COLOURS[element], "y": "ffe066", "w": "f4f6f7", "r": "ff4d4d", "g": "5fd35f",
+               "G": "f2c14e"}
+    return rows, palette
+
+
+# The support specials that give a stat boost (see their buffEffect in Assets/Data/Abilities).
+BOOSTS = {"flowstate", "kindle", "stoneward", "mendtheland", "secondwind"}
+
+ICONS = {f"ability_{name}": ability_icon(name, element, symbol, name in BOOSTS)
+         for name, (element, symbol) in ICON_SYMBOLS.items()}
+
+
 # ---------- Tiles: seeded noise so they tile without obvious repeats inside one tile ----------
 
 def noise_tile(seed, base, specks):
@@ -861,13 +1133,17 @@ def main():
     for name, grid in TILES.items():
         images[name] = [[hex_rgba(c) for c in row] for row in grid]
     portraits = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in PORTRAITS.items()}
+    icons = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in ICONS.items()}
 
     for name, pixels in images.items():
         write_png(os.path.join(OUT, name + ".png"), pixels)
     os.makedirs(os.path.join(OUT, "Portraits"), exist_ok=True)
     for name, pixels in portraits.items():
         write_png(os.path.join(OUT, "Portraits", name + ".png"), pixels)
-    print(f"wrote {len(images)} sprites and {len(portraits)} portraits to {OUT}")
+    os.makedirs(os.path.join(OUT, "Icons", "Abilities"), exist_ok=True)
+    for name, pixels in icons.items():
+        write_png(os.path.join(OUT, "Icons", "Abilities", name + ".png"), pixels)
+    print(f"wrote {len(images)} sprites, {len(portraits)} portraits and {len(icons)} icons to {OUT}")
 
     if len(sys.argv) > 1:
         # Sprites padded to 16x16 on grass, 6 per row at 6x; portraits on a dark panel, 6 per row at 4x.
@@ -875,6 +1151,8 @@ def main():
         panel = [[(46, 52, 64, 255)] * 34 for _ in range(34)]
         base, _ = os.path.splitext(sys.argv[1])
         preview_sheet(base + "_portraits.png", portraits, 34, panel, 6, 4)
+        # Icons on the same panel colour, 6 per row at 8x.
+        preview_sheet(base + "_icons.png", icons, 18, [row[:18] for row in panel[:18]], 6, 8)
 
 if __name__ == "__main__":
     main()

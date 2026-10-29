@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Stone Ward
   description: All towers take 30% less damage this wave
+  icon: {fileID: 21300000, guid: cb38854217bbe964bb470bf7484336e8, type: 3}
   chargeSeconds: 22
   shape: 4
   rangeMultiplier: 1

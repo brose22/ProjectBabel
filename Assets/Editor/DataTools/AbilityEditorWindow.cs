@@ -8,6 +8,7 @@ using UnityEngine;
 public class AbilityEditorWindow : DataEditorWindow<AbilityData>
 {
     const string Title = "Abilities";
+    const float PreviewSize = 64f;
 
     List<CaptainData> captains;
 
@@ -31,8 +32,14 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
 
     protected override void OnAssetsChanged() => captains = null;
 
-    protected override void DrawIcon(Rect rect, AbilityData ability) =>
-        DataToolsGUI.DrawChip(rect, ability.shape.ToString().Substring(0, 1), ShapeColor(ability.shape));
+    // The icon art, or a chip with the shape's initial for abilities without one.
+    protected override void DrawIcon(Rect rect, AbilityData ability)
+    {
+        if (ability.icon != null)
+            DataToolsGUI.DrawSprite(rect, ability.icon, Color.white);
+        else
+            DataToolsGUI.DrawChip(rect, ability.shape.ToString().Substring(0, 1), ShapeColor(ability.shape));
+    }
 
     static Color ShapeColor(AbilityData.Shape shape) => shape switch
     {
@@ -45,9 +52,18 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
 
     protected override void DrawEditor(SerializedObject so)
     {
+        var ability = (AbilityData)so.targetObject;
         DataToolsGUI.Section("Identity");
-        DataToolsGUI.Field(so, nameof(AbilityData.displayName));
-        DataToolsGUI.Field(so, nameof(AbilityData.description));
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            DataToolsGUI.SpritePreview(ability.icon, ShapeColor(ability.shape), PreviewSize);
+            using (new EditorGUILayout.VerticalScope())
+            {
+                DataToolsGUI.Field(so, nameof(AbilityData.displayName));
+                DataToolsGUI.Field(so, nameof(AbilityData.description));
+                DataToolsGUI.Field(so, nameof(AbilityData.icon));
+            }
+        }
         DrawFields(so);
         DrawUsers();
     }
