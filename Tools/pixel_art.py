@@ -4,8 +4,8 @@ Usage: python -I Tools/pixel_art.py [<preview png>]
 
 Each sprite is a grid of characters; '.' is transparent and every other character looks up a
 colour in that sprite's palette (merged over COMMON). Tiles are generated from a seeded noise
-pattern instead. Output goes to Assets/Art/Sprites (portraits to Portraits, ability icons to
-Icons/Abilities), where an editor AssetPostprocessor imports them as 16 pixels-per-unit point-filtered
+pattern instead. Output goes to Assets/Art/Sprites (portraits to Portraits, ability and element icons
+to Icons/Abilities and Icons/Elements), where an editor AssetPostprocessor imports them as 16 pixels-per-unit point-filtered
 sprites. Pass a path to also write enlarged preview sheets: the sprites there, and the portraits and
 icons beside it as <name>_portraits.png and <name>_icons.png.
 """
@@ -1040,6 +1040,115 @@ ICONS = {f"ability_{name}": ability_icon(name, element, symbol, name in BOOSTS)
          for name, (element, symbol) in ICON_SYMBOLS.items()}
 
 
+# ---------- Element icons (16x16): the element's symbol on a round badge, in the same colours as
+# the element's ability icons. ----------
+
+BADGE = [
+    ".....kkkkkk.....",
+    "...kkbbbbbbkk...",
+    "..kbbbbbbbbbbk..",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    "kbbbbbbbbbbbbbbk",
+    "kbbbbbbbbbbbbbbk",
+    "kbbbbbbbbbbbbbbk",
+    "kbbbbbbbbbbbbbbk",
+    "kbbbbbbbbbbbbbbk",
+    "kbbbbbbbbbbbbbbk",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    "..kbbbbbbbbbbk..",
+    "...kkbbbbbbkk...",
+    ".....kkkkkk.....",
+]
+
+ELEMENT_SYMBOLS = {
+    "water": [
+        "................",
+        "................",
+        ".......ee.......",
+        "......eeee......",
+        ".....eEeeee.....",
+        "....eEeeeeee....",
+        "....eEeeeeee....",
+        "...eEeeeeeeee...",
+        "...eEeeeeeeee...",
+        "...eeeeeeeeee...",
+        "....eeeeeeee....",
+        ".....dddddd.....",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    "fire": [
+        "................",
+        "................",
+        "........e.......",
+        ".......ee.......",
+        ".......eee......",
+        "......eeEe..e...",
+        ".....eeEEe.ee...",
+        "....eeEEyEeee...",
+        "....eEEyyEEee...",
+        "...eeEyyyyEee...",
+        "...eEyyyyyyEe...",
+        "....eEyyyyEe....",
+        ".....dddddd.....",
+        "................",
+        "................",
+        "................",
+    ],
+    # A mountain with grass on its slopes.
+    "earth": [
+        "................",
+        "................",
+        "................",
+        "......dd........",
+        ".....dEEd.......",
+        "....dEEeed......",
+        "....dEeeeed.dd..",
+        "...dEeeeeeddEEd.",
+        "...dEeeeeeeEeed.",
+        "..dleeeeeeeeeed.",
+        "..dlleeeeeeleld.",
+        "..dlllllllllld..",
+        "...dddddddddd...",
+        "................",
+        "................",
+        "................",
+    ],
+    "air": [
+        "................",
+        "................",
+        "................",
+        "........EEE.....",
+        ".......E...E....",
+        "...........E....",
+        "..EEEEEEEEE.....",
+        "................",
+        ".eeeeeeeeeeeee..",
+        "................",
+        "..EEEEEEEEEE....",
+        "............E...",
+        "........E...E...",
+        ".........EEE....",
+        "................",
+        "................",
+    ],
+}
+
+
+def element_icon(element, symbol):
+    for y, row in enumerate(symbol):
+        if len(row) != 16:
+            sys.exit(f"element {element}: icon row {y} is {len(row)} wide, expected 16")
+    return layer(BADGE, symbol), {**ELEMENT_ICON_COLOURS[element], "y": "ffe066", "l": "8bb24a"}
+
+
+ELEMENT_ICONS = {f"element_{element}": element_icon(element, symbol) for element, symbol in ELEMENT_SYMBOLS.items()}
+
+
 # ---------- Tiles: seeded noise so they tile without obvious repeats inside one tile ----------
 
 def noise_tile(seed, base, specks):
@@ -1134,6 +1243,7 @@ def main():
         images[name] = [[hex_rgba(c) for c in row] for row in grid]
     portraits = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in PORTRAITS.items()}
     icons = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in ICONS.items()}
+    element_icons = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in ELEMENT_ICONS.items()}
 
     for name, pixels in images.items():
         write_png(os.path.join(OUT, name + ".png"), pixels)
@@ -1143,7 +1253,10 @@ def main():
     os.makedirs(os.path.join(OUT, "Icons", "Abilities"), exist_ok=True)
     for name, pixels in icons.items():
         write_png(os.path.join(OUT, "Icons", "Abilities", name + ".png"), pixels)
-    print(f"wrote {len(images)} sprites, {len(portraits)} portraits and {len(icons)} icons to {OUT}")
+    os.makedirs(os.path.join(OUT, "Icons", "Elements"), exist_ok=True)
+    for name, pixels in element_icons.items():
+        write_png(os.path.join(OUT, "Icons", "Elements", name + ".png"), pixels)
+    print(f"wrote {len(images)} sprites, {len(portraits)} portraits and {len(icons) + len(element_icons)} icons to {OUT}")
 
     if len(sys.argv) > 1:
         # Sprites padded to 16x16 on grass, 6 per row at 6x; portraits on a dark panel, 6 per row at 4x.
@@ -1151,8 +1264,8 @@ def main():
         panel = [[(46, 52, 64, 255)] * 34 for _ in range(34)]
         base, _ = os.path.splitext(sys.argv[1])
         preview_sheet(base + "_portraits.png", portraits, 34, panel, 6, 4)
-        # Icons on the same panel colour, 6 per row at 8x.
-        preview_sheet(base + "_icons.png", icons, 18, [row[:18] for row in panel[:18]], 6, 8)
+        # Ability then element icons on the same panel colour, 6 per row at 8x.
+        preview_sheet(base + "_icons.png", {**icons, **element_icons}, 18, [row[:18] for row in panel[:18]], 6, 8)
 
 if __name__ == "__main__":
     main()
