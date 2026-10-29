@@ -143,6 +143,25 @@ public static class DataToolsGUI
             array.GetArrayElementAtIndex(i).intValue = chosen[i];
     }
 
+    // A labelled row of buttons, one per asset, that each open their asset.
+    public static void AssetButtons<TAsset>(string label, IEnumerable<TAsset> assets, Action<TAsset> open, string empty = "None")
+        where TAsset : UnityEngine.Object
+    {
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUILayout.PrefixLabel(label);
+            bool any = false;
+            foreach (TAsset asset in assets)
+            {
+                any = true;
+                if (GUILayout.Button(asset.name, EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
+                    open(asset);
+            }
+            if (!any) GUILayout.Label(empty, EditorStyles.miniLabel);
+            GUILayout.FlexibleSpace();
+        }
+    }
+
     public static List<TAsset> LoadAll<TAsset>() where TAsset : UnityEngine.Object
     {
         var found = new List<TAsset>();

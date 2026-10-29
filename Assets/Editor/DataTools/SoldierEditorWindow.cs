@@ -115,24 +115,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
             return;
         }
         captains ??= DataToolsGUI.LoadAll<CaptainData>();
-        CaptainButtons("Liked By", captains.Where(c => c.likes != null && c.likes.Contains(tag)));
-        CaptainButtons("Disliked By", captains.Where(c => c.dislikes != null && c.dislikes.Contains(tag)));
-    }
-
-    static void CaptainButtons(string label, IEnumerable<CaptainData> list)
-    {
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            EditorGUILayout.PrefixLabel(label);
-            bool any = false;
-            foreach (CaptainData captain in list)
-            {
-                any = true;
-                if (GUILayout.Button(captain.name, EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
-                    CaptainEditorWindow.OpenFor(captain);
-            }
-            if (!any) GUILayout.Label("Nobody", EditorStyles.miniLabel);
-            GUILayout.FlexibleSpace();
-        }
+        DataToolsGUI.AssetButtons("Liked By", captains.Where(c => c != null && c.likes != null && c.likes.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
+        DataToolsGUI.AssetButtons("Disliked By", captains.Where(c => c != null && c.dislikes != null && c.dislikes.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
     }
 }
