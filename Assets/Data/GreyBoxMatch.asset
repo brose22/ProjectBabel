@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: GreyBoxMatch
   m_EditorClassIdentifier: Assembly-CSharp::MatchData
   startingHealth: 20
-  startingGold: 3000
+  startingGold: 300
   maxTowers: 5
   partySize: 3
   roster:
