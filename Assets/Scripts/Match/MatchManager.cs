@@ -48,6 +48,7 @@ public class MatchManager : MonoBehaviour
     // Real-time seconds left on the current ability hit-stop.
     float hitStopRemaining;
     CameraShake cameraShake;
+    CameraFocus cameraFocus;
 
     // Game time the current wave started.
     public float WaveStartTime { get; private set; }
@@ -103,7 +104,10 @@ public class MatchManager : MonoBehaviour
         // Added at runtime so existing scenes need no rebuild.
         Camera cam = Camera.main;
         if (cam != null)
+        {
             cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
+            cameraFocus = cam.TryGetComponent(out CameraFocus focus) ? focus : cam.gameObject.AddComponent<CameraFocus>();
+        }
         if (!TryGetComponent(out Relationships _)) gameObject.AddComponent<Relationships>();
         if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
         if (!TryGetComponent(out RunScreens _)) gameObject.AddComponent<RunScreens>();
@@ -246,6 +250,12 @@ public class MatchManager : MonoBehaviour
     {
         GameSpeed = GameSpeed > 1f ? 1f : 2f;
         ApplyTimeScale();
+    }
+
+    // Zooms the camera in on a tower, such as a captain making a request, or back out with null.
+    public void FocusCamera(Tower tower)
+    {
+        if (cameraFocus != null) cameraFocus.Focus(tower != null ? tower.transform : null);
     }
 
     public void SetRequestPause(bool paused)

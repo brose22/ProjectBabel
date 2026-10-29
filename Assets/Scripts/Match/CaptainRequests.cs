@@ -109,12 +109,14 @@ public class CaptainRequests : MonoBehaviour
         if (active != null && !match.IsOver && Time.unscaledTime >= active.Deadline) Answer(active, RequestAnswer.No);
     }
 
-    // Starts the countdown on the request now shown, and holds the match while one waits.
+    // Starts the countdown on the request now shown, holds the match while one waits and zooms
+    // the camera in on the captain asking.
     void ShowNext()
     {
         Request active = Active;
         if (active != null && active.Deadline < 0f) active.Deadline = Time.unscaledTime + ResponseSeconds;
         match.SetRequestPause(active != null);
+        match.FocusCamera(active?.Tower);
     }
 
     // Picks a random working captain without a pending request, and a random request it could
