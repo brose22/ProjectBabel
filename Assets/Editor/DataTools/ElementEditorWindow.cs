@@ -85,7 +85,7 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
 
     void DrawDuplicateCheck(ElementData element)
     {
-        elements ??= DataToolsGUI.LoadAll<ElementData>();
+        elements = DataToolsGUI.LoadAll(elements);
         List<string> others = elements.Where(e => e != null && e != element && e.element == element.element).Select(e => e.name).ToList();
         if (others.Count > 0)
             EditorGUILayout.HelpBox($"{string.Join(", ", others)} also describes {element.element}; the UI may pick either.", MessageType.Warning);
@@ -117,8 +117,8 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
     void DrawLinks(ElementData element)
     {
         DataToolsGUI.Section("Used by");
-        captains ??= DataToolsGUI.LoadAll<CaptainData>();
-        enemies ??= DataToolsGUI.LoadAll<EnemyData>();
+        captains = DataToolsGUI.LoadAll(captains);
+        enemies = DataToolsGUI.LoadAll(enemies);
         DataToolsGUI.AssetButtons("Captains", captains.Where(c => c != null && c.element == element.element), CaptainEditorWindow.OpenFor);
         DataToolsGUI.AssetButtons("Weak Enemies", enemies.Where(e => e != null && e.hasWeakness && e.weakness == element.element), EnemyEditorWindow.OpenFor);
     }
