@@ -144,18 +144,31 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
     {
         using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
         {
-            tableMode = GUILayout.Toggle(tableMode, tableMode ? "Table" : "List", EditorStyles.toolbarButton, GUILayout.Width(50f));
+            bool table = GUILayout.Toggle(tableMode, tableMode ? "Table" : "List", EditorStyles.toolbarButton, GUILayout.Width(50f));
+            if (table != tableMode)
+            {
+                tableMode = table;
+                Relayout();
+            }
             search = GUILayout.TextField(search, EditorStyles.toolbarSearchField, GUILayout.MinWidth(80f), GUILayout.MaxWidth(260f));
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("New", EditorStyles.toolbarButton)) CreateAsset();
+            if (GUILayout.Button("New", EditorStyles.toolbarButton)) { CreateAsset(); Relayout(); }
             using (new EditorGUI.DisabledScope(Selected == null))
             {
-                if (GUILayout.Button("Duplicate", EditorStyles.toolbarButton)) DuplicateSelected();
-                if (GUILayout.Button("Rename", EditorStyles.toolbarButton)) StartRename();
-                if (GUILayout.Button("Delete", EditorStyles.toolbarButton)) DeleteSelected();
+                if (GUILayout.Button("Duplicate", EditorStyles.toolbarButton)) { DuplicateSelected(); Relayout(); }
+                if (GUILayout.Button("Rename", EditorStyles.toolbarButton)) { StartRename(); Relayout(); }
+                if (GUILayout.Button("Delete", EditorStyles.toolbarButton)) { DeleteSelected(); Relayout(); }
                 if (GUILayout.Button("Ping", EditorStyles.toolbarButton)) EditorGUIUtility.PingObject(Selected);
             }
         }
+    }
+
+    // Ends this GUI pass after an action that changes what the window draws, so the layout and the
+    // controls drawn for the same event can't disagree.
+    void Relayout()
+    {
+        Repaint();
+        GUIUtility.ExitGUI();
     }
 
     string TargetFolder()
@@ -283,6 +296,7 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
                 Select(asset);
                 if (Event.current.clickCount == 2) EditorGUIUtility.PingObject(asset);
                 Event.current.Use();
+                Relayout();
             }
         }
         if (shown.Count == 0)
@@ -301,6 +315,7 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
         Select(shown[index]);
         listScroll.y = Mathf.Clamp(listScroll.y, (index + 1) * RowHeight - position.height + 40f, index * RowHeight);
         e.Use();
+        Relayout();
     }
 
     void DrawSplitter(Rect rect)
@@ -351,13 +366,13 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
                 Event e = Event.current;
                 if (e.type == EventType.KeyDown && GUI.GetNameOfFocusedControl() == "RenameField")
                 {
-                    if (e.keyCode is KeyCode.Return or KeyCode.KeypadEnter) { ApplyRename(); e.Use(); }
-                    else if (e.keyCode == KeyCode.Escape) { renaming = false; e.Use(); }
+                    if (e.keyCode is KeyCode.Return or KeyCode.KeypadEnter) { ApplyRename(); e.Use(); Relayout(); }
+                    else if (e.keyCode == KeyCode.Escape) { renaming = false; e.Use(); Relayout(); }
                 }
                 GUI.SetNextControlName("RenameField");
                 renameText = EditorGUILayout.TextField(renameText);
-                if (GUILayout.Button("Apply", GUILayout.Width(50f))) ApplyRename();
-                if (GUILayout.Button("Cancel", GUILayout.Width(55f))) renaming = false;
+                if (GUILayout.Button("Apply", GUILayout.Width(50f))) { ApplyRename(); Relayout(); }
+                if (GUILayout.Button("Cancel", GUILayout.Width(55f))) { renaming = false; Relayout(); }
             }
             else
             {
@@ -413,6 +428,7 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
                     tableMode = false;
                 Select(asset);
                 lastNameClick = EditorApplication.timeSinceStartup;
+                Relayout();
             }
 
             SerializedObject so = SerializedFor(asset);
