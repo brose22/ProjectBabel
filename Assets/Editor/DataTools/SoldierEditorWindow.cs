@@ -8,6 +8,8 @@ using UnityEngine;
 public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
 {
     const string Title = "Soldiers";
+
+    protected override string WindowTitle => Title;
     const float PreviewSize = 96f;
 
     [SerializeField] int previewCaptain;

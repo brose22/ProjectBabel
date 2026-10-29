@@ -8,6 +8,8 @@ using UnityEngine;
 public class EnemyEditorWindow : DataEditorWindow<EnemyData>
 {
     const string Title = "Enemies";
+
+    protected override string WindowTitle => Title;
     const float PreviewSize = 96f;
 
     List<EnemyData> enemies;

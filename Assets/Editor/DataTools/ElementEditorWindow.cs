@@ -8,6 +8,8 @@ using UnityEngine;
 public class ElementEditorWindow : DataEditorWindow<ElementData>
 {
     const string Title = "Elements";
+
+    protected override string WindowTitle => Title;
     const float PreviewSize = 64f;
 
     List<ElementData> elements;

@@ -8,6 +8,8 @@ using UnityEngine;
 public class CaptainEditorWindow : DataEditorWindow<CaptainData>
 {
     const string Title = "Captains";
+
+    protected override string WindowTitle => Title;
     const float PreviewSize = 96f;
 
     [SerializeField] bool abilityExpanded = true;
