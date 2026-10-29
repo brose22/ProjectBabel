@@ -115,6 +115,7 @@ public class RunScreens : MonoBehaviour
 
         UIKit.LiveButton(column, () => "Begin run", () => match.BeginRun(picked), refreshers,
             () => picked.Count == PartySize, width: 220f, height: 34f);
+        UIKit.Button(column, "Main menu", match.ReturnToMenu, 160f, 24f);
     }
 
     void BuildCaptainCard(Transform parent, CaptainData captain, Action onClick, Func<bool> selected)
@@ -212,7 +213,10 @@ public class RunScreens : MonoBehaviour
                       $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}{(run.HasDeparted(captain) ? ", walked out" : "")})");
         UIKit.Label(column, $"Party: {string.Join("    ", party)}", 12, TextAnchor.MiddleCenter);
 
-        UIKit.Button(column, "Abandon run", match.RestartRun, 160f, 24f);
+        RectTransform buttons = UIKit.Group(column, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
+        UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
+        UIKit.Button(buttons, "Abandon run", match.RestartRun, 160f, 24f);
     }
 
     // Layers run left to right; cities in a layer are spread evenly top to bottom.
@@ -370,5 +374,6 @@ public class RunScreens : MonoBehaviour
 
         if (won && !runWon) UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f);
         UIKit.Button(panel, "New run", match.RestartRun, 220f, 28f);
+        UIKit.Button(panel, "Main menu", match.ReturnToMenu, 220f, 28f);
     }
 }

@@ -4,11 +4,13 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-// One-click Windows build: Babel > Build Windows Player builds the enabled scenes in Build
-// Settings into Builds/Windows/<product name>.exe (git-ignored), then opens that folder.
+// One-click Windows build: Babel > Build Windows Player puts the main menu first in Build
+// Settings (the player starts there), then builds the enabled scenes
+// into Builds/Windows/<product name>.exe (git-ignored) and opens that folder.
 public static class WindowsBuild
 {
     const string OutputFolder = "Builds/Windows";
+    const string MatchScenePath = "Assets/Scenes/Match.unity";
 
     [MenuItem("Babel/Build Windows Player", priority = 100)]
     public static void Build()
@@ -19,10 +21,16 @@ public static class WindowsBuild
             return;
         }
 
-        string[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
-        if (scenes.Length == 0)
+        // The player starts on the first scene, which must be the main menu.
+        if (!MainMenuBuilder.PutMenuFirst())
         {
-            Debug.LogError("No enabled scenes in Build Settings; run Babel > Build Grey-Box Match Scene first.");
+            Debug.LogError("No main menu scene; run Babel > Build Main Menu Scene first.");
+            return;
+        }
+        string[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+        if (!scenes.Contains(MatchScenePath))
+        {
+            Debug.LogError("The match scene isn't enabled in Build Settings; run Babel > Build Grey-Box Match Scene first.");
             return;
         }
 
