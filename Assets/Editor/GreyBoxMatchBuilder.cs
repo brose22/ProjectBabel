@@ -281,11 +281,13 @@ public static class GreyBoxMatchBuilder
                 CaptainRole.Healer, refusalTemper: 0.75f),
         };
 
-        // The vertical slice runs with one captain of each role (GDD month 12); the other captains
-        // are still built so they are ready for later milestones.
+        // The slice's captains (one of each role) come first so a new run's default picks are
+        // theirs; the rest of the roster follows for recruiting on the world map.
         var roster = new List<CaptainData>();
         foreach (string name in SliceCaptains)
             roster.Add(allCaptains.Find(c => c.name == name));
+        foreach (CaptainData captain in allCaptains)
+            if (!roster.Contains(captain)) roster.Add(captain);
 
         string matchPath = DataFolder + "/GreyBoxMatch.asset";
         bool matchExisted = AssetDatabase.LoadAssetAtPath<MatchData>(matchPath) != null;

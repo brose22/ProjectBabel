@@ -65,6 +65,25 @@ public class RunState
         Party.AddRange(captains);
     }
 
+    // Party members who haven't walked out.
+    public int ActivePartyCount => Party.FindAll(c => !HasDeparted(c)).Count;
+
+    // Captains offered to join after a won city; empty when there's nothing to choose.
+    public List<CaptainData> RecruitOffer { get; } = new();
+
+    public void OfferRecruits(IEnumerable<CaptainData> captains)
+    {
+        RecruitOffer.Clear();
+        RecruitOffer.AddRange(captains);
+    }
+
+    // Takes one of the offered captains into the party, or none when captain is null.
+    public void Recruit(CaptainData captain)
+    {
+        if (captain != null && RecruitOffer.Contains(captain) && !Party.Contains(captain)) Party.Add(captain);
+        RecruitOffer.Clear();
+    }
+
     // The run's world map, made when the run begins.
     public WorldMap Map { get; private set; }
 
