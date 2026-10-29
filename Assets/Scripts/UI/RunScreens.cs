@@ -8,7 +8,11 @@ using UnityEngine.UI;
 // and added to the match by MatchManager, like Relationships.
 public class RunScreens : MonoBehaviour
 {
-    static readonly Color DimColor = new(0.02f, 0.02f, 0.04f, 0.82f);
+    // Nearly opaque: the project renders in linear colour, where lighter dims let the bright map
+    // compete with the cards.
+    static readonly Color DimColor = new(0.02f, 0.02f, 0.04f, 0.94f);
+    static readonly Color CardColor = new(0.17f, 0.2f, 0.28f, 1f);
+    static readonly Color PickedCardColor = new(0.27f, 0.24f, 0.2f, 1f);
     // Short enough that three rows (the full 12-captain roster) fit on screen with the title.
     const float CardHeight = 112f;
     static readonly Vector2 MapArea = new(860f, 330f);
@@ -92,9 +96,10 @@ public class RunScreens : MonoBehaviour
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 10, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
 
-        UIKit.Label(column, "PROJECT BABEL", 30, TextAnchor.MiddleCenter);
-        UIKit.LiveLabel(column, () => $"Choose {PartySize} captains for this run  ({picked.Count}/{PartySize})", refreshers,
-            14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        Title(column, "PROJECT BABEL", UIKit.TextColor);
+        string accent = UIKit.Hex(UIKit.AccentColor);
+        UIKit.LiveLabel(column, () => $"Choose {PartySize} captains for this run   <color={accent}>{picked.Count}/{PartySize}</color>",
+            refreshers, 14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
         RectTransform grid = UIKit.Group(column, "Captains");
         var gridLayout = grid.gameObject.AddComponent<GridLayoutGroup>();
@@ -113,25 +118,55 @@ public class RunScreens : MonoBehaviour
             BuildCaptainCard(grid, captain, () => TogglePick(captain), () => picked.Contains(captain));
         }
 
-        UIKit.LiveButton(column, () => "Begin run", () => match.BeginRun(picked), refreshers,
-            () => picked.Count == PartySize, width: 220f, height: 34f);
+        UIKit.Primary(UIKit.LiveButton(column, () => "Begin run", () => match.BeginRun(picked), refreshers,
+            () => picked.Count == PartySize, width: 220f, height: 34f), refreshers);
         UIKit.Button(column, "Main menu", match.ReturnToMenu, 160f, 24f);
     }
 
+    static Text Title(Transform parent, string text, Color color)
+    {
+        Text title = UIKit.Shadowed(UIKit.Label(parent, text, 30, TextAnchor.MiddleCenter, color));
+        title.fontStyle = FontStyle.Bold;
+        return title;
+    }
+
+    // Picked cards keep their dark face, so the text stays readable, and get a gold ring and name.
     void BuildCaptainCard(Transform parent, CaptainData captain, Action onClick, Func<bool> selected)
     {
         Button card = UIKit.Button(parent, "", onClick);
         UIKit.Clear(card.transform);
         var image = card.GetComponent<Image>();
-        refreshers.Add(() => image.color = selected() ? UIKit.SelectedButtonColor : UIKit.ButtonColor);
-        UIKit.Layout<VerticalLayoutGroup>(card, 6, 1);
+        UIKit.Layout<VerticalLayoutGroup>(card, 8, 1).padding.top = 6;
+
+        Transform title = UIKit.Group(card.transform, "Title");
+        UIKit.Layout<HorizontalLayoutGroup>(title, 0, 4);
+        Text name = UIKit.Label(title, captain.displayName, 15);
+        name.fontStyle = FontStyle.Bold;
+        UIKit.Size(name, flexibleWidth: 1f);
+        Text tag = UIKit.Label(title, "IN PARTY", 9, TextAnchor.MiddleRight, UIKit.AccentColor);
+        tag.fontStyle = FontStyle.Bold;
 
         int rank = ApprovalStore.RankOf(captain);
-        UIKit.Label(card.transform, captain.displayName, 15);
-        UIKit.Label(card.transform, $"{captain.element} {captain.role}   Bond {BondMath.RankName(rank)} ({ApprovalStore.ApprovalOf(captain):0})", 12);
-        UIKit.Label(card.transform, captain.ability != null ? $"Special: {captain.ability.displayName}" : "No special", 12);
-        UIKit.Label(card.transform, $"Likes: {string.Join(", ", captain.likes)}", 11);
-        UIKit.Label(card.transform, $"Dislikes: {string.Join(", ", captain.dislikes)}", 11);
+        string muted = UIKit.Hex(UIKit.MutedTextColor);
+        UIKit.Label(card.transform, $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{captain.element}</color> {captain.role}" +
+                                    $"   <color={muted}>Bond</color> {BondMath.RankName(rank)} <color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>", 12);
+        UIKit.Label(card.transform, captain.ability != null ? $"<color={muted}>Special</color>  {captain.ability.displayName}" : "No special", 12);
+        UIKit.Label(card.transform, $"<color={UIKit.Hex(UIKit.GoodColor)}>Likes</color>  {string.Join(", ", captain.likes)}", 11,
+            color: UIKit.MutedTextColor);
+        UIKit.Label(card.transform, $"<color={UIKit.Hex(UIKit.BadColor)}>Dislikes</color>  {string.Join(", ", captain.dislikes)}", 11,
+            color: UIKit.MutedTextColor);
+
+        Image ring = UIKit.Outline(card.transform, UIKit.AccentColor);
+        ring.rectTransform.offsetMin = new Vector2(2f, 2f);
+        ring.rectTransform.offsetMax = new Vector2(-2f, -2f);
+        refreshers.Add(() =>
+        {
+            bool isPicked = selected();
+            image.color = isPicked ? PickedCardColor : CardColor;
+            ring.enabled = isPicked;
+            tag.enabled = isPicked;
+            name.color = isPicked ? UIKit.AccentColor : UIKit.TextColor;
+        });
     }
 
     void TogglePick(CaptainData captain)
@@ -171,8 +206,8 @@ public class RunScreens : MonoBehaviour
 
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.LiveButton(buttons, () => chosen != null ? $"Recruit {chosen.displayName}" : "Pick a captain",
-            () => match.Recruit(chosen), refreshers, () => chosen != null, width: 200f, height: 32f);
+        UIKit.Primary(UIKit.LiveButton(buttons, () => chosen != null ? $"Recruit {chosen.displayName}" : "Pick a captain",
+            () => match.Recruit(chosen), refreshers, () => chosen != null, width: 200f, height: 32f), refreshers);
         UIKit.Button(buttons, "No thanks", () => match.Recruit(null), 140f, 32f);
     }
 
@@ -343,37 +378,83 @@ public class RunScreens : MonoBehaviour
 
         RectTransform root = NewScreen("Results");
         RectTransform panel = UIKit.Box(root, "Panel");
-        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(460f, 0f));
+        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(480f, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(panel, 16, 6, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
 
         bool runWon = won && run.Map != null && run.Map.IsComplete;
-        UIKit.Label(panel, runWon ? "The enemy base has fallen" : won ? "Victory" : "Defeat", 30, TextAnchor.MiddleCenter);
+        Title(panel, runWon ? "The enemy base has fallen" : won ? "Victory" : "Defeat", won ? UIKit.AccentColor : UIKit.BadColor);
         string summary = runWon ? $"Run won in {run.MatchesPlayed} matches"
             : won ? $"Match {run.MatchesPlayed} won{(match.IsEliteMatch ? " (elite city)" : "")}"
             : $"The run ends after {run.MatchesPlayed} match{(run.MatchesPlayed == 1 ? "" : "es")} won";
         UIKit.Label(panel, summary, 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-        UIKit.Label(panel, $"Waves {match.WavesCleared}/{match.WaveCount}    Kills {match.Kills}    Leaks {match.Leaks}    Casualties {match.Casualties}",
-            13, TextAnchor.MiddleCenter);
-        string restored = match.HealthRestored > 0 ? $" (+{match.HealthRestored} for the win)" : "";
-        UIKit.Label(panel, $"Health {run.Health}/{run.MaxHealth}{restored}    Gold {run.Gold}", 13, TextAnchor.MiddleCenter);
 
-        UIKit.Label(panel, "Captains", 15, TextAnchor.MiddleCenter);
-        foreach (CaptainData captain in run.Party)
-        {
-            Tower tower = Tower.All.Find(t => t.Captain == captain);
-            float change = relationships != null ? relationships.ApprovalChangeThisMatch(captain) : 0f;
-            string level = tower != null ? $"Lv {tower.Level}" : $"Lv {Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)))}";
-            string line = $"{captain.displayName}   {level}   Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   " +
-                          $"Approval {ApprovalStore.ApprovalOf(captain):0} ({change:+0.#;-0.#;0})";
-            bool walkedOut = relationships != null && relationships.Walkouts.Contains(captain);
-            if (walkedOut) line += "   walked out!";
-            else if (run.HasDeparted(captain)) line += "   (left earlier)";
-            UIKit.Label(panel, line, 13, TextAnchor.MiddleCenter, walkedOut ? UIKit.SelectedButtonColor : UIKit.TextColor);
-        }
+        RectTransform stats = UIKit.Group(panel, "Stats");
+        UIKit.Layout<HorizontalLayoutGroup>(stats, 0, 8, fitContent: true).padding.top = UIKit.Gap;
+        Stat(stats, "WAVES", $"{match.WavesCleared}/{match.WaveCount}");
+        Stat(stats, "KILLS", $"{match.Kills}");
+        Stat(stats, "LEAKS", $"{match.Leaks}");
+        Stat(stats, "CASUALTIES", $"{match.Casualties}");
+        Stat(stats, "HEALTH", $"{run.Health}/{run.MaxHealth}");
+        Stat(stats, "GOLD", $"{run.Gold}").color = UIKit.AccentColor;
+        if (match.HealthRestored > 0)
+            UIKit.Label(panel, $"+{match.HealthRestored} health for the win", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
 
-        if (won && !runWon) UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f);
-        UIKit.Button(panel, "New run", match.RestartRun, 220f, 28f);
-        UIKit.Button(panel, "Main menu", match.ReturnToMenu, 220f, 28f);
+        UIKit.Size(UIKit.Header(panel, "Captains"), flexibleWidth: 1f);
+        ResultColumns(ResultRow(panel, false), "", "LEVEL", "BOND", "APPROVAL", "CHANGE", 9, UIKit.MutedTextColor).preferredHeight = 14f;
+        for (int i = 0; i < run.Party.Count; i++)
+            CaptainResultRow(panel, run, run.Party[i], i % 2 == 0);
+
+        UIKit.Size(UIKit.Group(panel, "Gap"), height: UIKit.Gap);
+        if (won && !runWon) UIKit.Primary(UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f), refreshers);
+        RectTransform buttons = UIKit.Group(panel, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 8, fitContent: true);
+        Button newRun = UIKit.Button(buttons, "New run", match.RestartRun, 150f, 28f);
+        if (!won || runWon) UIKit.Primary(newRun, refreshers);
+        UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 150f, 28f);
+    }
+
+    static Text Stat(Transform parent, string caption, string value)
+    {
+        RectTransform stat = UIKit.Group(parent, caption);
+        UIKit.Layout<VerticalLayoutGroup>(stat, 0, -1f).childAlignment = TextAnchor.UpperCenter;
+        UIKit.Size(stat, 66f);
+        UIKit.Label(stat, caption, 9, TextAnchor.MiddleCenter, UIKit.MutedTextColor).fontStyle = FontStyle.Bold;
+        return UIKit.Label(stat, value, 15, TextAnchor.MiddleCenter);
+    }
+
+    static RectTransform ResultRow(Transform panel, bool shaded)
+    {
+        RectTransform row = UIKit.Panel(panel, "Row", shaded ? UIKit.InsetColor : Color.clear, blocksClicks: false);
+        HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(row, 0, 8);
+        layout.padding.left = layout.padding.right = UIKit.Pad;
+        return row;
+    }
+
+    // The captain table's columns: name, level, bond, approval and its change.
+    static LayoutElement ResultColumns(RectTransform row, string name, string level, string bond, string approval, string change,
+        int size, Color color, Color? changeColor = null)
+    {
+        UIKit.Size(UIKit.Label(row, name, size + 1, color: color), flexibleWidth: 1f);
+        UIKit.Size(UIKit.Label(row, level, size, color: color), 44f);
+        UIKit.Size(UIKit.Label(row, bond, size, color: color), 56f);
+        UIKit.Size(UIKit.Label(row, approval, size + 1, TextAnchor.MiddleRight, color), 54f);
+        UIKit.Size(UIKit.Label(row, change, size, TextAnchor.MiddleRight, changeColor ?? color), 48f);
+        return UIKit.Size(row, height: 22f, flexibleWidth: 1f);
+    }
+
+    // One table row per captain, with any walkout noted after the name.
+    void CaptainResultRow(Transform panel, RunState run, CaptainData captain, bool shaded)
+    {
+        Tower tower = Tower.All.Find(t => t.Captain == captain);
+        float change = relationships != null ? relationships.ApprovalChangeThisMatch(captain) : 0f;
+        int level = tower != null ? tower.Level : Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
+        bool walkedOut = relationships != null && relationships.Walkouts.Contains(captain);
+        string note = walkedOut ? $"  <color={UIKit.Hex(UIKit.BadColor)}>walked out!</color>"
+            : run.HasDeparted(captain) ? $"  <color={UIKit.Hex(UIKit.MutedTextColor)}>(left earlier)</color>" : "";
+
+        Color changeColor = change > 0f ? UIKit.GoodColor : change < 0f ? UIKit.BadColor : UIKit.MutedTextColor;
+        ResultColumns(ResultRow(panel, shaded), captain.displayName + note, $"Lv {level}", BondMath.RankName(ApprovalStore.RankOf(captain)),
+            $"{ApprovalStore.ApprovalOf(captain):0}", $"{change:+0.#;-0.#;0}", 12, UIKit.TextColor, changeColor);
     }
 }
