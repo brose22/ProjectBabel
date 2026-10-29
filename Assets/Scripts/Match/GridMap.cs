@@ -17,8 +17,13 @@ public class GridMap : MonoBehaviour
     [SerializeField, Range(0f, 1f)] float groundAccentChance = 0.12f;
     [SerializeField] EnemyPath path;
     [SerializeField] Vector2Int size = new(24, 12);
+    [Tooltip("Optional: the gate and castle, moved to the ends of the road when a city layout is applied.")]
+    [SerializeField] Transform spawnMarker;
+    [SerializeField] Transform baseMarker;
 
     readonly HashSet<Vector2Int> pathCells = new();
+    // The road's on-map cells from the gate to the castle.
+    readonly List<Vector2Int> orderedPathCells = new();
     readonly Dictionary<Vector2Int, Tower> occupants = new();
 
     public Vector2Int Size => size;
@@ -30,6 +35,7 @@ public class GridMap : MonoBehaviour
         groundTilemap.ClearAllTiles();
         pathTilemap.ClearAllTiles();
         pathCells.Clear();
+        orderedPathCells.Clear();
 
         for (int x = 0; x < size.x; x++)
             for (int y = 0; y < size.y; y++)
@@ -44,16 +50,44 @@ public class GridMap : MonoBehaviour
                 pathTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), pathTile);
     }
 
+    // Swaps in a city layout's road and props, moves the gate and castle to the road's ends and
+    // repaints. Called by the match before play starts.
+    public void ApplyLayout(CityLayout layout)
+    {
+        if (layout == null || layout.pathCells.Length < 2) return;
+        var points = new Vector3[layout.pathCells.Length];
+        for (int i = 0; i < points.Length; i++)
+            points[i] = CellCenter(layout.pathCells[i]);
+        path.SetPoints(points);
+
+        if (propTilemap != null)
+        {
+            propTilemap.ClearAllTiles();
+            foreach (LayoutProp prop in layout.props)
+                if (prop.tile != null) propTilemap.SetTile(new Vector3Int(prop.cell.x, prop.cell.y, 0), prop.tile);
+        }
+
+        Paint();
+        if (orderedPathCells.Count == 0) return;
+        if (spawnMarker != null) spawnMarker.position = CellCenter(orderedPathCells[0]);
+        if (baseMarker != null) baseMarker.position = CellCenter(orderedPathCells[^1]);
+    }
+
     void AddPathSegment(Vector2Int from, Vector2Int to)
     {
         Vector2Int cell = from;
-        pathCells.Add(cell);
+        AddPathCell(cell);
         while (cell != to)
         {
             if (cell.x != to.x) cell.x += System.Math.Sign(to.x - cell.x);
             else cell.y += System.Math.Sign(to.y - cell.y);
-            pathCells.Add(cell);
+            AddPathCell(cell);
         }
+    }
+
+    void AddPathCell(Vector2Int cell)
+    {
+        if (pathCells.Add(cell) && InBounds(cell)) orderedPathCells.Add(cell);
     }
 
     // A fixed hash rather than Random, so the ground looks the same every time the map is painted.

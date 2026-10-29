@@ -46,6 +46,10 @@ public class MatchData : ScriptableObject
     [Tooltip("Gold taken from the shared pool to relocate a tower mid-match. 0 makes moving free.")]
     public int relocationCost = 25;
 
+    [Header("Cities")]
+    [Tooltip("Map templates the world map's cities are played on. Empty keeps the scene's own road.")]
+    public List<CityLayout> layouts = new();
+
     [Header("Captain XP")]
     [Tooltip("Most XP a captain can earn from healing and buffing in one wave (GDD: support XP is capped per wave). Kill XP is not capped.")]
     public int supportXpCapPerWave = 60;
