@@ -14,6 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MatchData
   startingHealth: 20
   startingGold: 300
+  healthPerWin: 2
+  restHealFraction: 0.3
+  giftCost: 75
+  giftApproval: 10
+  events:
+  - {fileID: 11400000, guid: e8fb9179c30445f787ca4e29fc612e14, type: 2}
+  - {fileID: 11400000, guid: d919d17c362c48c88fff1241c2da6467, type: 2}
+  - {fileID: 11400000, guid: 991cc325b1c74f3dbc4ad8b3d3cd9615, type: 2}
+  - {fileID: 11400000, guid: c26859083a7948fbaf0db57bb1cf5fcc, type: 2}
+  - {fileID: 11400000, guid: c77d25af7d3143b2ad8dda46b653b2da, type: 2}
+  - {fileID: 11400000, guid: 0bc1d97d982a474d98f90467b39d0c3d, type: 2}
   maxTowers: 5
   partySize: 3
   maxPartySize: 8
@@ -48,19 +59,20 @@ MonoBehaviour:
   - {fileID: 11400000, guid: d2ea2d7acb90f6945bd4d121366debfb, type: 2}
   - {fileID: 11400000, guid: 23ee12d6b74ad7442aa6d896f0c96600, type: 2}
   - {fileID: 11400000, guid: 6fdae8f84929b5e45ac1e5020bfcabe6, type: 2}
-  events:
-  - {fileID: 11400000, guid: e8fb9179c30445f787ca4e29fc612e14, type: 2}
-  - {fileID: 11400000, guid: d919d17c362c48c88fff1241c2da6467, type: 2}
-  - {fileID: 11400000, guid: 991cc325b1c74f3dbc4ad8b3d3cd9615, type: 2}
-  - {fileID: 11400000, guid: c26859083a7948fbaf0db57bb1cf5fcc, type: 2}
-  - {fileID: 11400000, guid: c77d25af7d3143b2ad8dda46b653b2da, type: 2}
-  - {fileID: 11400000, guid: 0bc1d97d982a474d98f90467b39d0c3d, type: 2}
   matchesPerRun: 7
   minCitiesPerLayer: 2
   maxCitiesPerLayer: 3
   intelDepth: 2
+  nodeOdds:
+    elite: 0.15
+    rest: 0.12
+    shop: 0.1
+    event: 0.15
   enemyHealthGrowthPerMatch: 0.12
   enemyCountGrowthPerMatch: 0.08
+  eliteLayerBonus: 2
+  eliteGoldMultiplier: 2
+  eliteExtraRecruitChoices: 1
   baseWaveRepeats: 2
   boss: {fileID: 11400000, guid: 3aa8be080f4c4667b8946576716da8b3, type: 2}
   supportXpCapPerWave: 60
@@ -242,3 +254,12 @@ MonoBehaviour:
       spawnInterval: 3
       delayBefore: 2
     healthMultiplier: 1.54
+  elements:
+  - {fileID: 11400000, guid: d511a4227377bb84e84e8dd9c46fd432, type: 2}
+  - {fileID: 11400000, guid: bd1e1a626cde8c94ebc3ef1e860b6ac8, type: 2}
+  - {fileID: 11400000, guid: 4ba67919cb6f06a498a2913db62c485f, type: 2}
+  - {fileID: 11400000, guid: ef4b5e49849742c4490957b49d665028, type: 2}
+  roleIcons:
+  - {fileID: 21300000, guid: 4053c567249892548b3137dc0df2afd1, type: 3}
+  - {fileID: 21300000, guid: e4ff38f7553c4e94b9149e85433233c5, type: 3}
+  - {fileID: 21300000, guid: 392268873ab018d4982b4d551a28ab3f, type: 3}

@@ -194,6 +194,21 @@ public static class UIKit
         return box;
     }
 
+    // A sprite drawn as painted at a fixed size. Pick sizes that are whole multiples of the art
+    // (16 or 32 for a 16 px icon) so its pixels stay square.
+    public static Image Icon(Transform parent, Sprite sprite, float size)
+    {
+        var icon = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        icon.transform.SetParent(parent, false);
+        var image = icon.GetComponent<Image>();
+        image.sprite = sprite;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        image.enabled = sprite != null;
+        Size(image, size, size);
+        return image;
+    }
+
     // A ring laid over a widget's edges; colour it to mark selection, or clear to hide it.
     public static Image Outline(Transform parent, Color color)
     {

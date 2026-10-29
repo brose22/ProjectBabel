@@ -27,6 +27,9 @@ public class RunScreens : MonoBehaviour
     const float DrawerWidth = 300f;
     const float DrawerSlideSeconds = 0.2f;
     static readonly Vector2 DrawerTabSize = new(30f, 110f);
+    // Art drawn at whole multiples so its pixels stay square: 32 px portraits at 2x, 16 px icons at 1x.
+    const float PortraitSize = 64f;
+    const float IconSize = 16f;
     static readonly Color RoadColor = new(0.55f, 0.45f, 0.3f, 1f);
     static readonly Color ClearedCityColor = new(0.16f, 0.3f, 0.2f, 1f);
     static readonly Color BaseColor = new(0.55f, 0.12f, 0.16f, 1f);
@@ -429,17 +432,52 @@ public class RunScreens : MonoBehaviour
 
     // A captain in the party drawer: the usual details, tagged with their level, or faded with a
     // note when they've walked out.
-    static void PartyCard(Transform list, RunState run, CaptainData captain)
+    // Portrait on the left; name and level, element and role icons, bond, and special on the right.
+    void PartyCard(Transform list, RunState run, CaptainData captain)
     {
         bool departed = run.HasDeparted(captain);
         RectTransform card = UIKit.Box(list, captain.displayName, departed ? UIKit.InsetColor : CardColor, blocksClicks: false);
-        UIKit.Layout<VerticalLayoutGroup>(card, 8, 1).padding.top = 6;
+        HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(card, 6, 8);
+        layout.childAlignment = TextAnchor.UpperLeft;
         UIKit.Size(card, flexibleWidth: 1f);
+
+        // The 32 px portraits at 2x, inset like a picture frame.
+        RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
+        UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
+        UIKit.Icon(frame, captain.portrait, PortraitSize);
+
+        RectTransform info = UIKit.Group(card, "Info");
+        UIKit.Layout<VerticalLayoutGroup>(info, 0, 2);
+        UIKit.Size(info, flexibleWidth: 1f);
+
+        Transform title = UIKit.Group(info, "Title");
+        UIKit.Layout<HorizontalLayoutGroup>(title, 0, 4);
+        Text name = UIKit.Label(title, captain.displayName, 15);
+        name.fontStyle = FontStyle.Bold;
+        UIKit.Size(name, flexibleWidth: 1f);
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
-        CaptainDetails(card, captain, departed ? "WALKED OUT" : $"LV {level}", out _, out Text tag);
-        if (!departed) return;
-        tag.color = UIKit.BadColor;
-        card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
+        Text tag = UIKit.Label(title, departed ? "WALKED OUT" : $"LV {level}", 9, TextAnchor.MiddleRight,
+            departed ? UIKit.BadColor : UIKit.AccentColor);
+        tag.fontStyle = FontStyle.Bold;
+
+        ElementData element = match.Data.ElementInfo(captain.element);
+        Transform tags = UIKit.Group(info, "Tags");
+        UIKit.Layout<HorizontalLayoutGroup>(tags, 0, 4);
+        UIKit.Icon(tags, element != null ? element.icon : null, IconSize);
+        UIKit.Label(tags, element != null ? element.displayName : captain.element.ToString(), 12, color: UIKit.ElementColor(captain.element));
+        UIKit.Size(UIKit.Group(tags, "Gap"), 6f);
+        UIKit.Icon(tags, match.Data.RoleIcon(captain.role), IconSize);
+        UIKit.Label(tags, captain.role.ToString(), 12);
+
+        string muted = UIKit.Hex(UIKit.MutedTextColor);
+        UIKit.Label(info, $"<color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))} " +
+                          $"<color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>", 12);
+        Transform special = UIKit.Group(info, "Special");
+        UIKit.Layout<HorizontalLayoutGroup>(special, 0, 4);
+        UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, IconSize);
+        UIKit.Label(special, captain.ability != null ? captain.ability.displayName : "No special", 12);
+
+        if (departed) card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
     }
 
     // Layers run left to right; cities in a layer are spread evenly top to bottom.

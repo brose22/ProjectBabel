@@ -4,8 +4,8 @@ Usage: python -I Tools/pixel_art.py [<preview png>]
 
 Each sprite is a grid of characters; '.' is transparent and every other character looks up a
 colour in that sprite's palette (merged over COMMON). Tiles are generated from a seeded noise
-pattern instead. Output goes to Assets/Art/Sprites (portraits to Portraits, ability and element icons
-to Icons/Abilities and Icons/Elements), where an editor AssetPostprocessor imports them as 16 pixels-per-unit point-filtered
+pattern instead. Output goes to Assets/Art/Sprites (portraits to Portraits, ability, element and role
+icons to Icons/Abilities, Icons/Elements and Icons/Roles), where an editor AssetPostprocessor imports them as 16 pixels-per-unit point-filtered
 sprites. Pass a path to also write enlarged preview sheets: the sprites there, and the portraits and
 icons beside it as <name>_portraits.png and <name>_icons.png.
 """
@@ -1149,6 +1149,105 @@ def element_icon(element, symbol):
 ELEMENT_ICONS = {f"element_{element}": element_icon(element, symbol) for element, symbol in ELEMENT_SYMBOLS.items()}
 
 
+# ---------- Role icons (16x16): the role's symbol on a shield, so they never read as an element's
+# round badge. 'e' is the symbol, 'E' its highlight, 'd' its shadow. ----------
+
+SHIELD = [
+    "................",
+    ".kkkkkkkkkkkkkk.",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    ".kbbbbbbbbbbbbk.",
+    "..kbbbbbbbbbbk..",
+    "..kbbbbbbbbbbk..",
+    "...kbbbbbbbbk...",
+    "....kbbbbbbk....",
+    ".....kbbbbk.....",
+    "......kbbk......",
+    ".......kk.......",
+]
+
+ROLE_SYMBOLS = {
+    # A sword, point up.
+    "attacker": [
+        "................",
+        "................",
+        ".......EE.......",
+        ".......Ee.......",
+        ".......Ee.......",
+        ".......Ee.......",
+        ".......Ee.......",
+        ".......Ee.......",
+        ".....dddddd.....",
+        ".......dd.......",
+        ".......dd.......",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    # A plus.
+    "healer": [
+        "................",
+        "................",
+        "................",
+        "......EEee......",
+        "......Eeee......",
+        "......Eeee......",
+        "...EEEEeeeeee...",
+        "...Eeeeeeeeee...",
+        "...eeeeeeeeed...",
+        "......eeed......",
+        "......eeed......",
+        "......eedd......",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+    # Two rising chevrons.
+    "buffer": [
+        "................",
+        "................",
+        ".......EE.......",
+        "......EeeE......",
+        ".....Ee..eE.....",
+        "....Ee....eE....",
+        "................",
+        ".......ee.......",
+        "......eeee......",
+        ".....ed..de.....",
+        "....ed....de....",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+    ],
+}
+
+ROLE_ICON_COLOURS = {
+    "attacker": {"b": "3a1c1c", "e": "c9d2dc", "E": "ffffff", "d": "8a6a3a"},
+    "healer": {"b": "17331f", "e": "6fd86a", "E": "c8f5b8", "d": "2f8a3a"},
+    "buffer": {"b": "3a3014", "e": "ffc94a", "E": "fff0a8", "d": "b07a1e"},
+}
+
+
+def role_icon(role, symbol):
+    for y, row in enumerate(symbol):
+        if len(row) != 16:
+            sys.exit(f"role {role}: icon row {y} is {len(row)} wide, expected 16")
+    return layer(SHIELD, symbol), ROLE_ICON_COLOURS[role]
+
+
+ROLE_ICONS = {f"role_{role}": role_icon(role, symbol) for role, symbol in ROLE_SYMBOLS.items()}
+
+
 # ---------- Tiles: seeded noise so they tile without obvious repeats inside one tile ----------
 
 def noise_tile(seed, base, specks):
@@ -1244,6 +1343,7 @@ def main():
     portraits = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in PORTRAITS.items()}
     icons = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in ICONS.items()}
     element_icons = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in ELEMENT_ICONS.items()}
+    role_icons = {name: grid_to_pixels(rows, palette, name) for name, (rows, palette) in ROLE_ICONS.items()}
 
     for name, pixels in images.items():
         write_png(os.path.join(OUT, name + ".png"), pixels)
@@ -1256,7 +1356,11 @@ def main():
     os.makedirs(os.path.join(OUT, "Icons", "Elements"), exist_ok=True)
     for name, pixels in element_icons.items():
         write_png(os.path.join(OUT, "Icons", "Elements", name + ".png"), pixels)
-    print(f"wrote {len(images)} sprites, {len(portraits)} portraits and {len(icons) + len(element_icons)} icons to {OUT}")
+    os.makedirs(os.path.join(OUT, "Icons", "Roles"), exist_ok=True)
+    for name, pixels in role_icons.items():
+        write_png(os.path.join(OUT, "Icons", "Roles", name + ".png"), pixels)
+    icon_count = len(icons) + len(element_icons) + len(role_icons)
+    print(f"wrote {len(images)} sprites, {len(portraits)} portraits and {icon_count} icons to {OUT}")
 
     if len(sys.argv) > 1:
         # Sprites padded to 16x16 on grass, 6 per row at 6x; portraits on a dark panel, 6 per row at 4x.
@@ -1264,8 +1368,8 @@ def main():
         panel = [[(46, 52, 64, 255)] * 34 for _ in range(34)]
         base, _ = os.path.splitext(sys.argv[1])
         preview_sheet(base + "_portraits.png", portraits, 34, panel, 6, 4)
-        # Ability then element icons on the same panel colour, 6 per row at 8x.
-        preview_sheet(base + "_icons.png", {**icons, **element_icons}, 18, [row[:18] for row in panel[:18]], 6, 8)
+        # Ability, element then role icons on the same panel colour, 6 per row at 8x.
+        preview_sheet(base + "_icons.png", {**icons, **element_icons, **role_icons}, 18, [row[:18] for row in panel[:18]], 6, 8)
 
 if __name__ == "__main__":
     main()
