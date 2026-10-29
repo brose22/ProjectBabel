@@ -100,6 +100,8 @@ public class MatchManager : MonoBehaviour
         if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
         if (!TryGetComponent(out RunScreens _)) gameObject.AddComponent<RunScreens>();
         if (!TryGetComponent(out MatchStats _)) gameObject.AddComponent<MatchStats>();
+        // Testing cheats stay out of release builds.
+        if (Debug.isDebugBuild && !TryGetComponent(out CheatWindow _)) gameObject.AddComponent<CheatWindow>();
     }
 
     void OnEnable()
@@ -315,6 +317,18 @@ public class MatchManager : MonoBehaviour
             }
         }
         return scaled;
+    }
+
+    // Cheat: wins the match on the spot, as if every wave were cleared. Enemies on the field are
+    // removed without paying Gold or XP.
+    public bool CanCheatWin => State is MatchState.Preparing or MatchState.WaveActive;
+
+    public void CheatWinMatch()
+    {
+        if (!CanCheatWin) return;
+        foreach (Enemy enemy in Enemy.Active.ToArray()) Destroy(enemy.gameObject);
+        WavesCleared = WaveCount;
+        Finish(MatchState.Won);
     }
 
     // Jolts the camera and freezes the match for a moment when an ability lands so the hit reads.
