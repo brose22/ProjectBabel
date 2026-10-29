@@ -8,6 +8,8 @@ using UnityEngine;
 public class AbilityEditorWindow : DataEditorWindow<AbilityData>
 {
     const string Title = "Abilities";
+
+    protected override string WindowTitle => Title;
     const float PreviewSize = 64f;
 
     List<CaptainData> captains;

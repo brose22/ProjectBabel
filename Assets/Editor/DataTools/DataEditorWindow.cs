@@ -17,6 +17,8 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
 
     // Where New puts an asset when nothing is selected.
     protected abstract string DefaultFolder { get; }
+    // The tab title, set on enable so a window opened without one (or restored by a layout) is named.
+    protected abstract string WindowTitle { get; }
     // Serialized fields shown as columns in table mode, in order.
     protected abstract string[] TableColumns { get; }
     // Draws the selected asset's fields. Update and Apply are handled by the caller.
@@ -62,6 +64,7 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
 
     protected virtual void OnEnable()
     {
+        titleContent = new GUIContent(WindowTitle);
         Undo.undoRedoPerformed += Repaint;
         RefreshAssets();
         if (!string.IsNullOrEmpty(selectedGuid))
