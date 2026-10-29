@@ -49,6 +49,8 @@ public class RunState
 
     public void TakeDamage(int amount) => Health = Mathf.Max(0, Health - amount);
 
+    public void Heal(int amount) => Health = RunHealing.Heal(Health, MaxHealth, amount);
+
     public int XpOf(CaptainData captain) => captainXp.TryGetValue(captain, out int xp) ? xp : 0;
 
     public void AddXp(CaptainData captain, int amount)

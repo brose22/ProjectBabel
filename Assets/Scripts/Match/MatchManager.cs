@@ -32,6 +32,8 @@ public class MatchManager : MonoBehaviour
     public int Kills { get; private set; }
     public int Leaks { get; private set; }
     public int Casualties { get; private set; }
+    // Global health restored by winning this match.
+    public int HealthRestored { get; private set; }
 
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
     public bool IsBetweenMatches => State is MatchState.Setup or MatchState.Map;
@@ -372,6 +374,9 @@ public class MatchManager : MonoBehaviour
         bool runGoesOn = won && !RunState.Current.Map.IsComplete;
         if (runGoesOn)
         {
+            int before = RunState.Current.Health;
+            RunState.Current.Heal(data.healthPerWin);
+            HealthRestored = RunState.Current.Health - before;
             OfferRecruits();
             RunSave.Save(RunState.Current);
         }
