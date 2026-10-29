@@ -44,7 +44,7 @@ public class MatchHUD : MonoBehaviour
         canvas = UIKit.CreateCanvas("Match HUD", 10);
         BuildTopBar();
 
-        towerPanel = UIKit.Panel(canvas.transform, "Tower Panel", UIKit.PanelColor);
+        towerPanel = UIKit.Box(canvas.transform, "Tower Panel");
         UIKit.Place(towerPanel, new Vector2(0f, 0f), new Vector2(8f, 8f), new Vector2(PanelWidth, 0f));
         UIKit.Layout<VerticalLayoutGroup>(towerPanel, 8, 3, fitContent: true);
 
@@ -85,7 +85,7 @@ public class MatchHUD : MonoBehaviour
 
     void BuildTopBar()
     {
-        RectTransform bar = UIKit.Panel(canvas.transform, "Top Bar", UIKit.PanelColor);
+        RectTransform bar = UIKit.Box(canvas.transform, "Top Bar");
         bar.anchorMin = new Vector2(0f, 1f);
         bar.anchorMax = Vector2.one;
         bar.pivot = new Vector2(0.5f, 1f);
@@ -304,7 +304,7 @@ public class MatchHUD : MonoBehaviour
         foreach (CaptainRequests.Request request in Requests.Pending)
         {
             if (request.Tower == null) continue;
-            RectTransform card = UIKit.Panel(requestList, "Request", UIKit.PanelColor);
+            RectTransform card = UIKit.Box(requestList, "Request");
             UIKit.Size(card, 600f, 30f);
             UIKit.Layout<HorizontalLayoutGroup>(card, 4, 6);
             UIKit.Size(UIKit.Label(card, $"{request.Tower.Captain.displayName}: \"{request.Text}\""), flexibleWidth: 1f);

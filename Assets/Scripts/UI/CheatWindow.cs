@@ -19,7 +19,7 @@ public class CheatWindow : MonoBehaviour
     {
         // Above the run screens so cheats work on the results and map too.
         canvas = UIKit.CreateCanvas("Cheats", 30);
-        panel = UIKit.Panel(canvas.transform, "Cheat Window", UIKit.PanelColor);
+        panel = UIKit.Box(canvas.transform, "Cheat Window");
         UIKit.Place(panel, new Vector2(0f, 1f), new Vector2(8f, -40f), new Vector2(200f, 0f));
         UIKit.Layout<VerticalLayoutGroup>(panel, 8, 6, fitContent: true);
 
