@@ -28,8 +28,12 @@ public class MatchData : ScriptableObject
 
     [Header("Towers")]
     public int maxTowers = 5;
-    [Tooltip("How many roster captains the player takes on a run.")]
+    [Tooltip("How many roster captains the player picks to start a run.")]
     public int partySize = 3;
+    [Tooltip("Most captains in the party at once (GDD: 8 per run). Walked-out captains don't count.")]
+    public int maxPartySize = 8;
+    [Tooltip("Captains offered to recruit after each won city.")]
+    public int recruitChoices = 3;
     [Tooltip("Captains available to place, in order.")]
     public List<CaptainData> roster = new();
     [Tooltip("Soldier classes the player can choose from, in display order.")]

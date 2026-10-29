@@ -44,6 +44,7 @@ public class RunScreens : MonoBehaviour
             if (screen != null) Destroy(screen.gameObject);
             screen = null;
             if (wanted == MatchState.Setup) BuildSetup();
+            else if (wanted == MatchState.Map && RunState.Current.RecruitOffer.Count > 0) BuildRecruit();
             else if (wanted == MatchState.Map) BuildMap();
             else if (match.IsOver) BuildResults();
         }
@@ -102,19 +103,19 @@ public class RunScreens : MonoBehaviour
         foreach (CaptainData captain in Available)
         {
             if (picked.Count < PartySize) picked.Add(captain);
-            BuildCaptainCard(grid, captain);
+            BuildCaptainCard(grid, captain, () => TogglePick(captain), () => picked.Contains(captain));
         }
 
         UIKit.LiveButton(column, () => "Begin run", () => match.BeginRun(picked), refreshers,
             () => picked.Count == PartySize, width: 220f, height: 34f);
     }
 
-    void BuildCaptainCard(Transform parent, CaptainData captain)
+    void BuildCaptainCard(Transform parent, CaptainData captain, Action onClick, Func<bool> selected)
     {
-        Button card = UIKit.Button(parent, "", () => TogglePick(captain));
+        Button card = UIKit.Button(parent, "", onClick);
         UIKit.Clear(card.transform);
         var image = card.GetComponent<Image>();
-        refreshers.Add(() => image.color = picked.Contains(captain) ? UIKit.SelectedButtonColor : UIKit.ButtonColor);
+        refreshers.Add(() => image.color = selected() ? UIKit.SelectedButtonColor : UIKit.ButtonColor);
         UIKit.Layout<VerticalLayoutGroup>(card, 6, 1);
 
         int rank = ApprovalStore.RankOf(captain);
@@ -129,6 +130,49 @@ public class RunScreens : MonoBehaviour
     {
         if (picked.Remove(captain)) return;
         if (picked.Count < PartySize) picked.Add(captain);
+    }
+
+    // ---------- Recruiting ----------
+
+    void BuildRecruit()
+    {
+        RunState run = RunState.Current;
+        CaptainData chosen = null;
+
+        RectTransform root = NewScreen("Recruit");
+        RectTransform column = UIKit.Group(root, "Column");
+        UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880f, 0f));
+        VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 10, fitContent: true);
+        layout.childAlignment = TextAnchor.UpperCenter;
+
+        UIKit.Label(column, "A CAPTAIN OFFERS TO JOIN", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, $"Recruit one for the rest of the run, or go on without.  Party {run.ActivePartyCount}/{match.Data.maxPartySize}",
+            14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+
+        RectTransform row = UIKit.Group(column, "Captains");
+        var rowLayout = row.gameObject.AddComponent<GridLayoutGroup>();
+        rowLayout.cellSize = new Vector2(205f, CardHeight);
+        rowLayout.spacing = new Vector2(8f, 8f);
+        rowLayout.constraint = GridLayoutGroup.Constraint.FixedRowCount;
+        rowLayout.constraintCount = 1;
+        rowLayout.childAlignment = TextAnchor.UpperCenter;
+        int count = run.RecruitOffer.Count;
+        UIKit.Size(row, count * 205f + (count - 1) * 8f, CardHeight);
+        foreach (CaptainData captain in run.RecruitOffer)
+            BuildCaptainCard(row, captain, () => chosen = captain, () => chosen == captain);
+
+        RectTransform buttons = UIKit.Group(column, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
+        UIKit.LiveButton(buttons, () => chosen != null ? $"Recruit {chosen.displayName}" : "Pick a captain",
+            () => FinishRecruiting(chosen), refreshers, () => chosen != null, width: 200f, height: 32f);
+        UIKit.Button(buttons, "No thanks", () => FinishRecruiting(null), 140f, 32f);
+    }
+
+    void FinishRecruiting(CaptainData captain)
+    {
+        RunState.Current.Recruit(captain);
+        // Same state, different screen: force a rebuild into the world map.
+        shownFor = (MatchState)(-1);
     }
 
     // ---------- World map ----------

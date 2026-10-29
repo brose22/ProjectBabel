@@ -248,6 +248,22 @@ public class MatchManager : MonoBehaviour
         State = MatchState.Map;
     }
 
+    // A won city offers a few captains from outside the party to join, while there's room.
+    void OfferRecruits()
+    {
+        RunState run = RunState.Current;
+        if (run.ActivePartyCount >= data.maxPartySize) return;
+        var candidates = data.roster.FindAll(c => c != null && !run.Party.Contains(c));
+        var offer = new List<CaptainData>();
+        while (offer.Count < data.recruitChoices && candidates.Count > 0)
+        {
+            int pick = Random.Range(0, candidates.Count);
+            offer.Add(candidates[pick]);
+            candidates.RemoveAt(pick);
+        }
+        run.OfferRecruits(offer);
+    }
+
     // Plays the picked city: reloads the scene, which lays out that city's map and waves.
     public void ChooseCity(int id)
     {
@@ -318,7 +334,11 @@ public class MatchManager : MonoBehaviour
         Tower.ClearWaveBoosts();
         Time.timeScale = 0f;
         // The city falls as soon as the match is won, so the win counts even if the player quits here.
-        if (result == MatchState.Won) RunState.Current.CompleteMatch(data.intelDepth);
+        if (result == MatchState.Won)
+        {
+            RunState.Current.CompleteMatch(data.intelDepth);
+            if (!RunState.Current.Map.IsComplete) OfferRecruits();
+        }
         GameEvents.RaiseMatchEnded(result == MatchState.Won);
     }
 
