@@ -72,7 +72,10 @@ public static class DataToolsGUI
             Swatch(new Rect(center.x - side / 2f, center.y - side / 2f, side, side), tint);
             return;
         }
-        Texture2D texture = sprite.texture;
+        // With a sprite atlas enabled, sprite.texture is the packed atlas but sprite.rect is still in
+        // the source image, so draw from the source image.
+        Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GetAssetPath(sprite));
+        if (texture == null) texture = sprite.texture;
         Rect source = sprite.rect;
         float fit = Mathf.Min(rect.width / source.width, rect.height / source.height) * scale;
         Vector2 size = new(source.width * fit, source.height * fit);
@@ -84,11 +87,21 @@ public static class DataToolsGUI
         GUI.color = old;
     }
 
-    // A framed sprite preview laid out at the given size.
-    public static Rect SpritePreview(Sprite sprite, Color tint, float size, float scale = 1f)
+    // An outline of the given width just inside the rect.
+    public static void Frame(Rect rect, Color color, float width)
+    {
+        EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, width), color);
+        EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - width, rect.width, width), color);
+        EditorGUI.DrawRect(new Rect(rect.x, rect.y, width, rect.height), color);
+        EditorGUI.DrawRect(new Rect(rect.xMax - width, rect.y, width, rect.height), color);
+    }
+
+    // A sprite preview laid out at the given size, optionally framed in a border colour.
+    public static Rect SpritePreview(Sprite sprite, Color tint, float size, float scale = 1f, Color? border = null)
     {
         Rect rect = GUILayoutUtility.GetRect(size, size, GUILayout.Width(size), GUILayout.Height(size));
         EditorGUI.DrawRect(rect, PreviewBackground);
+        if (border is Color color) Frame(rect, color, 3f);
         DrawSprite(new Rect(rect.x + 4f, rect.y + 4f, rect.width - 8f, rect.height - 8f), sprite, tint, scale);
         return rect;
     }
