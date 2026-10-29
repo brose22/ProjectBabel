@@ -27,16 +27,52 @@ public static class GreyBoxMatchBuilder
     static readonly string[] SliceCaptains = { "Cinder", "Marin", "Ember" };
     const float WaveHealthGrowth = 0.06f;
 
-    // The slice city. Waypoint cells; the first and last sit just off the map so enemies walk on
-    // and off screen. The road winds through town from the gate (top left) to the castle (right).
-    static readonly Vector2Int[] PathCells =
+    // City layouts, slice city first. Waypoint cells; the first and last sit just off the map so
+    // enemies walk on and off screen. Props block building: houses in the road's loops, trees
+    // around the edge and a few rocks, leaving open ground at every bend for towers.
+    static readonly (string name, string displayName, Vector2Int[] path, (string art, Vector2Int cell)[] props)[] Layouts =
+    {
+        // The road winds through town from the gate (top left) to the castle (right).
+        ("SliceCity", "Riverside", SlicePath, SliceProps),
+        // Enters mid-left, dives south, then climbs over the hill fort in two tall loops.
+        ("Hillfort", "Hillfort",
+            new Vector2Int[] { new(-1, 6), new(4, 6), new(4, 1), new(10, 1), new(10, 10), new(15, 10), new(15, 4), new(20, 4), new(20, 8), new(24, 8) },
+            new (string, Vector2Int)[]
+            {
+                ("prop_house", new(7, 4)), ("prop_house", new(7, 5)), ("prop_house", new(13, 6)), ("prop_house", new(13, 7)), ("prop_house", new(18, 6)),
+                ("prop_tree", new(0, 0)), ("prop_tree", new(1, 0)), ("prop_tree", new(0, 11)), ("prop_tree", new(1, 11)), ("prop_tree", new(23, 0)),
+                ("prop_tree", new(22, 0)), ("prop_tree", new(23, 11)), ("prop_tree", new(8, 11)), ("prop_tree", new(19, 11)),
+                ("prop_rock", new(6, 8)), ("prop_rock", new(17, 1)), ("prop_rock", new(12, 0)),
+            }),
+        // Comes down from the north gate and zig-zags through the market to the east.
+        ("MarketSquare", "Market Square",
+            new Vector2Int[] { new(6, 12), new(6, 8), new(2, 8), new(2, 3), new(12, 3), new(12, 8), new(17, 8), new(17, 2), new(21, 2), new(21, 6), new(24, 6) },
+            new (string, Vector2Int)[]
+            {
+                ("prop_house", new(8, 5)), ("prop_house", new(9, 5)), ("prop_house", new(14, 5)), ("prop_house", new(15, 5)), ("prop_house", new(19, 5)),
+                ("prop_tree", new(0, 0)), ("prop_tree", new(0, 1)), ("prop_tree", new(23, 0)), ("prop_tree", new(23, 11)), ("prop_tree", new(22, 11)),
+                ("prop_tree", new(0, 11)), ("prop_tree", new(10, 11)), ("prop_tree", new(14, 11)),
+                ("prop_rock", new(4, 1)), ("prop_rock", new(9, 9)), ("prop_rock", new(19, 9)),
+            }),
+        // Three long switchbacks: few bends, so towers must cover long straights.
+        ("LongRoad", "Long Road",
+            new Vector2Int[] { new(-1, 1), new(20, 1), new(20, 5), new(3, 5), new(3, 9), new(24, 9) },
+            new (string, Vector2Int)[]
+            {
+                ("prop_house", new(6, 3)), ("prop_house", new(7, 3)), ("prop_house", new(14, 3)), ("prop_house", new(15, 3)),
+                ("prop_house", new(9, 7)), ("prop_house", new(10, 7)), ("prop_house", new(17, 7)),
+                ("prop_tree", new(0, 11)), ("prop_tree", new(1, 11)), ("prop_tree", new(23, 0)), ("prop_tree", new(22, 3)),
+                ("prop_tree", new(23, 3)), ("prop_tree", new(0, 7)), ("prop_tree", new(23, 6)),
+                ("prop_rock", new(12, 11)), ("prop_rock", new(4, 0)), ("prop_rock", new(18, 10)),
+            }),
+    };
+
+    static Vector2Int[] SlicePath => new Vector2Int[]
     {
         new(-1, 10), new(3, 10), new(3, 3), new(8, 3), new(8, 9), new(13, 9), new(13, 2), new(18, 2), new(18, 7), new(24, 7),
     };
 
-    // Props that block building: the town's houses in the road's loops, trees around the edge,
-    // and a few rocks. They leave open ground at every bend for towers.
-    static readonly (string art, Vector2Int cell)[] Props =
+    static (string art, Vector2Int cell)[] SliceProps => new (string, Vector2Int)[]
     {
         ("prop_house", new(5, 6)), ("prop_house", new(6, 6)), ("prop_house", new(11, 6)), ("prop_house", new(11, 5)),
         ("prop_house", new(16, 5)), ("prop_house", new(16, 6)), ("prop_house", new(21, 3)), ("prop_house", new(22, 3)),
@@ -79,6 +115,7 @@ public static class GreyBoxMatchBuilder
 
         MatchData matchData = CreateData();
         ApplyArt();
+        AssignLayouts(matchData);
         Enemy enemyPrefab = CreateEnemyPrefab(square);
         Soldier soldierPrefab = CreateSoldierPrefab(square, dot);
         Tower towerPrefab = CreateTowerPrefab(square, disc, soldierPrefab);
@@ -565,6 +602,51 @@ public static class GreyBoxMatchBuilder
         return bar;
     }
 
+    // ---------- City layouts ----------
+
+    // Creates any missing layout assets and gives the match the full set if it has none. Existing
+    // layouts are kept so hand edits survive a rebuild. Props that land on the road are skipped.
+    static void AssignLayouts(MatchData match)
+    {
+        EnsureFolder(DataFolder + "/Layouts");
+        var layouts = new List<CityLayout>();
+        foreach ((string name, string displayName, Vector2Int[] path, (string art, Vector2Int cell)[] props) in Layouts)
+        {
+            layouts.Add(LoadOrCreate<CityLayout>($"{DataFolder}/Layouts/{name}.asset", l =>
+            {
+                l.displayName = displayName;
+                l.pathCells = path;
+                HashSet<Vector2Int> road = RoadCells(path);
+                foreach ((string art, Vector2Int cell) in props)
+                {
+                    TileBase tile = PropTile(art);
+                    if (tile != null && !road.Contains(cell)) l.props.Add(new LayoutProp { tile = tile, cell = cell });
+                }
+            }));
+        }
+        if (match.layouts.Count > 0) return;
+        match.layouts = layouts;
+        EditorUtility.SetDirty(match);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with city layouts.");
+    }
+
+    static HashSet<Vector2Int> RoadCells(Vector2Int[] path)
+    {
+        var cells = new HashSet<Vector2Int>();
+        for (int i = 1; i < path.Length; i++)
+        {
+            Vector2Int cell = path[i - 1];
+            cells.Add(cell);
+            while (cell != path[i])
+            {
+                if (cell.x != path[i].x) cell.x += Math.Sign(path[i].x - cell.x);
+                else cell.y += Math.Sign(path[i].y - cell.y);
+                cells.Add(cell);
+            }
+        }
+        return cells;
+    }
+
     // ---------- Scene ----------
 
     static void PopulateScene(Scene scene, Sprite square, TileBase groundTile, TileBase pathTile, TileBase groundAccentTile,
@@ -589,14 +671,18 @@ public static class GreyBoxMatchBuilder
         lightSo.FindProperty("m_LightType").intValue = (int)Light2D.LightType.Global;
         lightSo.ApplyModifiedPropertiesWithoutUndo();
 
+        // The scene shows the first layout; the match swaps in each city's own at runtime.
+        CityLayout layout = matchData.layouts.Count > 0 ? matchData.layouts[0] : null;
+        Vector2Int[] pathCells = layout != null ? layout.pathCells : SlicePath;
+
         // Path waypoints sit at cell centers.
         var pathObject = new GameObject("EnemyPath");
         EnemyPath path = pathObject.AddComponent<EnemyPath>();
-        for (int i = 0; i < PathCells.Length; i++)
+        for (int i = 0; i < pathCells.Length; i++)
         {
             var point = new GameObject($"Point {i}");
             point.transform.SetParent(pathObject.transform, false);
-            point.transform.position = new Vector3(PathCells[i].x + 0.5f, PathCells[i].y + 0.5f, 0f);
+            point.transform.position = new Vector3(pathCells[i].x + 0.5f, pathCells[i].y + 0.5f, 0f);
         }
 
         var gridObject = new GameObject("Grid");
@@ -604,22 +690,22 @@ public static class GreyBoxMatchBuilder
         Tilemap ground = AddTilemap(gridObject.transform, "Ground", 0);
         Tilemap pathTilemap = AddTilemap(gridObject.transform, "Path", 1);
         Tilemap propTilemap = AddTilemap(gridObject.transform, "Props", 2);
-        foreach ((string art, Vector2Int cell) in Props)
-        {
-            TileBase prop = PropTile(art);
-            if (prop != null) propTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), prop);
-        }
+        if (layout != null)
+            foreach (LayoutProp prop in layout.props)
+                if (prop.tile != null) propTilemap.SetTile(new Vector3Int(prop.cell.x, prop.cell.y, 0), prop.tile);
+
+        Vector2Int spawn = pathCells[1], goal = pathCells[^2];
+        Transform spawnMarker = AddProp("Spawn Marker", "prop_gate", square, new Color(0.6f, 0.1f, 0.15f), new Vector3(0.5f, spawn.y + 0.5f));
+        Transform baseMarker = AddProp("Base Marker", "prop_castle", square, new Color(0.25f, 0.4f, 0.95f), new Vector3(MapSize.x - 0.5f, goal.y + 0.5f));
+
         GridMap gridMap = gridObject.AddComponent<GridMap>();
         Wire(gridMap, ("groundTilemap", ground), ("pathTilemap", pathTilemap), ("propTilemap", propTilemap), ("groundTile", groundTile),
-            ("pathTile", pathTile), ("groundAccentTile", groundAccentTile), ("path", path));
+            ("pathTile", pathTile), ("groundAccentTile", groundAccentTile), ("path", path), ("spawnMarker", spawnMarker), ("baseMarker", baseMarker));
         var gridSo = new SerializedObject(gridMap);
         gridSo.FindProperty("size").vector2IntValue = MapSize;
         gridSo.ApplyModifiedPropertiesWithoutUndo();
-        gridMap.Paint();
-
-        Vector2Int spawn = PathCells[1], goal = PathCells[^2];
-        AddProp("Spawn Marker", "prop_gate", square, new Color(0.6f, 0.1f, 0.15f), new Vector3(0.5f, spawn.y + 0.5f));
-        AddProp("Base Marker", "prop_castle", square, new Color(0.25f, 0.4f, 0.95f), new Vector3(MapSize.x - 0.5f, goal.y + 0.5f));
+        if (layout != null) gridMap.ApplyLayout(layout);
+        else gridMap.Paint();
 
         var matchObject = new GameObject("Match");
         MatchManager match = matchObject.AddComponent<MatchManager>();
@@ -750,11 +836,11 @@ public static class GreyBoxMatchBuilder
     }
 
     // A map prop drawn with its generated art, or a tinted square if the art is missing.
-    static void AddProp(string name, string artName, Sprite square, Color fallbackColor, Vector3 position)
+    static Transform AddProp(string name, string artName, Sprite square, Color fallbackColor, Vector3 position)
     {
         Sprite art = ArtSprite(artName);
-        if (art != null) AddSprite(name, null, art, Color.white, 3, position, Vector3.one);
-        else AddSprite(name, null, square, fallbackColor, 3, position, Vector3.one * 0.9f);
+        if (art != null) return AddSprite(name, null, art, Color.white, 3, position, Vector3.one).transform;
+        return AddSprite(name, null, square, fallbackColor, 3, position, Vector3.one * 0.9f).transform;
     }
 
     static T LoadOrCreate<T>(string path, Action<T> init) where T : ScriptableObject
