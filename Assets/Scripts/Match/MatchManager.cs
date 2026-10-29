@@ -80,7 +80,8 @@ public class MatchManager : MonoBehaviour
 
     void Awake()
     {
-        if (RunState.Current == null)
+        // Pick up a saved run if there is one, otherwise start fresh.
+        if (RunState.Current == null && !RunSave.TryResume(data.roster))
             RunState.StartNewRun(data.startingHealth, data.startingGold);
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
@@ -88,6 +89,7 @@ public class MatchManager : MonoBehaviour
         State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : MatchState.Preparing;
         waves = ScaledWaves();
         if (CityLayout != null) grid.ApplyLayout(CityLayout);
+        if (State == MatchState.Map) RunSave.Save(run);
         Time.timeScale = GameSpeed;
 
         // Added at runtime so existing scenes need no rebuild.
@@ -233,6 +235,7 @@ public class MatchManager : MonoBehaviour
     // are untouched, since they carry between runs.
     public void RestartRun()
     {
+        RunSave.Delete();
         RunState.StartNewRun(data.startingHealth, data.startingGold);
         SceneManager.LoadScene(gameObject.scene.name);
     }
@@ -246,6 +249,14 @@ public class MatchManager : MonoBehaviour
             data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth));
         nextCaptainIndex = 0;
         State = MatchState.Map;
+        RunSave.Save(RunState.Current);
+    }
+
+    // Takes an offered captain into the party (or none, for null) and saves the choice.
+    public void Recruit(CaptainData captain)
+    {
+        RunState.Current.Recruit(captain);
+        RunSave.Save(RunState.Current);
     }
 
     // A won city offers a few captains from outside the party to join, while there's room.
@@ -333,13 +344,20 @@ public class MatchManager : MonoBehaviour
         spawner.StopSpawning();
         Tower.ClearWaveBoosts();
         Time.timeScale = 0f;
-        // The city falls as soon as the match is won, so the win counts even if the player quits here.
-        if (result == MatchState.Won)
+        bool won = result == MatchState.Won;
+        if (won) RunState.Current.CompleteMatch(data.intelDepth);
+        // Walkouts are judged on this, so recruits are offered after it.
+        GameEvents.RaiseMatchEnded(won);
+
+        // The city falls as soon as the match is won and is saved straight away, so the win counts
+        // even if the player quits here. A lost or finished run has nothing left to resume.
+        bool runGoesOn = won && !RunState.Current.Map.IsComplete;
+        if (runGoesOn)
         {
-            RunState.Current.CompleteMatch(data.intelDepth);
-            if (!RunState.Current.Map.IsComplete) OfferRecruits();
+            OfferRecruits();
+            RunSave.Save(RunState.Current);
         }
-        GameEvents.RaiseMatchEnded(result == MatchState.Won);
+        else RunSave.Delete();
     }
 
     // The tower that landed the killing blow earns the XP; a destroyed (sold) tower earns nothing.

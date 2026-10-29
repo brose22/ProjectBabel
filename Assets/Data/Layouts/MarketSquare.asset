@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5d54343af2628345a13c4e47f28ecfc, type: 3}
+  m_Name: MarketSquare
+  m_EditorClassIdentifier: Assembly-CSharp::CityLayout
+  displayName: Market Square
+  pathCells:
+  - {x: 6, y: 12}
+  - {x: 6, y: 8}
+  - {x: 2, y: 8}
+  - {x: 2, y: 3}
+  - {x: 12, y: 3}
+  - {x: 12, y: 8}
+  - {x: 17, y: 8}
+  - {x: 17, y: 2}
+  - {x: 21, y: 2}
+  - {x: 21, y: 6}
+  - {x: 24, y: 6}
+  props:
+  - tile: {fileID: 11400000, guid: b20dcf8165b11a846b252d586c04307c, type: 2}
+    cell: {x: 8, y: 5}
+  - tile: {fileID: 11400000, guid: b20dcf8165b11a846b252d586c04307c, type: 2}
+    cell: {x: 9, y: 5}
+  - tile: {fileID: 11400000, guid: b20dcf8165b11a846b252d586c04307c, type: 2}
+    cell: {x: 14, y: 5}
+  - tile: {fileID: 11400000, guid: b20dcf8165b11a846b252d586c04307c, type: 2}
+    cell: {x: 15, y: 5}
+  - tile: {fileID: 11400000, guid: b20dcf8165b11a846b252d586c04307c, type: 2}
+    cell: {x: 19, y: 5}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 0, y: 0}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 0, y: 1}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 23, y: 0}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 23, y: 11}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 22, y: 11}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 0, y: 11}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 10, y: 11}
+  - tile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
+    cell: {x: 14, y: 11}
+  - tile: {fileID: 11400000, guid: fbc9dda37318f084695ae541564c35b9, type: 2}
+    cell: {x: 4, y: 1}
+  - tile: {fileID: 11400000, guid: fbc9dda37318f084695ae541564c35b9, type: 2}
+    cell: {x: 9, y: 9}
+  - tile: {fileID: 11400000, guid: fbc9dda37318f084695ae541564c35b9, type: 2}
+    cell: {x: 19, y: 9}

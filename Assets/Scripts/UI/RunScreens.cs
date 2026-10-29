@@ -24,6 +24,7 @@ public class RunScreens : MonoBehaviour
     readonly List<Action> refreshers = new();
     readonly List<CaptainData> picked = new();
     MatchState shownFor = (MatchState)(-1);
+    bool shownRecruiting;
 
     void Awake()
     {
@@ -37,14 +38,17 @@ public class RunScreens : MonoBehaviour
     {
         if (canvas == null) return;
         MatchState wanted = match.IsBetweenMatches || match.IsOver ? match.State : MatchState.Preparing;
-        if (wanted != shownFor)
+        // The map screen shows recruiting first while captains are on offer.
+        bool recruiting = wanted == MatchState.Map && RunState.Current.RecruitOffer.Count > 0;
+        if (wanted != shownFor || recruiting != shownRecruiting)
         {
             shownFor = wanted;
+            shownRecruiting = recruiting;
             refreshers.Clear();
             if (screen != null) Destroy(screen.gameObject);
             screen = null;
             if (wanted == MatchState.Setup) BuildSetup();
-            else if (wanted == MatchState.Map && RunState.Current.RecruitOffer.Count > 0) BuildRecruit();
+            else if (recruiting) BuildRecruit();
             else if (wanted == MatchState.Map) BuildMap();
             else if (match.IsOver) BuildResults();
         }
@@ -164,15 +168,8 @@ public class RunScreens : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.LiveButton(buttons, () => chosen != null ? $"Recruit {chosen.displayName}" : "Pick a captain",
-            () => FinishRecruiting(chosen), refreshers, () => chosen != null, width: 200f, height: 32f);
-        UIKit.Button(buttons, "No thanks", () => FinishRecruiting(null), 140f, 32f);
-    }
-
-    void FinishRecruiting(CaptainData captain)
-    {
-        RunState.Current.Recruit(captain);
-        // Same state, different screen: force a rebuild into the world map.
-        shownFor = (MatchState)(-1);
+            () => match.Recruit(chosen), refreshers, () => chosen != null, width: 200f, height: 32f);
+        UIKit.Button(buttons, "No thanks", () => match.Recruit(null), 140f, 32f);
     }
 
     // ---------- World map ----------
