@@ -4,13 +4,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Full-screen run screens around a match: run setup (title and captain pick) before a run's first
-// match, and results after every match with Next match or New run. Built in uGUI at runtime and
-// added to the match by MatchManager, like Relationships.
+// match, the world map between matches, and results after every match. Built in uGUI at runtime
+// and added to the match by MatchManager, like Relationships.
 public class RunScreens : MonoBehaviour
 {
     static readonly Color DimColor = new(0.02f, 0.02f, 0.04f, 0.82f);
     // Short enough that three rows (the full 12-captain roster) fit on screen with the title.
     const float CardHeight = 112f;
+    static readonly Vector2 MapArea = new(860f, 330f);
+    static readonly Vector2 CitySize = new(104f, 34f);
+    static readonly Color RoadColor = new(0.55f, 0.45f, 0.3f, 1f);
+    static readonly Color ClearedCityColor = new(0.16f, 0.3f, 0.2f, 1f);
+    static readonly Color BaseColor = new(0.55f, 0.12f, 0.16f, 1f);
 
     MatchManager match;
     Relationships relationships;
@@ -31,7 +36,7 @@ public class RunScreens : MonoBehaviour
     void LateUpdate()
     {
         if (canvas == null) return;
-        MatchState wanted = match.State == MatchState.Setup || match.IsOver ? match.State : MatchState.Preparing;
+        MatchState wanted = match.IsBetweenMatches || match.IsOver ? match.State : MatchState.Preparing;
         if (wanted != shownFor)
         {
             shownFor = wanted;
@@ -39,6 +44,7 @@ public class RunScreens : MonoBehaviour
             if (screen != null) Destroy(screen.gameObject);
             screen = null;
             if (wanted == MatchState.Setup) BuildSetup();
+            else if (wanted == MatchState.Map) BuildMap();
             else if (match.IsOver) BuildResults();
         }
         UIKit.Refresh(refreshers);
@@ -125,6 +131,90 @@ public class RunScreens : MonoBehaviour
         if (picked.Count < PartySize) picked.Add(captain);
     }
 
+    // ---------- World map ----------
+
+    void BuildMap()
+    {
+        RunState run = RunState.Current;
+        WorldMap map = run.Map;
+
+        RectTransform root = NewScreen("World Map");
+        RectTransform column = UIKit.Group(root, "Column");
+        UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(MapArea.x, 0f));
+        VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 8, fitContent: true);
+        layout.childAlignment = TextAnchor.UpperCenter;
+
+        UIKit.Label(column, "WORLD MAP", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, $"Match {run.MatchesPlayed + 1}    Health {run.Health}/{run.MaxHealth}    Gold {run.Gold}    " +
+                            "Pick the next city. Every road leads to the enemy base; winning a city reveals the roads beyond it.",
+            12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+
+        RectTransform area = UIKit.Panel(column, "Map", UIKit.PanelColor, blocksClicks: false);
+        UIKit.Size(area, MapArea.x, MapArea.y);
+
+        var choices = map.Choices();
+        foreach (MapNode node in map.nodes)
+            if (node.revealed)
+                foreach (int next in node.next)
+                    if (map.nodes[next].revealed)
+                        BuildRoad(area, CityPosition(map, node), CityPosition(map, map.nodes[next]));
+        foreach (MapNode node in map.nodes)
+            if (node.revealed) BuildCity(area, map, node, choices.Exists(c => c.id == node.id));
+
+        // One wrapped line so a full party of 8 still fits under the map.
+        var party = new List<string>();
+        foreach (CaptainData captain in run.Party)
+            party.Add($"{captain.displayName} ({captain.role}, Lv {Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)))}, " +
+                      $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}{(run.HasDeparted(captain) ? ", walked out" : "")})");
+        UIKit.Label(column, $"Party: {string.Join("    ", party)}", 12, TextAnchor.MiddleCenter);
+
+        UIKit.Button(column, "Abandon run", match.RestartRun, 160f, 24f);
+    }
+
+    // Layers run left to right; cities in a layer are spread evenly top to bottom.
+    static Vector2 CityPosition(WorldMap map, MapNode node)
+    {
+        float usableWidth = MapArea.x - CitySize.x - 20f, usableHeight = MapArea.y - CitySize.y - 20f;
+        float x = map.layerCount > 1 ? node.layer / (float)(map.layerCount - 1) : 0.5f;
+        int size = map.LayerSize(node.layer);
+        float y = (node.lane + 0.5f) / size;
+        return new Vector2((x - 0.5f) * usableWidth, (0.5f - y) * usableHeight);
+    }
+
+    static void BuildRoad(RectTransform area, Vector2 from, Vector2 to)
+    {
+        RectTransform road = UIKit.Panel(area, "Road", RoadColor, blocksClicks: false);
+        Vector2 delta = to - from;
+        UIKit.Place(road, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(delta.magnitude, 3f));
+        road.pivot = new Vector2(0.5f, 0.5f);
+        road.anchoredPosition = (from + to) * 0.5f;
+        road.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+    }
+
+    void BuildCity(RectTransform area, WorldMap map, MapNode node, bool choosable)
+    {
+        bool isBase = node.id == map.BaseId;
+        string name = isBase ? "Enemy base" : match.Data.layouts.Count > 0 ? match.Data.layouts[node.layout % match.Data.layouts.Count].displayName : "City";
+        if (node.id == map.current) name += " (here)";
+        else if (node.cleared) name += " (won)";
+
+        Button city = UIKit.Button(area, name, () => match.ChooseCity(node.id));
+        city.GetComponentInChildren<Text>().fontSize = 11;
+        city.interactable = choosable;
+        var image = city.GetComponent<Image>();
+        image.color = choosable ? UIKit.SelectedButtonColor : node.cleared ? ClearedCityColor : isBase ? BaseColor : UIKit.ButtonColor;
+        // Cities that can't be picked yet stay readable rather than greyed out by the button.
+        if (!choosable)
+        {
+            ColorBlock colors = city.colors;
+            colors.disabledColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            city.colors = colors;
+        }
+        UIKit.Place((RectTransform)city.transform, new Vector2(0.5f, 0.5f), Vector2.zero, CitySize);
+        ((RectTransform)city.transform).pivot = new Vector2(0.5f, 0.5f);
+        ((RectTransform)city.transform).anchoredPosition = CityPosition(map, node);
+    }
+
     // ---------- Results ----------
 
     void BuildResults()
@@ -138,9 +228,12 @@ public class RunScreens : MonoBehaviour
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(panel, 16, 6, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
 
-        UIKit.Label(panel, won ? "Victory" : "Defeat", 30, TextAnchor.MiddleCenter);
-        UIKit.Label(panel, won ? $"Match {run.MatchesPlayed + 1} won" : $"The run ends after {run.MatchesPlayed} match{(run.MatchesPlayed == 1 ? "" : "es")} won",
-            13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        bool runWon = won && run.Map != null && run.Map.IsComplete;
+        UIKit.Label(panel, runWon ? "The enemy base has fallen" : won ? "Victory" : "Defeat", 30, TextAnchor.MiddleCenter);
+        string summary = runWon ? $"Run won in {run.MatchesPlayed} matches"
+            : won ? $"Match {run.MatchesPlayed} won"
+            : $"The run ends after {run.MatchesPlayed} match{(run.MatchesPlayed == 1 ? "" : "es")} won";
+        UIKit.Label(panel, summary, 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         UIKit.Label(panel, $"Waves {match.WavesCleared}/{match.WaveCount}    Kills {match.Kills}    Leaks {match.Leaks}    Casualties {match.Casualties}",
             13, TextAnchor.MiddleCenter);
         UIKit.Label(panel, $"Health {run.Health}/{run.MaxHealth}    Gold {run.Gold}", 13, TextAnchor.MiddleCenter);
@@ -159,7 +252,7 @@ public class RunScreens : MonoBehaviour
             UIKit.Label(panel, line, 13, TextAnchor.MiddleCenter, walkedOut ? UIKit.SelectedButtonColor : UIKit.TextColor);
         }
 
-        if (won) UIKit.Button(panel, "Next match", match.NextMatch, 220f, 32f);
+        if (won && !runWon) UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f);
         UIKit.Button(panel, "New run", match.RestartRun, 220f, 28f);
     }
 }

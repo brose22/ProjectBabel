@@ -65,7 +65,17 @@ public class RunState
         Party.AddRange(captains);
     }
 
-    public void CompleteMatch() => MatchesPlayed++;
+    // The run's world map, made when the run begins.
+    public WorldMap Map { get; private set; }
+
+    public void SetMap(WorldMap map) => Map = map;
+
+    // A won match: the target city falls and its intel reveals the roads ahead.
+    public void CompleteMatch(int intelDepth)
+    {
+        MatchesPlayed++;
+        Map?.ClearTarget(intelDepth);
+    }
 
     public bool HasDeparted(CaptainData captain) => departed.Contains(captain);
 

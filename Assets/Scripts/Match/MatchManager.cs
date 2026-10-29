@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Setup is the run setup screen, shown before a run's first match while no party is chosen.
-public enum MatchState { Setup, Preparing, WaveActive, Won, Lost }
+// Setup is the run setup screen, shown before a run's first match while no party is chosen. Map is
+// the world map between matches, while the player picks the next city.
+public enum MatchState { Setup, Map, Preparing, WaveActive, Won, Lost }
 
 // Runs one match: wave flow, tower placement, and the win/lose result.
 public class MatchManager : MonoBehaviour
@@ -16,7 +17,13 @@ public class MatchManager : MonoBehaviour
     public MatchData Data => data;
     public MatchState State { get; private set; } = MatchState.Preparing;
     public int WavesCleared { get; private set; }
-    public int WaveCount => data.waves.Count;
+    public int WaveCount => waves.Count;
+    // The city being played, or null on the setup and map screens.
+    public MapNode City { get; private set; }
+    public CityLayout CityLayout => City != null && data.layouts.Count > 0 ? data.layouts[City.layout % data.layouts.Count] : null;
+    public bool IsBaseMatch => City != null && RunState.Current.Map != null && City.id == RunState.Current.Map.BaseId;
+    // The match data's waves, scaled for how far into the run this city is.
+    List<WaveDefinition> waves;
     // Seconds until the next wave starts by itself, or below zero when waiting for the player.
     public float NextWaveCountdown { get; private set; } = -1f;
     public float GameSpeed { get; private set; } = 1f;
@@ -26,6 +33,7 @@ public class MatchManager : MonoBehaviour
     public int Casualties { get; private set; }
 
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
+    public bool IsBetweenMatches => State is MatchState.Setup or MatchState.Map;
     public bool IsHitStopped => hitStopRemaining > 0f;
 
     // Real-time seconds left on the current ability hit-stop.
@@ -74,8 +82,12 @@ public class MatchManager : MonoBehaviour
     {
         if (RunState.Current == null)
             RunState.StartNewRun(data.startingHealth, data.startingGold);
-        // A run without a party starts at the setup screen; later matches go straight to play.
-        State = RunState.Current.HasParty ? MatchState.Preparing : MatchState.Setup;
+        // A run without a party starts at the setup screen, then the world map until a city is picked.
+        RunState run = RunState.Current;
+        City = run.Map?.Target;
+        State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : MatchState.Preparing;
+        waves = ScaledWaves();
+        if (CityLayout != null) grid.ApplyLayout(CityLayout);
         Time.timeScale = GameSpeed;
 
         // Added at runtime so existing scenes need no rebuild.
@@ -133,7 +145,7 @@ public class MatchManager : MonoBehaviour
         State = MatchState.WaveActive;
         WaveStartTime = Time.time;
         Tower.ClearWaveBoosts();
-        spawner.SpawnWave(data.waves[WavesCleared]);
+        spawner.SpawnWave(waves[WavesCleared]);
         GameEvents.RaiseWaveStarted(WavesCleared + 1);
     }
 
@@ -225,22 +237,57 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
-    // Starts the run with the chosen captains; called from the setup screen.
+    // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
     public void BeginRun(IEnumerable<CaptainData> party)
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
+        RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
+            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth));
         nextCaptainIndex = 0;
-        State = MatchState.Preparing;
+        State = MatchState.Map;
     }
 
-    // After a win, plays the next match of the run. Health, Gold, XP, the party and any walkouts
-    // carry over because they live in RunState.
-    public void NextMatch()
+    // Plays the picked city: reloads the scene, which lays out that city's map and waves.
+    public void ChooseCity(int id)
+    {
+        if (State != MatchState.Map || !RunState.Current.Map.TryChoose(id)) return;
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
+    // After a win, back to the world map. Health, Gold, XP, the party and any walkouts carry over
+    // because they live in RunState.
+    public void ReturnToMap()
     {
         if (State != MatchState.Won) return;
-        RunState.Current.CompleteMatch();
         SceneManager.LoadScene(gameObject.scene.name);
+    }
+
+    // Copies the authored waves with more and tougher enemies further into the run. The enemy base
+    // plays them baseWaveRepeats times over, each pass a layer tougher.
+    List<WaveDefinition> ScaledWaves()
+    {
+        int layer = City != null ? City.layer : 0;
+        int repeats = IsBaseMatch ? Mathf.Max(1, data.baseWaveRepeats) : 1;
+        var scaled = new List<WaveDefinition>();
+        for (int pass = 0; pass < repeats; pass++)
+        {
+            float health = RunScaling.HealthMultiplier(layer + pass, data.enemyHealthGrowthPerMatch);
+            foreach (WaveDefinition wave in data.waves)
+            {
+                var copy = new WaveDefinition { healthMultiplier = wave.healthMultiplier * health };
+                foreach (SpawnGroup group in wave.groups)
+                    copy.groups.Add(new SpawnGroup
+                    {
+                        enemy = group.enemy,
+                        count = RunScaling.EnemyCount(group.count, layer + pass, data.enemyCountGrowthPerMatch),
+                        spawnInterval = group.spawnInterval,
+                        delayBefore = group.delayBefore,
+                    });
+                scaled.Add(copy);
+            }
+        }
+        return scaled;
     }
 
     // Jolts the camera and freezes the match for a moment when an ability lands so the hit reads.
@@ -270,6 +317,8 @@ public class MatchManager : MonoBehaviour
         spawner.StopSpawning();
         Tower.ClearWaveBoosts();
         Time.timeScale = 0f;
+        // The city falls as soon as the match is won, so the win counts even if the player quits here.
+        if (result == MatchState.Won) RunState.Current.CompleteMatch(data.intelDepth);
         GameEvents.RaiseMatchEnded(result == MatchState.Won);
     }
 
