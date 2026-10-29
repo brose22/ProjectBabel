@@ -128,7 +128,7 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
         }
         abilityExpanded = EditorGUILayout.Foldout(abilityExpanded, $"{ability.name} settings", true);
         if (!abilityExpanded) return;
-        captains ??= DataToolsGUI.LoadAll<CaptainData>();
+        captains = DataToolsGUI.LoadAll(captains);
         int users = captains.Count(c => c != null && c.ability == ability);
         if (users > 1)
             EditorGUILayout.HelpBox($"{users} captains share this ability; changes here affect all of them.", MessageType.Info);

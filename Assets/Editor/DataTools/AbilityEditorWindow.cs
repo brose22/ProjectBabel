@@ -159,7 +159,7 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
     // The captains that fire this ability, as buttons that open them.
     void DrawUsers()
     {
-        captains ??= DataToolsGUI.LoadAll<CaptainData>();
+        captains = DataToolsGUI.LoadAll(captains);
         DataToolsGUI.Section("Used by");
         DataToolsGUI.AssetButtons("Captains", captains.Where(c => c != null && c.ability == Selected), CaptainEditorWindow.OpenFor, "Nobody");
     }

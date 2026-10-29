@@ -214,6 +214,11 @@ public static class DataToolsGUI
         return row + 1;
     }
 
+    // The cached list, or every asset of the type when the cache is missing or empty. An empty result
+    // isn't trusted: a lookup made while Unity is still importing after a reload can come back empty.
+    public static List<TAsset> LoadAll<TAsset>(List<TAsset> cache) where TAsset : UnityEngine.Object =>
+        cache is { Count: > 0 } ? cache : LoadAll<TAsset>();
+
     public static List<TAsset> LoadAll<TAsset>() where TAsset : UnityEngine.Object
     {
         var found = new List<TAsset>();

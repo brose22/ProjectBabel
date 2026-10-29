@@ -96,7 +96,7 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
 
     EnemyData Largest()
     {
-        enemies ??= DataToolsGUI.LoadAll<EnemyData>();
+        enemies = DataToolsGUI.LoadAll(enemies);
         return enemies.Where(e => e != null).OrderByDescending(e => e.size).FirstOrDefault();
     }
 
@@ -112,7 +112,7 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
         }
         DataToolsGUI.Note($"Takes {StatusRules.WeaknessDamageMultiplier:0.##}× damage and {StatusRules.WeaknessStatusChanceMultiplier:0.##}× status chance from {enemy.weakness} captains");
 
-        captains ??= DataToolsGUI.LoadAll<CaptainData>();
+        captains = DataToolsGUI.LoadAll(captains);
         DataToolsGUI.AssetButtons("Strong Captains", captains.Where(c => c != null && c.element == enemy.weakness), CaptainEditorWindow.OpenFor, "None yet");
     }
 }

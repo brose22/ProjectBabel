@@ -92,7 +92,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
     // Damage per hit is the captain's power times the class multiplier, so show it for a real captain.
     void DrawDamagePreview(SoldierClassData soldierClass)
     {
-        captains ??= DataToolsGUI.LoadAll<CaptainData>();
+        captains = DataToolsGUI.LoadAll(captains);
         if (captains.Count == 0) return;
         previewCaptain = Mathf.Clamp(previewCaptain, 0, captains.Count - 1);
         previewCaptain = EditorGUILayout.Popup("Under Captain", previewCaptain, captains.Select(c => c.name).ToArray());
@@ -113,7 +113,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
                 "so no captain can like or dislike this class.", MessageType.Warning);
             return;
         }
-        captains ??= DataToolsGUI.LoadAll<CaptainData>();
+        captains = DataToolsGUI.LoadAll(captains);
         DataToolsGUI.AssetButtons("Liked By", captains.Where(c => c != null && c.likes != null && c.likes.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
         DataToolsGUI.AssetButtons("Disliked By", captains.Where(c => c != null && c.dislikes != null && c.dislikes.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
     }
