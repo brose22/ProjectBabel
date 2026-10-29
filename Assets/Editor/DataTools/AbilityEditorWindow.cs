@@ -160,7 +160,7 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
         {
             foreach (CaptainData captain in users)
                 if (GUILayout.Button(captain.name, EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
-                    EditorGUIUtility.PingObject(captain);
+                    CaptainEditorWindow.OpenFor(captain);
             GUILayout.FlexibleSpace();
         }
     }
