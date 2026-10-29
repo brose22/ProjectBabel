@@ -879,7 +879,7 @@ public static class GreyBoxMatchBuilder
     // data that has no sprite yet, so art set by hand is kept and a second run changes nothing.
     // Captains without their own art share a pale generic sprite tinted with the captain colour.
     // Portraits come from the Portraits subfolder under the same names, with no shared fallback, and
-    // ability icons from Icons/Abilities (ability_flarevolley).
+    // ability and element icons from Icons/Abilities (ability_flarevolley) and Icons/Elements (element_fire).
     static void ApplyArt()
     {
         foreach (CaptainData captain in LoadAll<CaptainData>(DataFolder + "/Captains"))
@@ -906,6 +906,8 @@ public static class GreyBoxMatchBuilder
         }
         foreach (AbilityData ability in LoadAll<AbilityData>(DataFolder + "/Abilities"))
             UseArt(ability, ability.icon, "Icons/Abilities/ability_", "its icon", s => ability.icon = s);
+        foreach (ElementData element in LoadAll<ElementData>(DataFolder + "/Elements"))
+            UseArt(element, element.icon, "Icons/Elements/element_", "its icon", s => element.icon = s);
     }
 
     static void UseArt(Object asset, Sprite current, string prefix, string what, Action<Sprite> assign)
