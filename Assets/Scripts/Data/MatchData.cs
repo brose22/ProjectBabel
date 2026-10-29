@@ -67,6 +67,12 @@ public class MatchData : ScriptableObject
     public float enemyHealthGrowthPerMatch = 0.12f;
     [Tooltip("Extra enemies per match into the run (0.08 = +8% per layer, rounded).")]
     public float enemyCountGrowthPerMatch = 0.08f;
+    [Tooltip("Elite cities play this many layers tougher than their place on the map.")]
+    public int eliteLayerBonus = 2;
+    [Tooltip("Elite cities multiply the Gold from kills by this.")]
+    public float eliteGoldMultiplier = 2f;
+    [Tooltip("Extra captains offered to recruit after winning an elite city.")]
+    public int eliteExtraRecruitChoices = 1;
     [Tooltip("The enemy base plays its waves this many times over (GDD: double the waves).")]
     public int baseWaveRepeats = 2;
 

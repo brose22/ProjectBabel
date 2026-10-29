@@ -125,6 +125,14 @@ public class WorldMapTests
     }
 
     [Test]
+    public void RunScaling_ElitesPlayFurtherOn()
+    {
+        Assert.That(RunScaling.DifficultyLayer(new MapNode { layer = 3 }, 2), Is.EqualTo(3));
+        Assert.That(RunScaling.DifficultyLayer(new MapNode { layer = 3, kind = NodeKind.Elite }, 2), Is.EqualTo(5));
+        Assert.That(RunScaling.DifficultyLayer(null, 2), Is.EqualTo(0));
+    }
+
+    [Test]
     public void Generate_WithoutOdds_MakesOnlyCities()
     {
         Assert.That(Map().nodes.All(n => n.kind == NodeKind.City));

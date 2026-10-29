@@ -283,7 +283,7 @@ public class RunScreens : MonoBehaviour
         bool runWon = won && run.Map != null && run.Map.IsComplete;
         UIKit.Label(panel, runWon ? "The enemy base has fallen" : won ? "Victory" : "Defeat", 30, TextAnchor.MiddleCenter);
         string summary = runWon ? $"Run won in {run.MatchesPlayed} matches"
-            : won ? $"Match {run.MatchesPlayed} won"
+            : won ? $"Match {run.MatchesPlayed} won{(match.IsEliteMatch ? " (elite city)" : "")}"
             : $"The run ends after {run.MatchesPlayed} match{(run.MatchesPlayed == 1 ? "" : "es")} won";
         UIKit.Label(panel, summary, 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         UIKit.Label(panel, $"Waves {match.WavesCleared}/{match.WaveCount}    Kills {match.Kills}    Leaks {match.Leaks}    Casualties {match.Casualties}",
