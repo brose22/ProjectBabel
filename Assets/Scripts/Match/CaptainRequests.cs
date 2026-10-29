@@ -8,8 +8,9 @@ public enum RequestAnswer { No, Some, Yes }
 
 // Captains ask for things during a wave (GDD: up to 2 per wave, often none). The player answers
 // No (0%), Some (50%) or Yes (100%): the answer grants that share of the request and of the
-// approval reward. Refusing always costs approval, scaled by request and captain; a request left
-// unanswered when the wave ends counts as a refusal. Added to the match at runtime.
+// approval reward. Refusing always costs approval, scaled by request and captain. Requests are
+// shown one at a time and the match pauses while one waits; one left unanswered when its
+// countdown runs out, or when the wave ends, counts as a refusal. Added to the match at runtime.
 public class CaptainRequests : MonoBehaviour
 {
     public class Request
@@ -18,6 +19,8 @@ public class CaptainRequests : MonoBehaviour
         public RequestKind Kind;
         // The soldier class asked for, for NewMix.
         public SoldierClassData WantedClass;
+        // Real time the request goes unanswered, set once it is shown.
+        public float Deadline = -1f;
 
         public string Text => Kind switch
         {
@@ -35,13 +38,18 @@ public class CaptainRequests : MonoBehaviour
     // Requests arrive between these many seconds into the wave.
     const float EarliestRequestSeconds = 3f;
     const float LatestRequestSeconds = 15f;
+    // Real-time seconds the player has to answer a shown request.
+    public const float ResponseSeconds = 10f;
 
+    // In arrival order; the first is the one shown.
     readonly List<Request> pending = new();
     readonly List<float> scheduled = new();
     MatchManager match;
     Relationships relationships;
 
     public IReadOnlyList<Request> Pending => pending;
+    public Request Active => pending.Count > 0 ? pending[0] : null;
+    public float SecondsLeft => Active == null ? 0f : Mathf.Max(0f, Active.Deadline - Time.unscaledTime);
 
     void Awake()
     {
@@ -81,8 +89,13 @@ public class CaptainRequests : MonoBehaviour
             Answer(request, RequestAnswer.No);
     }
 
-    void DropRequestsFor(Tower tower) => pending.RemoveAll(r => r.Tower == tower);
+    void DropRequestsFor(Tower tower)
+    {
+        pending.RemoveAll(r => r.Tower == tower);
+        ShowNext();
+    }
 
+    // Scheduled in game time, so no new request comes in while the match is paused.
     void Update()
     {
         for (int i = scheduled.Count - 1; i >= 0; i--)
@@ -91,6 +104,17 @@ public class CaptainRequests : MonoBehaviour
             scheduled.RemoveAt(i);
             TryMakeRequest();
         }
+
+        Request active = Active;
+        if (active != null && !match.IsOver && Time.unscaledTime >= active.Deadline) Answer(active, RequestAnswer.No);
+    }
+
+    // Starts the countdown on the request now shown, and holds the match while one waits.
+    void ShowNext()
+    {
+        Request active = Active;
+        if (active != null && active.Deadline < 0f) active.Deadline = Time.unscaledTime + ResponseSeconds;
+        match.SetRequestPause(active != null);
     }
 
     // Picks a random working captain without a pending request, and a random request it could
@@ -107,6 +131,7 @@ public class CaptainRequests : MonoBehaviour
         if (wanted != null) options.Add(new Request { Tower = tower, Kind = RequestKind.NewMix, WantedClass = wanted });
         if (tower.IsSpecialReady) options.Add(new Request { Tower = tower, Kind = RequestKind.UseSpecial });
         pending.Add(options[UnityEngine.Random.Range(0, options.Count)]);
+        ShowNext();
     }
 
     // A soldier class the captain likes that isn't in every slot yet, or null.
@@ -124,7 +149,9 @@ public class CaptainRequests : MonoBehaviour
 
     public void Answer(Request request, RequestAnswer answer)
     {
-        if (!pending.Remove(request) || request.Tower == null) return;
+        if (!pending.Remove(request)) return;
+        ShowNext();
+        if (request.Tower == null) return;
         Tower tower = request.Tower;
         if (answer == RequestAnswer.No)
         {

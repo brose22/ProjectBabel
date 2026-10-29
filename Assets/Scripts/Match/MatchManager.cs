@@ -42,6 +42,8 @@ public class MatchManager : MonoBehaviour
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
     public bool IsBetweenMatches => State is MatchState.Setup or MatchState.Map or MatchState.Stop;
     public bool IsHitStopped => hitStopRemaining > 0f;
+    // Held while a captain's request waits for an answer.
+    public bool IsRequestPaused { get; private set; }
 
     // Real-time seconds left on the current ability hit-stop.
     float hitStopRemaining;
@@ -96,7 +98,7 @@ public class MatchManager : MonoBehaviour
         if (CityLayout != null) grid.ApplyLayout(CityLayout);
         // A stop is saved with it picked, so quitting there (say after shopping) comes back to it.
         if (State is MatchState.Map or MatchState.Stop) RunSave.Save(run);
-        Time.timeScale = GameSpeed;
+        ApplyTimeScale();
 
         // Added at runtime so existing scenes need no rebuild.
         Camera cam = Camera.main;
@@ -243,8 +245,18 @@ public class MatchManager : MonoBehaviour
     public void ToggleGameSpeed()
     {
         GameSpeed = GameSpeed > 1f ? 1f : 2f;
-        if (!IsOver && !IsHitStopped) Time.timeScale = GameSpeed;
+        ApplyTimeScale();
     }
+
+    public void SetRequestPause(bool paused)
+    {
+        IsRequestPaused = paused;
+        ApplyTimeScale();
+    }
+
+    // Every freeze (match over, hit-stop, a waiting request) goes through here, so ending one
+    // never restarts the match while another still holds it.
+    void ApplyTimeScale() => Time.timeScale = TimeScaleRules.Resolve(IsOver, IsHitStopped, IsRequestPaused, GameSpeed);
 
     // Ends the run: back to the setup screen with fresh health and Gold. Approval and bond ranks
     // are untouched, since they carry between runs.
@@ -453,7 +465,7 @@ public class MatchManager : MonoBehaviour
         float seconds = ability.hitStopSeconds;
         if (seconds <= 0f || IsOver) return;
         hitStopRemaining = Mathf.Max(hitStopRemaining, seconds);
-        Time.timeScale = 0f;
+        ApplyTimeScale();
     }
 
     // Counts in unscaled time, since the freeze itself sets timeScale to 0.
@@ -461,7 +473,7 @@ public class MatchManager : MonoBehaviour
     {
         if (hitStopRemaining <= 0f) return;
         hitStopRemaining -= Time.unscaledDeltaTime;
-        if (hitStopRemaining <= 0f && !IsOver) Time.timeScale = GameSpeed;
+        if (hitStopRemaining <= 0f) ApplyTimeScale();
     }
 
     void Finish(MatchState result)
@@ -469,7 +481,7 @@ public class MatchManager : MonoBehaviour
         State = result;
         spawner.StopSpawning();
         Tower.ClearWaveBoosts();
-        Time.timeScale = 0f;
+        ApplyTimeScale();
         bool won = result == MatchState.Won;
         if (won) RunState.Current.CompleteMatch(data.intelDepth);
         // Walkouts are judged on this, so recruits are offered after it.

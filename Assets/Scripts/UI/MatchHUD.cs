@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -193,29 +192,41 @@ public class MatchHUD : MonoBehaviour
 
     // ---------- Requests ----------
 
+    // Only the request being asked is shown, with the time left to answer it; the match is paused
+    // until then. Any others wait their turn.
     void UpdateRequests()
     {
         if (Requests == null) return;
-        var key = new StringBuilder();
-        foreach (CaptainRequests.Request request in Requests.Pending) key.Append(request.GetHashCode()).Append('|');
-        if (key.ToString() == requestKey) return;
-        requestKey = key.ToString();
+        CaptainRequests.Request request = match.IsOver ? null : Requests.Active;
+        string key = request == null ? "" : request.GetHashCode().ToString();
+        if (key == requestKey)
+        {
+            UIKit.Refresh(requestRefreshers);
+            return;
+        }
+        requestKey = key;
 
         requestRefreshers.Clear();
         UIKit.Clear(requestList);
+        if (request == null || request.Tower == null) return;
         string accent = UIKit.Hex(UIKit.AccentColor);
-        foreach (CaptainRequests.Request request in Requests.Pending)
-        {
-            if (request.Tower == null) continue;
-            RectTransform card = UIKit.Box(requestList, "Request");
-            UIKit.Size(card, RequestWidth).minHeight = 32f;
-            UIKit.Layout<HorizontalLayoutGroup>(card, 5, 4);
-            UIKit.Size(UIKit.Label(card, $"<color={accent}>{request.Tower.Captain.displayName}</color>  \"{request.Text}\"", 12),
-                flexibleWidth: 1f);
-            AnswerButton(card, request, "No", RequestAnswer.No, NoColor, 40f);
-            AnswerButton(card, request, "Some", RequestAnswer.Some, UIKit.ButtonColor, 50f);
-            AnswerButton(card, request, "Yes", RequestAnswer.Yes, YesColor, 40f);
-        }
+        RectTransform card = UIKit.Box(requestList, "Request");
+        UIKit.Size(card, RequestWidth);
+        UIKit.Layout<VerticalLayoutGroup>(card, 5, 4);
+
+        RectTransform row = UIKit.Group(card, "Ask");
+        UIKit.Size(row, flexibleWidth: 1f).minHeight = 24f;
+        UIKit.Layout<HorizontalLayoutGroup>(row, 0, 4);
+        int waiting = Requests.Pending.Count - 1;
+        string more = waiting > 0 ? $"  <color={accent}>(+{waiting} more)</color>" : "";
+        UIKit.Size(UIKit.Label(row, $"<color={accent}>{request.Tower.Captain.displayName}</color>  \"{request.Text}\"{more}", 12),
+            flexibleWidth: 1f);
+        AnswerButton(row, request, "No", RequestAnswer.No, NoColor, 40f);
+        AnswerButton(row, request, "Some", RequestAnswer.Some, UIKit.ButtonColor, 50f);
+        AnswerButton(row, request, "Yes", RequestAnswer.Yes, YesColor, 40f);
+
+        UIKit.LiveBar(card, () => Requests.SecondsLeft / CaptainRequests.ResponseSeconds,
+            () => $"Paused - {Mathf.CeilToInt(Requests.SecondsLeft)}s to answer", UIKit.ReserveBarColor, requestRefreshers, 12f);
     }
 
     void AnswerButton(Transform card, CaptainRequests.Request request, string text, RequestAnswer answer, Color color, float width)
