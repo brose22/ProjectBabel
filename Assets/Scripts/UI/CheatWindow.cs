@@ -34,7 +34,7 @@ public class CheatWindow : MonoBehaviour
     }
 
     void AddCheat(string label, Action apply, Func<bool> available) =>
-        UIKit.LiveButton(panel, () => label, apply, refreshers, available, height: 26f);
+        UIKit.LiveButton(panel, () => label, apply, refreshers, available, width: 200f, height: 26f);
 
     void Update()
     {
