@@ -16,6 +16,8 @@ MonoBehaviour:
   startingGold: 300
   maxTowers: 5
   partySize: 3
+  maxPartySize: 8
+  recruitChoices: 3
   roster:
   - {fileID: 11400000, guid: 407d0613acf91584a806b32bf9f63fd7, type: 2}
   - {fileID: 11400000, guid: f4ac709d2c6e49f4593eadcbdecbac5f, type: 2}
@@ -41,6 +43,18 @@ MonoBehaviour:
   soldiersPerTower: 2
   restoreBaseCost: 15
   relocationCost: 25
+  layouts:
+  - {fileID: 11400000, guid: ce66a11181702f047a1f2b6e83f66de6, type: 2}
+  - {fileID: 11400000, guid: d2ea2d7acb90f6945bd4d121366debfb, type: 2}
+  - {fileID: 11400000, guid: 23ee12d6b74ad7442aa6d896f0c96600, type: 2}
+  - {fileID: 11400000, guid: 6fdae8f84929b5e45ac1e5020bfcabe6, type: 2}
+  matchesPerRun: 7
+  minCitiesPerLayer: 2
+  maxCitiesPerLayer: 3
+  intelDepth: 2
+  enemyHealthGrowthPerMatch: 0.12
+  enemyCountGrowthPerMatch: 0.08
+  baseWaveRepeats: 2
   supportXpCapPerWave: 60
   timeBetweenWaves: 15
   waves:
