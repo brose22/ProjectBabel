@@ -52,6 +52,7 @@ public class RunScreens : MonoBehaviour
             if (wanted == MatchState.Setup) BuildSetup();
             else if (recruiting) BuildRecruit();
             else if (wanted == MatchState.Map) BuildMap();
+            else if (wanted == MatchState.Stop) BuildStop();
             else if (match.IsOver) BuildResults();
         }
         UIKit.Refresh(refreshers);
@@ -265,6 +266,56 @@ public class RunScreens : MonoBehaviour
         UIKit.Place((RectTransform)city.transform, new Vector2(0.5f, 0.5f), Vector2.zero, CitySize);
         ((RectTransform)city.transform).pivot = new Vector2(0.5f, 0.5f);
         ((RectTransform)city.transform).anchoredPosition = CityPosition(map, node);
+    }
+
+    // ---------- Stops ----------
+
+    void BuildStop()
+    {
+        RectTransform root = NewScreen("Stop");
+        RectTransform panel = UIKit.Panel(root, "Panel", UIKit.PanelColor);
+        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 0f));
+        VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(panel, 16, 8, fitContent: true);
+        layout.childAlignment = TextAnchor.UpperCenter;
+
+        switch (match.City.kind)
+        {
+            case NodeKind.Rest: BuildRest(panel); break;
+            case NodeKind.Shop: BuildShop(panel); break;
+            default: UIKit.Button(panel, "Move on", match.LeaveStop, 220f, 32f); break;
+        }
+    }
+
+    // Title and description, then the run's health and Gold, kept current while shopping.
+    void StopHeader(RectTransform panel, string title, string description)
+    {
+        RunState run = RunState.Current;
+        UIKit.Label(panel, title, 26, TextAnchor.MiddleCenter);
+        UIKit.Label(panel, description, 13, TextAnchor.MiddleCenter);
+        UIKit.LiveLabel(panel, () => $"Health {run.Health}/{run.MaxHealth}    Gold {run.Gold}", refreshers, 13, TextAnchor.MiddleCenter,
+            UIKit.MutedTextColor);
+    }
+
+    void BuildRest(RectTransform panel)
+    {
+        StopHeader(panel, "REST", "The army makes camp and tends its wounds.");
+        RunState run = RunState.Current;
+        int amount = Mathf.Min(match.RestAmount, run.MaxHealth - run.Health);
+        UIKit.Button(panel, amount > 0 ? $"Rest (+{amount} health)" : "Rest (already at full health)", match.Rest, 260f, 32f);
+    }
+
+    void BuildShop(RectTransform panel)
+    {
+        RunState run = RunState.Current;
+        StopHeader(panel, "SHOP", $"Buy a gift for a captain: {match.Data.giftCost} Gold for +{match.Data.giftApproval:0} approval.");
+        foreach (CaptainData captain in run.Party)
+        {
+            if (run.HasDeparted(captain)) continue;
+            UIKit.LiveButton(panel,
+                () => $"{captain.displayName}   Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {ApprovalStore.ApprovalOf(captain):0}",
+                () => match.BuyGift(captain), refreshers, () => match.CanBuyGift(captain), width: 400f, height: 26f);
+        }
+        UIKit.Button(panel, "Leave the shop", match.LeaveStop, 220f, 32f);
     }
 
     // ---------- Results ----------

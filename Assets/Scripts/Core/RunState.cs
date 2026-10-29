@@ -111,6 +111,10 @@ public class RunState
         Map?.ClearTarget(intelDepth);
     }
 
+    // A rest, shop or event left behind: it counts as visited and its intel reveals the roads
+    // ahead, but it isn't a match.
+    public void CompleteStop(int intelDepth) => Map?.ClearTarget(intelDepth);
+
     public bool HasDeparted(CaptainData captain) => departed.Contains(captain);
 
     public void Depart(CaptainData captain) => departed.Add(captain);
