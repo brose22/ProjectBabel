@@ -365,6 +365,51 @@ public static class UIKit
         return button;
     }
 
+    // A vertically scrolling list with a scrollbar on the right. Size the returned ScrollRect
+    // like any layout child, and add rows to its content, which grows to fit them.
+    public static ScrollRect ScrollList(Transform parent, string name, float spacing)
+    {
+        const float barWidth = 10f;
+        RectTransform root = Group(parent, name);
+        var scroll = root.gameObject.AddComponent<ScrollRect>();
+
+        RectTransform viewport = Stretch(Panel(root, "Viewport", Color.clear));
+        viewport.offsetMax = new Vector2(-barWidth - Gap, 0f);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        RectTransform content = Group(viewport, "Content");
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = Vector2.one;
+        content.pivot = new Vector2(0.5f, 1f);
+        content.sizeDelta = Vector2.zero;
+        Layout<VerticalLayoutGroup>(content, 0, spacing, fitContent: true);
+
+        RectTransform track = Box(root, "Scrollbar", InsetColor);
+        track.anchorMin = new Vector2(1f, 0f);
+        track.anchorMax = Vector2.one;
+        track.pivot = new Vector2(1f, 0.5f);
+        track.sizeDelta = new Vector2(barWidth, 0f);
+        RectTransform slidingArea = Stretch(Group(track, "Sliding Area"));
+        RectTransform handle = Stretch(Panel(slidingArea, "Handle", MutedTextColor));
+        UseSprite(handle.GetComponent<Image>(), ButtonSprite);
+        var bar = track.gameObject.AddComponent<Scrollbar>();
+        bar.direction = Scrollbar.Direction.BottomToTop;
+        bar.handleRect = handle;
+        bar.targetGraphic = handle.GetComponent<Image>();
+        var colors = bar.colors;
+        colors.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f);
+        bar.colors = colors;
+
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        // The Input System UI module reports about 6 per wheel notch; this makes a notch a row or so.
+        scroll.scrollSensitivity = 8f;
+        scroll.verticalScrollbar = bar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        return scroll;
+    }
+
     // Detaches before destroying so layouts stop counting the old children this frame.
     public static void Clear(Transform parent)
     {
