@@ -53,6 +53,7 @@ The run is saved to `run.json` in the persistent data path whenever you're on th
 2. Press **Play**. The game starts on the main menu (`Assets/Scenes/MainMenu.unity`) whichever scene is open, while **Babel → Play From Main Menu** is ticked; untick it to play the open scene directly, such as `Assets/Scenes/Match.unity`.
 3. To regenerate the grey-box scene, use the menu **Babel → Build Grey-Box Match Scene**. Existing data assets and prefabs are kept, so your tuning survives a rebuild. **Babel → Build Main Menu Scene** regenerates the menu scene and keeps it first in Build Settings.
 4. **Babel → Build Windows Player** builds a standalone player into `Builds/Windows`, starting on the main menu.
+5. **Babel → Build Android APK (Fire Tablet)** builds a sideloadable APK into `Builds/Android` for an Amazon Fire tablet (needs Android Build Support from Unity Hub). It sets the Android player to IL2CPP, 32- and 64-bit ARM and landscape only. Copy the APK to the tablet with *Apps from Unknown Sources* allowed, or run `adb install -r Builds/Android/ProjectBabel.apk`.
 
 ### Main menu
 
