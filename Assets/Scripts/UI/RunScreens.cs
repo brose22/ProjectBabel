@@ -19,8 +19,9 @@ public class RunScreens : MonoBehaviour
     const float SetupWidth = 880f;
     const float SetupBodyHeight = 420f;
     const float PartyWidth = 300f;
-    const float SlotHeight = 96f;
-    const float RowHeight = 58f;
+    // Party slots and roster cards: a party card's height, portrait and all.
+    const float SlotHeight = 84f;
+    const int RosterColumns = 2;
     static readonly Vector2 MapArea = new(860f, 330f);
     static readonly Vector2 CitySize = new(104f, 34f);
     // World map party drawer.
@@ -140,24 +141,18 @@ public class RunScreens : MonoBehaviour
             color: UIKit.AccentColor);
         header.fontStyle = FontStyle.Bold;
 
-        var slots = new List<Button>();
-        for (int i = 0; i < PartySize; i++)
-        {
-            int slot = i;
-            Button button = UIKit.Button(party, "", () => { if (slot < picked.Count) picked.RemoveAt(slot); });
-            UIKit.Size(button, height: SlotHeight, flexibleWidth: 1f);
-            // Added once: a GameObject takes only one layout group, and slots are refilled often.
-            UIKit.Layout<VerticalLayoutGroup>(button, 8, 1).padding.top = 6;
-            slots.Add(button);
-        }
         // Slots only change on a pick, so they rebuild then rather than refreshing every frame.
+        RectTransform slots = UIKit.Group(party, "Slots");
+        UIKit.Layout<VerticalLayoutGroup>(slots, 0, 6);
+        UIKit.Size(slots, flexibleWidth: 1f);
         string shown = null;
         refreshers.Add(() =>
         {
             string key = string.Join("|", picked);
             if (key == shown) return;
             shown = key;
-            for (int i = 0; i < slots.Count; i++) FillSlot(slots[i], i < picked.Count ? picked[i] : null, i);
+            UIKit.Clear(slots);
+            for (int i = 0; i < PartySize; i++) BuildSlot(slots, i < picked.Count ? picked[i] : null, i);
         });
 
         UIKit.Size(UIKit.Group(party, "Spacer"), flexibleWidth: 1f).flexibleHeight = 1f;
@@ -168,30 +163,29 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(UIKit.Button(party, "Main menu", match.ReturnToMenu), height: 24f, flexibleWidth: 1f);
     }
 
-    // An empty slot is an inset placeholder; a filled one shows the captain like a recruit card.
-    void FillSlot(Button slot, CaptainData captain, int index)
+    // An empty slot is an inset placeholder; a filled one is the captain's party card, which
+    // removes them when clicked.
+    void BuildSlot(Transform slots, CaptainData captain, int index)
     {
-        UIKit.Clear(slot.transform);
-        slot.interactable = captain != null;
-        var image = slot.GetComponent<Image>();
-        ColorBlock colors = slot.colors;
-        // An empty slot can't be clicked, but shouldn't look broken either.
-        colors.disabledColor = Color.white;
-        slot.colors = colors;
         if (captain == null)
         {
-            image.color = UIKit.InsetColor;
-            Text empty = UIKit.Label(slot.transform, $"Slot {index + 1}\n<size=10>Pick a captain from the list</size>", 13,
+            RectTransform empty = UIKit.Box(slots, $"Slot {index + 1}", UIKit.InsetColor, blocksClicks: false);
+            // Not flexible, or the label's flexible height would let the slots take the spacer's room.
+            UIKit.Size(empty, height: SlotHeight, flexibleWidth: 1f).flexibleHeight = 0f;
+            UIKit.Layout<VerticalLayoutGroup>(empty, 6, 0);
+            Text label = UIKit.Label(empty, $"Slot {index + 1}\n<size=10>Pick a captain from the list</size>", 13,
                 TextAnchor.MiddleCenter, UIKit.DisabledTextColor);
-            UIKit.Size(empty, flexibleWidth: 1f).flexibleHeight = 1f;
+            UIKit.Size(label, flexibleWidth: 1f).flexibleHeight = 1f;
             return;
         }
-        image.color = PickedCardColor;
-        CaptainDetails(slot.transform, captain, "CLICK TO REMOVE", out Text name, out Text tag);
+        RectTransform card = UIKit.Box(slots, captain.displayName, PickedCardColor, blocksClicks: false);
+        UIKit.Size(card, height: SlotHeight, flexibleWidth: 1f);
+        UIKit.Clickable(card, () => picked.Remove(captain));
+        PartyCardBody(card, captain, "REMOVE", UIKit.MutedTextColor, out Text name, out _);
         name.color = UIKit.AccentColor;
-        tag.color = UIKit.MutedTextColor;
     }
 
+    // The roster as party cards, two to a row.
     void BuildRosterList(Transform body)
     {
         RectTransform panel = UIKit.Box(body, "Roster");
@@ -203,40 +197,34 @@ public class RunScreens : MonoBehaviour
 
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        foreach (CaptainData captain in Available)
-            BuildRosterRow(list.content, captain);
+        List<CaptainData> available = Available;
+        for (int i = 0; i < available.Count; i += RosterColumns)
+        {
+            RectTransform row = UIKit.Group(list.content, "Row");
+            UIKit.Layout<HorizontalLayoutGroup>(row, 0, UIKit.Gap);
+            UIKit.Size(row, flexibleWidth: 1f);
+            for (int j = i; j < i + RosterColumns; j++)
+            {
+                // A blank cell keeps a lone last card at the same width as the rest.
+                if (j < available.Count) BuildRosterCard(row, available[j]);
+                else UIKit.Size(UIKit.Group(row, "Blank"), 0f, flexibleWidth: 1f);
+            }
+        }
     }
 
-    // A compact row: name, element and role, bond; then the special; then likes and dislikes.
-    // Rows of captains who can't join (the party is full) fade out.
-    void BuildRosterRow(Transform list, CaptainData captain)
+    // A party card that adds or removes the captain. Picked cards get a gold ring, name and tag;
+    // cards of captains who can't join (the party is full) fade out.
+    void BuildRosterCard(Transform row, CaptainData captain)
     {
-        Button row = UIKit.Button(list, "", () => TogglePick(captain));
-        UIKit.Clear(row.transform);
-        UIKit.Size(row, height: RowHeight, flexibleWidth: 1f);
-        UIKit.Layout<VerticalLayoutGroup>(row, 8, 0).padding.top = 5;
-        var image = row.GetComponent<Image>();
-        var fade = row.gameObject.AddComponent<CanvasGroup>();
+        RectTransform card = UIKit.Box(row, captain.displayName, CardColor, blocksClicks: false);
+        // No preferred width, so the row splits evenly however long each name is.
+        UIKit.Size(card, 0f, SlotHeight, 1f);
+        UIKit.Clickable(card, () => TogglePick(captain));
+        var image = card.GetComponent<Image>();
+        var fade = card.gameObject.AddComponent<CanvasGroup>();
+        PartyCardBody(card, captain, "IN PARTY", UIKit.AccentColor, out Text name, out Text tag);
 
-        string muted = UIKit.Hex(UIKit.MutedTextColor);
-        Transform title = UIKit.Group(row.transform, "Title");
-        UIKit.Layout<HorizontalLayoutGroup>(title, 0, 8);
-        Text name = UIKit.Label(title, captain.displayName, 14);
-        name.fontStyle = FontStyle.Bold;
-        UIKit.Size(name, 84f);
-        UIKit.Size(UIKit.Label(title, $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{captain.element}</color> {captain.role}", 12),
-            flexibleWidth: 1f);
-        Text tag = UIKit.Label(title, "IN PARTY", 9, TextAnchor.MiddleRight, UIKit.AccentColor);
-        tag.fontStyle = FontStyle.Bold;
-        UIKit.Label(title, $"<color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))} " +
-                           $"<color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>", 12, TextAnchor.MiddleRight);
-
-        UIKit.Label(row.transform, captain.ability != null ? $"<color={muted}>Special</color>  {captain.ability.displayName}" : "No special", 12);
-        UIKit.Label(row.transform, $"<color={UIKit.Hex(UIKit.GoodColor)}>Likes</color>  {string.Join(", ", captain.likes)}      " +
-                                   $"<color={UIKit.Hex(UIKit.BadColor)}>Dislikes</color>  {string.Join(", ", captain.dislikes)}", 11,
-            color: UIKit.MutedTextColor).horizontalOverflow = HorizontalWrapMode.Overflow;
-
-        Image ring = UIKit.Outline(row.transform, UIKit.AccentColor);
+        Image ring = UIKit.Outline(card, UIKit.AccentColor);
         ring.rectTransform.offsetMin = new Vector2(2f, 2f);
         ring.rectTransform.offsetMax = new Vector2(-2f, -2f);
         refreshers.Add(() =>
@@ -439,15 +427,23 @@ public class RunScreens : MonoBehaviour
 
     // A captain in the party drawer: the usual details, tagged with their level, or faded with a
     // note when they've walked out.
-    // Portrait on the left; name and level, element and role icons, bond, and special on the right.
     void PartyCard(Transform list, RunState run, CaptainData captain)
     {
         bool departed = run.HasDeparted(captain);
         RectTransform card = UIKit.Box(list, captain.displayName, departed ? UIKit.InsetColor : CardColor, blocksClicks: false);
-        HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(card, 6, 8);
-        layout.childAlignment = TextAnchor.UpperLeft;
         UIKit.Size(card, flexibleWidth: 1f);
         UIKit.Clickable(card, () => ShowCaptainDetails(run, captain));
+        int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
+        PartyCardBody(card, captain, departed ? "WALKED OUT" : $"LV {level}", departed ? UIKit.BadColor : UIKit.AccentColor, out _, out _);
+        if (departed) card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
+    }
+
+    // The party card's face, shared with run setup: portrait on the left; name and tag, element
+    // and role icons, bond, and special on the right.
+    void PartyCardBody(RectTransform card, CaptainData captain, string tagText, Color tagColor, out Text name, out Text tag)
+    {
+        HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(card, 6, 8);
+        layout.childAlignment = TextAnchor.UpperLeft;
 
         // The 32 px portraits at 2x, inset like a picture frame.
         RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
@@ -460,12 +456,10 @@ public class RunScreens : MonoBehaviour
 
         Transform title = UIKit.Group(info, "Title");
         UIKit.Layout<HorizontalLayoutGroup>(title, 0, 4);
-        Text name = UIKit.Label(title, captain.displayName, 15);
+        name = UIKit.Label(title, captain.displayName, 15);
         name.fontStyle = FontStyle.Bold;
         UIKit.Size(name, flexibleWidth: 1f);
-        int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
-        Text tag = UIKit.Label(title, departed ? "WALKED OUT" : $"LV {level}", 9, TextAnchor.MiddleRight,
-            departed ? UIKit.BadColor : UIKit.AccentColor);
+        tag = UIKit.Label(title, tagText, 9, TextAnchor.MiddleRight, tagColor);
         tag.fontStyle = FontStyle.Bold;
 
         ElementData element = match.Data.ElementInfo(captain.element);
@@ -484,8 +478,6 @@ public class RunScreens : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(special, 0, 4);
         UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, IconSize);
         UIKit.Label(special, captain.ability != null ? captain.ability.displayName : "No special", 12);
-
-        if (departed) card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
     }
 
     // A window over the map with everything about one captain. A click beside it, or Close,
