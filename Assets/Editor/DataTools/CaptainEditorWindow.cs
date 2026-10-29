@@ -57,7 +57,6 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
             }
             using (new EditorGUILayout.VerticalScope())
             {
-                DataToolsGUI.Section("Identity");
                 DataToolsGUI.Field(so, nameof(CaptainData.displayName));
                 DataToolsGUI.Field(so, nameof(CaptainData.element));
                 DataToolsGUI.Field(so, nameof(CaptainData.role));
@@ -67,7 +66,6 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
             }
         }
 
-        DataToolsGUI.Section("Stats");
         DataToolsGUI.Field(so, nameof(CaptainData.power));
         DataToolsGUI.Field(so, nameof(CaptainData.range));
         DataToolsGUI.Field(so, nameof(CaptainData.speed));
@@ -174,7 +172,6 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
 
     void DrawRelationship(SerializedObject so)
     {
-        DataToolsGUI.Section("Relationship");
         DataToolsGUI.Field(so, nameof(CaptainData.refusalTemper));
         SerializedProperty likes = so.FindProperty(nameof(CaptainData.likes));
         SerializedProperty dislikes = so.FindProperty(nameof(CaptainData.dislikes));
