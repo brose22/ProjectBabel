@@ -40,10 +40,14 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
         captain.dislikes = new CaptainTag[0];
     }
 
-    protected override void DrawIcon(Rect rect, CaptainData captain) =>
-        DataToolsGUI.DrawSprite(rect, captain.sprite, Tint(captain));
+    // Sprites show untinted inside a border in the captain colour; art-less captains are a square in it.
+    protected override void DrawIcon(Rect rect, CaptainData captain)
+    {
+        DataToolsGUI.Frame(rect, captain.color, 1f);
+        DataToolsGUI.DrawSprite(new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f), captain.sprite, Fill(captain));
+    }
 
-    static Color Tint(CaptainData captain) => captain.sprite == null || captain.tintSprite ? captain.color : Color.white;
+    static Color Fill(CaptainData captain) => captain.sprite == null ? captain.color : Color.white;
 
     protected override void DrawEditor(SerializedObject so)
     {
@@ -52,9 +56,9 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
         {
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(PreviewSize)))
             {
-                DataToolsGUI.SpritePreview(captain.sprite, Tint(captain), PreviewSize);
+                DataToolsGUI.SpritePreview(captain.sprite, Fill(captain), PreviewSize, border: captain.color);
                 DataToolsGUI.ChipLayout(captain.element.ToString(), DataToolsGUI.ElementColor(captain.element), PreviewSize);
-                DataToolsGUI.SpritePreview(captain.portrait, Color.white, PreviewSize);
+                DataToolsGUI.SpritePreview(captain.portrait, Color.white, PreviewSize, border: captain.color);
                 GUILayout.Label("portrait", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(PreviewSize));
             }
             using (new EditorGUILayout.VerticalScope())
