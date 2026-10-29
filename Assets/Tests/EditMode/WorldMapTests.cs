@@ -123,4 +123,51 @@ public class WorldMapTests
         Assert.That(RunScaling.EnemyCount(4, 5, 0.1f), Is.EqualTo(6));
         Assert.That(RunScaling.EnemyCount(1, 1, 0.1f), Is.EqualTo(1));
     }
+
+    [Test]
+    public void Generate_WithoutOdds_MakesOnlyCities()
+    {
+        Assert.That(Map().nodes.All(n => n.kind == NodeKind.City));
+    }
+
+    [TestCase(3)]
+    [TestCase(8)]
+    [TestCase(21)]
+    public void Generate_KeepsTheFirstLastAndPreBaseLayersPlain(int seed)
+    {
+        WorldMap map = WorldMap.Generate(seed, 9, 4, 2, 3, 2, new NodeOdds(0.25f, 0.25f, 0.25f, 0.25f));
+        foreach (MapNode node in map.nodes)
+            if (node.layer == 0 || node.layer >= map.layerCount - 2)
+                Assert.That(node.kind, Is.EqualTo(NodeKind.City), $"city {node.id} on layer {node.layer}");
+        Assert.That(map.nodes.Where(n => n.layer > 0 && n.layer < map.layerCount - 2).All(n => n.kind != NodeKind.City));
+    }
+
+    [Test]
+    public void Generate_KindsAreTheSameForTheSameSeed()
+    {
+        var odds = new NodeOdds(0.2f, 0.2f, 0.2f, 0.2f);
+        WorldMap a = WorldMap.Generate(4, 9, 4, 2, 3, 2, odds), b = WorldMap.Generate(4, 9, 4, 2, 3, 2, odds);
+        Assert.That(a.nodes.Select(n => (n.kind, n.seed)), Is.EqualTo(b.nodes.Select(n => (n.kind, n.seed))));
+    }
+
+    [Test]
+    public void NodeOdds_PickFollowsTheThresholds()
+    {
+        var odds = new NodeOdds(0.1f, 0.2f, 0.3f, 0.1f);
+        Assert.That(odds.Pick(0.05), Is.EqualTo(NodeKind.Elite));
+        Assert.That(odds.Pick(0.15), Is.EqualTo(NodeKind.Rest));
+        Assert.That(odds.Pick(0.45), Is.EqualTo(NodeKind.Shop));
+        Assert.That(odds.Pick(0.65), Is.EqualTo(NodeKind.Event));
+        Assert.That(odds.Pick(0.75), Is.EqualTo(NodeKind.City));
+    }
+
+    [Test]
+    public void MapNode_OnlyCitiesAndElitesAreMatches()
+    {
+        Assert.That(new MapNode { kind = NodeKind.City }.IsMatch);
+        Assert.That(new MapNode { kind = NodeKind.Elite }.IsMatch);
+        Assert.That(new MapNode { kind = NodeKind.Rest }.IsMatch, Is.False);
+        Assert.That(new MapNode { kind = NodeKind.Shop }.IsMatch, Is.False);
+        Assert.That(new MapNode { kind = NodeKind.Event }.IsMatch, Is.False);
+    }
 }

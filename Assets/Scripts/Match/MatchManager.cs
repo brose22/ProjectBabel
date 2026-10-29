@@ -248,7 +248,7 @@ public class MatchManager : MonoBehaviour
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
         RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
-            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth));
+            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds));
         nextCaptainIndex = 0;
         State = MatchState.Map;
         RunSave.Save(RunState.Current);

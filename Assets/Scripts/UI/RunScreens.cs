@@ -16,6 +16,8 @@ public class RunScreens : MonoBehaviour
     static readonly Color RoadColor = new(0.55f, 0.45f, 0.3f, 1f);
     static readonly Color ClearedCityColor = new(0.16f, 0.3f, 0.2f, 1f);
     static readonly Color BaseColor = new(0.55f, 0.12f, 0.16f, 1f);
+    static readonly Color EliteColor = new(0.45f, 0.2f, 0.38f, 1f);
+    static readonly Color StopColor = new(0.18f, 0.3f, 0.42f, 1f);
 
     MatchManager match;
     Relationships relationships;
@@ -187,7 +189,7 @@ public class RunScreens : MonoBehaviour
 
         UIKit.Label(column, "WORLD MAP", 24, TextAnchor.MiddleCenter);
         UIKit.Label(column, $"Match {run.MatchesPlayed + 1}    Health {run.Health}/{run.MaxHealth}    Gold {run.Gold}    " +
-                            "Pick the next city. Every road leads to the enemy base; winning a city reveals the roads beyond it.",
+                            "Pick the next stop. Every road leads to the enemy base; each stop reveals the roads beyond it.",
             12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
         RectTransform area = UIKit.Panel(column, "Map", UIKit.PanelColor, blocksClicks: false);
@@ -235,7 +237,15 @@ public class RunScreens : MonoBehaviour
     void BuildCity(RectTransform area, WorldMap map, MapNode node, bool choosable)
     {
         bool isBase = node.id == map.BaseId;
-        string name = isBase ? "Enemy base" : match.Data.layouts.Count > 0 ? match.Data.layouts[node.layout % match.Data.layouts.Count].displayName : "City";
+        string cityName = match.Data.layouts.Count > 0 ? match.Data.layouts[node.layout % match.Data.layouts.Count].displayName : "City";
+        string name = isBase ? "Enemy base" : node.kind switch
+        {
+            NodeKind.Elite => $"Elite: {cityName}",
+            NodeKind.Rest => "Rest",
+            NodeKind.Shop => "Shop",
+            NodeKind.Event => "Event ?",
+            _ => cityName,
+        };
         if (node.id == map.current) name += " (here)";
         else if (node.cleared) name += " (won)";
 
@@ -243,7 +253,8 @@ public class RunScreens : MonoBehaviour
         city.GetComponentInChildren<Text>().fontSize = 11;
         city.interactable = choosable;
         var image = city.GetComponent<Image>();
-        image.color = choosable ? UIKit.SelectedButtonColor : node.cleared ? ClearedCityColor : isBase ? BaseColor : UIKit.ButtonColor;
+        image.color = choosable ? UIKit.SelectedButtonColor : node.cleared ? ClearedCityColor : isBase ? BaseColor
+            : node.kind == NodeKind.Elite ? EliteColor : node.IsMatch ? UIKit.ButtonColor : StopColor;
         // Cities that can't be picked yet stay readable rather than greyed out by the button.
         if (!choosable)
         {

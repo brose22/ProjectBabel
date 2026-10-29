@@ -1,6 +1,39 @@
 using System;
 using System.Collections.Generic;
 
+// What a world map node holds. Cities and elite cities are matches; rests, shops and events are
+// stops that take the place of a match in their layer.
+public enum NodeKind { City, Elite, Rest, Shop, Event }
+
+// The chance of each special node kind on layers that allow them; the rest are plain cities.
+[Serializable]
+public struct NodeOdds
+{
+    public float elite;
+    public float rest;
+    public float shop;
+    public float @event;
+
+    public NodeOdds(float elite, float rest, float shop, float @event)
+    {
+        this.elite = elite;
+        this.rest = rest;
+        this.shop = shop;
+        this.@event = @event;
+    }
+
+    // Picks a kind from a roll in [0, 1).
+    public NodeKind Pick(double roll)
+    {
+        float threshold = 0f;
+        if (roll < (threshold += Math.Max(0f, elite))) return NodeKind.Elite;
+        if (roll < (threshold += Math.Max(0f, rest))) return NodeKind.Rest;
+        if (roll < (threshold += Math.Max(0f, shop))) return NodeKind.Shop;
+        if (roll < (threshold += Math.Max(0f, @event))) return NodeKind.Event;
+        return NodeKind.City;
+    }
+}
+
 // One city on the world map. Layer 0 is the first match; the last layer holds only the enemy base.
 [Serializable]
 public class MapNode
@@ -11,10 +44,15 @@ public class MapNode
     public int lane;
     // Index of the city layout template this match is played on.
     public int layout;
+    public NodeKind kind;
+    // A per-node random number, e.g. to pick which event an event node holds.
+    public int seed;
     public List<int> next = new();
     // Revealed by intel; hidden cities and their roads aren't shown.
     public bool revealed;
     public bool cleared;
+
+    public bool IsMatch => kind is NodeKind.City or NodeKind.Elite;
 }
 
 // A run's overworld: a branching graph of cities, layer by layer, where every branch leads to the
@@ -99,8 +137,11 @@ public class WorldMap
     // Builds a map of matchCount layers (the last is the base). Each earlier layer has minLanes to
     // maxLanes cities. Roads between neighbouring layers never cross, and every city has a road in
     // (past the first layer) and a road out (before the base), so every branch reaches the base.
-    // The first layer, intel from the starting position and the base are revealed.
-    public static WorldMap Generate(int seed, int matchCount, int layoutCount, int minLanes, int maxLanes, int intelDepth)
+    // The first layer, intel from the starting position and the base are revealed. Cities get
+    // special kinds by odds, except in the first layer, the layer before the base and the base,
+    // which stay plain cities.
+    public static WorldMap Generate(int seed, int matchCount, int layoutCount, int minLanes, int maxLanes, int intelDepth,
+        NodeOdds odds = default)
     {
         var random = new Random(seed);
         matchCount = Math.Max(2, matchCount);
@@ -132,6 +173,12 @@ public class WorldMap
                 foreach (int id in node.next)
                     if (map.nodes[id].layout == node.layout && map.nodes[id].layer < matchCount - 1)
                         map.nodes[id].layout = (node.layout + 1 + random.Next(layoutCount - 1)) % layoutCount;
+
+        foreach (MapNode node in map.nodes)
+        {
+            node.seed = random.Next();
+            if (node.layer > 0 && node.layer < matchCount - 2) node.kind = odds.Pick(random.NextDouble());
+        }
 
         foreach (MapNode node in layers[0]) map.RevealFrom(node.id, Math.Max(0, intelDepth - 1));
         map.Base.revealed = true;
