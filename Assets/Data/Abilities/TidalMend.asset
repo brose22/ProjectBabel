@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: TidalMend
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Tidal Mend
-  description: Heals tower and soldiers
-  chargeSeconds: 18
+  description: Heals all towers and soldiers 35%
+  chargeSeconds: 20
   shape: 4
   rangeMultiplier: 1
   radius: 0
@@ -22,10 +22,9 @@ MonoBehaviour:
   knockbackDistance: 0
   zoneDuration: 4
   statusChance: 0
-  healFraction: 0.5
+  healFraction: 0.35
   buffEffect: 0
   buffAmount: 0
-  buffSeconds: 0
   hitStopSeconds: 0.15
   cameraShake: 0.05
   cameraShakeSeconds: 0.25

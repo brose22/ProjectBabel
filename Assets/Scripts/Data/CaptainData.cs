@@ -41,14 +41,6 @@ public class CaptainData : ScriptableObject
     public float specialChargeRate = 1f;
     public int level = 1;
 
-    [Header("Aura (Buffer and Healer captains)")]
-    [Tooltip("Applied to this tower's own soldiers while a wave is running. None for Attackers.")]
-    public SupportEffect aura;
-    [Tooltip("Heal: soldier health per second. ActSpeed / Damage / Defense: the boost at wave start (0.5 = 50%).")]
-    public float auraStrength;
-    [Tooltip("Stat auras fade to nothing over this many seconds after the wave starts. Heal never fades.")]
-    public float auraFadeSeconds = 60f;
-
     [Header("Relationship")]
     [Tooltip("Scales the approval lost when the player refuses this captain's requests (GDD: varies by captain).")]
     public float refusalTemper = 1f;

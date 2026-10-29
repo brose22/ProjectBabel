@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: MendTheLand
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Mend the Land
-  description: Area heal plus short shield
-  chargeSeconds: 22
+  description: Heals all 25%, +15% defense this wave
+  chargeSeconds: 24
   shape: 4
   rangeMultiplier: 1
   radius: 2.5
@@ -22,10 +22,9 @@ MonoBehaviour:
   knockbackDistance: 0
   zoneDuration: 4
   statusChance: 0
-  healFraction: 0.3
+  healFraction: 0.25
   buffEffect: 4
-  buffAmount: 0.6
-  buffSeconds: 3
+  buffAmount: 0.15
   hitStopSeconds: 0.15
   cameraShake: 0.05
   cameraShakeSeconds: 0.25

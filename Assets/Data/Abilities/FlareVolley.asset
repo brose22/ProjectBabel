@@ -22,3 +22,9 @@ MonoBehaviour:
   knockbackDistance: 0
   zoneDuration: 4
   statusChance: 0.35
+  healFraction: 0
+  buffEffect: 0
+  buffAmount: 0
+  hitStopSeconds: 0.15
+  cameraShake: 0.1
+  cameraShakeSeconds: 0.25

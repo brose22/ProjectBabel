@@ -17,7 +17,7 @@ MonoBehaviour:
   role: 1
   color: {r: 0.6, g: 0.45, b: 0.3, a: 1}
   abilityName: Stone Ward
-  abilityDescription: Defense boost, towers and soldiers
+  abilityDescription: All towers take 30% less damage this wave
   ability: {fileID: 11400000, guid: e506c09bcb01b6e4cb1625bd2abb2645, type: 2}
   sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
   tintSprite: 1
@@ -29,9 +29,6 @@ MonoBehaviour:
   resourceRegen: 2
   specialChargeRate: 1
   level: 1
-  aura: 4
-  auraStrength: 0.4
-  auraFadeSeconds: 60
   refusalTemper: 0.75
   likes: 000000000100000008000000
   dislikes: 020000000900000005000000

@@ -8,7 +8,7 @@ You claim cities on a world map, defend them in wave-based matches, and use the 
 
 - **Runs:** about 30 matches on a tactics-style overworld. Global health lasts the whole run; enemies that leak through reduce it, and at zero the run is lost.
 - **Matches:** 10 waves, 5–10 minutes. Place up to 5 towers, set each captain's Gold draw rate, choose soldier mixes, and relocate towers mid-match for Gold. The final match has double the waves and a very slow boss.
-- **Captains:** 12 unique captains (8 per run), each with an element (Water, Fire, Earth, Air), a role (Attacker, Buffer, Healer), one special ability, and 3 likes and 3 dislikes.
+- **Captains:** 12 unique captains (8 per run), each with an element (Water, Fire, Earth, Air), a role (Attacker, Buffer, Healer), one special ability, and 3 likes and 3 dislikes. The role decides what the special does: an Attacker's hits enemies, a Healer's restores a share of health to every tower and soldier, and a Buffer's boosts every tower and soldier for the rest of the wave.
 - **Relationships:** captains judge your play style (leaks, casualties, selling, ability use, stable or moving placement) and soldier mix. Their approval and bond rank (D → S) carry over between runs and boost their tower.
 - **Soldiers:** Knights, Archers, Mages and Rogues leave their tower to attack the closest enemy, then return. Every act and respawn costs Gold.
 - **Economy:** one shared Gold pool, earned from kills and carried between matches. Towers draw from it into their own reserve at Low, Normal or High rates.

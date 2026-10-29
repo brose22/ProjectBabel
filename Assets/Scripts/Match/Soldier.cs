@@ -121,7 +121,6 @@ public class Soldier : MonoBehaviour
     void Strike(Enemy enemy)
     {
         float damage = Tower.SoldierPower * Class.damageMultiplier;
-        Tower.OnSoldierActed();
         switch (Class.attackStyle)
         {
             case SoldierClassData.AttackStyle.Ranged:
@@ -205,7 +204,7 @@ public class Soldier : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
-        health -= amount * Tower.SoldierDamageTakenMultiplier;
+        health -= amount * Tower.DamageTakenMultiplier;
         healthBar.SetFraction(health / MaxHealth);
         if (health <= 0f) Die();
     }

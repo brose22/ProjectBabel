@@ -47,18 +47,17 @@ public class Tower : MonoBehaviour
     // The body colour before disabled dimming or the ready pulse: white for drawn art, so it shows
     // as painted, or the captain colour for squares and tinted generic art.
     Color baseColor = Color.white;
-    // Timed boosts from support abilities, indexed by SupportEffect: amount and game time they end.
-    readonly float[] timedBoostAmount = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
-    readonly float[] timedBoostUntil = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
+    // Boosts from Buffer specials, indexed by SupportEffect. They apply to every tower and its
+    // soldiers until the wave ends, so they live here rather than on each tower.
+    static readonly float[] waveBoosts = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
 
     public float Range => Captain.range;
     public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed * (1f + Boost(SupportEffect.ActSpeed)));
     public float SoldierPower => Captain.power * LevelMath.StatFactor(Level) * (1f + Boost(SupportEffect.Damage));
-    // Multiplies damage this tower's soldiers take.
-    public float SoldierDamageTakenMultiplier => AuraMath.DamageTakenMultiplier(Boost(SupportEffect.Defense));
+    // Multiplies damage the tower and its soldiers take.
+    public float DamageTakenMultiplier => BoostMath.DamageTakenMultiplier(Boost(SupportEffect.Defense));
 
     bool IsWaveRunning => match != null && match.State == MatchState.WaveActive;
-    public bool IsAuraActive => Captain.aura != SupportEffect.None && IsWaveRunning && !IsDisabled;
 
     // XP lives in RunState so a captain keeps it if sold and placed again within the run.
     // The asset's level is a floor, for captains authored above level 1.
@@ -71,11 +70,9 @@ public class Tower : MonoBehaviour
     public int XpForNextLevel => LevelMath.XpForLevel(Level + 1);
     public bool IsMaxLevel => Level >= LevelMath.MaxLevel;
 
-    // XP per point of health a Healer restores, and per boosted soldier act scaled by boost size.
+    // XP per point of health a Healer restores, and per working tower a Buffer's special boosts.
     const float SupportXpPerHealthHealed = 0.5f;
-    const float SupportXpPerBoostedAct = 4f;
-    // Flat XP for casting a support ability that grants a boost.
-    const float SupportAbilityBoostXp = 10f;
+    const float SupportXpPerTowerBoosted = 6f;
     float supportXpBank;
     int supportXpThisWave;
     float supportXpWaveStart = -1f;
@@ -84,7 +81,9 @@ public class Tower : MonoBehaviour
     public bool IsSpecialReady => HasAbility && SpecialCharge >= 1f;
     public float AbilityRange => Range * (HasAbility ? Captain.ability.rangeMultiplier : 1f);
     public bool IsSupportAbility => HasAbility && Captain.ability.shape == AbilityData.Shape.Support;
-    public bool CanUseAbility => IsSpecialReady && !IsDisabled && (IsSupportAbility || FindAbilityTarget() != null);
+    // A boost lasts only until the wave ends, so a Buffer's special waits for a wave to be running.
+    public bool CanUseAbility => IsSpecialReady && !IsDisabled &&
+        (IsSupportAbility ? IsWaveRunning || !Captain.ability.HasBuff : FindAbilityTarget() != null);
 
     public int LivingSoldiers
     {
@@ -213,40 +212,25 @@ public class Tower : MonoBehaviour
 
         ChargeSpecial();
         TickAutoFire();
-        TickHealAura();
         UpdateBodyColor();
     }
 
-    // How strong a stat boost on this tower's soldiers is right now (0.5 = +50%): its own aura,
-    // which starts full when the wave begins and fades over the wave, plus any timed boost.
-    public float Boost(SupportEffect effect)
+    // How strong a stat boost on the tower and its soldiers is right now (0.5 = +50%).
+    public float Boost(SupportEffect effect) => WaveBoost(effect);
+
+    // The boost every tower has from Buffer specials cast this wave; 0 for Heal and None.
+    public static float WaveBoost(SupportEffect effect) =>
+        effect is SupportEffect.None or SupportEffect.Heal ? 0f : waveBoosts[(int)effect];
+
+    // Casting again in the same wave adds to the boost.
+    public static void AddWaveBoost(SupportEffect effect, float amount)
     {
-        if (effect is SupportEffect.None or SupportEffect.Heal) return 0f;
-        float boost = Time.time < timedBoostUntil[(int)effect] ? timedBoostAmount[(int)effect] : 0f;
-        if (Captain.aura == effect) boost += AuraBoost();
-        return boost;
+        if (effect is SupportEffect.None or SupportEffect.Heal || amount <= 0f) return;
+        waveBoosts[(int)effect] += amount;
     }
 
-    // This captain's own stat aura right now, fading over the wave; 0 for Heal or when inactive.
-    float AuraBoost()
-    {
-        if (Captain.aura is SupportEffect.None or SupportEffect.Heal || !IsAuraActive) return 0f;
-        return AuraMath.FadedStrength(Captain.auraStrength, Time.time - match.WaveStartTime, Captain.auraFadeSeconds);
-    }
-
-    // Seconds left on a timed boost, or 0.
-    public float TimedBoostSecondsLeft(SupportEffect effect) =>
-        effect is SupportEffect.None or SupportEffect.Heal ? 0f : Mathf.Max(0f, timedBoostUntil[(int)effect] - Time.time);
-
-    // Re-applying a boost keeps the stronger amount and the later end time rather than stacking.
-    public void AddTimedBoost(SupportEffect effect, float amount, float seconds)
-    {
-        if (effect is SupportEffect.None or SupportEffect.Heal || amount <= 0f || seconds <= 0f) return;
-        int i = (int)effect;
-        bool active = Time.time < timedBoostUntil[i];
-        timedBoostAmount[i] = active ? Mathf.Max(timedBoostAmount[i], amount) : amount;
-        timedBoostUntil[i] = Mathf.Max(timedBoostUntil[i], Time.time + seconds);
-    }
+    // MatchManager calls this when a wave starts or ends and when the match finishes.
+    public static void ClearWaveBoosts() => System.Array.Clear(waveBoosts, 0, waveBoosts.Length);
 
     // Restores a fraction of max health to the tower and each living soldier. Returns the total
     // health restored. Disabled towers can only be brought back by Restore.
@@ -259,17 +243,6 @@ public class Tower : MonoBehaviour
         foreach (Soldier soldier in soldiers)
             healed += soldier.Heal(soldier.MaxHealth * fraction);
         return healed;
-    }
-
-    // Healer auras restore living soldiers a little every frame while the wave runs.
-    void TickHealAura()
-    {
-        if (Captain.aura != SupportEffect.Heal || !IsAuraActive) return;
-        float amount = Captain.auraStrength * Time.deltaTime;
-        float healed = 0f;
-        foreach (Soldier soldier in soldiers)
-            healed += soldier.Heal(amount);
-        GainSupportXp(healed * SupportXpPerHealthHealed);
     }
 
     public void GainXp(int amount)
@@ -297,12 +270,6 @@ public class Tower : MonoBehaviour
         if (allowed <= 0) return;
         supportXpThisWave += allowed;
         GainXp(allowed);
-    }
-
-    // Called when one of this tower's soldiers acts: a Buffer earns XP for acts its aura boosted.
-    public void OnSoldierActed()
-    {
-        GainSupportXp(SupportXpPerBoostedAct * AuraBoost());
     }
 
     // Fills only while enemies are on the field, so the special can't be stockpiled between waves.
@@ -374,7 +341,8 @@ public class Tower : MonoBehaviour
         if (IsSupportAbility)
         {
             float healed = AbilityCaster.CastSupport(this, rangeIndicator.sprite);
-            GainSupportXp(healed * SupportXpPerHealthHealed + (Captain.ability.buffAmount > 0f ? SupportAbilityBoostXp : 0f));
+            int boosted = Captain.ability.HasBuff ? All.FindAll(t => !t.IsDisabled).Count : 0;
+            GainSupportXp(healed * SupportXpPerHealthHealed + boosted * SupportXpPerTowerBoosted);
         }
         else AbilityCaster.Cast(this, FindAbilityTarget(), SpriteUtil.Square, rangeIndicator.sprite);
         SpecialCharge = 0f;
@@ -450,7 +418,7 @@ public class Tower : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDisabled) return;
-        Health = Mathf.Max(0f, Health - amount);
+        Health = Mathf.Max(0f, Health - amount * DamageTakenMultiplier);
         UpdateHealthBar();
         if (Health <= 0f) Disable();
     }
@@ -496,5 +464,9 @@ public class Tower : MonoBehaviour
     void OnDestroy() => All.Remove(this);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() => All.Clear();
+    static void ResetStatics()
+    {
+        All.Clear();
+        ClearWaveBoosts();
+    }
 }

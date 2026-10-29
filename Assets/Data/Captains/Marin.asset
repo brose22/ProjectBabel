@@ -17,7 +17,7 @@ MonoBehaviour:
   role: 2
   color: {r: 0.3, g: 0.75, b: 0.8, a: 1}
   abilityName: Tidal Mend
-  abilityDescription: Heals tower and soldiers
+  abilityDescription: Heals all towers and soldiers 35%
   ability: {fileID: 11400000, guid: 4986bda02ecb3184b99dac983ebfa64e, type: 2}
   sprite: {fileID: 21300000, guid: bfc6a24d589de3e42a2b8fddcf360a0b, type: 3}
   tintSprite: 0
@@ -29,9 +29,6 @@ MonoBehaviour:
   resourceRegen: 2
   specialChargeRate: 1
   level: 1
-  aura: 1
-  auraStrength: 2
-  auraFadeSeconds: 60
   refusalTemper: 0.75
   likes: 000000000800000007000000
   dislikes: 030000000400000005000000
