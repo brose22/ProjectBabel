@@ -11,7 +11,7 @@ public class Tower : MonoBehaviour
 
     static readonly Vector3[] CrossDirections = { Vector3.up, Vector3.right, Vector3.down, Vector3.left };
     // Far enough that a soldier stands clear of the tower body (0.8 tiles wide).
-    const float SoldierHomeDistance = 0.65f;
+    const float SoldierHomeDistance = 1.0f;
 
     [SerializeField] SpriteRenderer body;
     [SerializeField] SpriteRenderer rangeIndicator;
