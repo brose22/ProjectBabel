@@ -4,12 +4,13 @@ using UnityEngine;
 // an ability's hit-stop, and fades out linearly so it reads as a single jolt.
 public class CameraShake : MonoBehaviour
 {
-    Vector3 restPosition;
+    // Where the camera sits when not shaking; CameraFocus moves it to zoom in on something.
+    public Vector3 RestPosition { get; set; }
     float strength;
     float duration;
     float remaining;
 
-    void Awake() => restPosition = transform.localPosition;
+    void Awake() => RestPosition = transform.localPosition;
 
     // A new shake replaces a weaker or nearly finished one rather than adding to it.
     public void Shake(float shakeStrength, float shakeDuration)
@@ -24,14 +25,12 @@ public class CameraShake : MonoBehaviour
 
     void LateUpdate()
     {
-        if (remaining <= 0f) return;
-        remaining -= Time.unscaledDeltaTime;
-        if (remaining <= 0f)
+        Vector2 offset = Vector2.zero;
+        if (remaining > 0f)
         {
-            transform.localPosition = restPosition;
-            return;
+            remaining -= Time.unscaledDeltaTime;
+            if (remaining > 0f) offset = Random.insideUnitCircle * (strength * remaining / duration);
         }
-        Vector2 offset = Random.insideUnitCircle * (strength * remaining / duration);
-        transform.localPosition = restPosition + (Vector3)offset;
+        transform.localPosition = RestPosition + (Vector3)offset;
     }
 }
