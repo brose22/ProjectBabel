@@ -71,13 +71,11 @@ public class MatchManager : MonoBehaviour
         }
     }
 
-    // Moves the choice to the next captain not yet on the field, wrapping around the roster.
-    public void CycleNextCaptain()
+    // Makes this captain the next one placed, if they aren't on the field already.
+    public void ChooseNextCaptain(CaptainData captain)
     {
-        CaptainData current = NextCaptain;
-        if (current == null) return;
-        List<CaptainData> party = RunState.Current.Party;
-        nextCaptainIndex = (party.IndexOf(current) + 1) % party.Count;
+        int index = RunState.Current.Party.IndexOf(captain);
+        if (index >= 0) nextCaptainIndex = index;
     }
 
     public bool CanPlaceTower => !IsOver && Tower.All.Count < data.maxTowers && NextCaptain != null;

@@ -107,7 +107,7 @@ public class CaptainPanelParts
         Text name = UIKit.Label(row, ability.displayName, 13);
         name.fontStyle = FontStyle.Bold;
         UIKit.Size(name, flexibleWidth: 1f);
-        UIKit.LiveButton(row, () => "Use (Q)", () => tower.TryUseAbility(), refreshers, () => tower.CanUseAbility,
+        UIKit.LiveButton(row, () => "Use", () => tower.TryUseAbility(), refreshers, () => tower.CanUseAbility,
             selected: () => tower.CanUseAbility, width: 80f, height: 22f);
         UIKit.LiveBar(panel, () => tower.SpecialCharge,
             () => tower.IsSpecialReady ? "Ready" : $"Charge {Mathf.FloorToInt(tower.SpecialCharge * 100f)}%", UIKit.ChargeBarColor, refreshers, 12f);
