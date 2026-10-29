@@ -60,7 +60,7 @@ public class MatchHUD : MonoBehaviour
 
         Text hint = UIKit.Label(canvas.transform,
             "Click: place / select    Tab: next captain    Q: ability    1-3: Gold draw    M: move    X: sell    Space: next wave",
-            11, TextAnchor.LowerRight, UIKit.MutedTextColor);
+            11, TextAnchor.LowerRight, UIKit.TextColor);
         UIKit.Place(hint.rectTransform, new Vector2(1f, 0f), new Vector2(-8f, 6f), new Vector2(640f, 18f));
     }
 
@@ -248,7 +248,7 @@ public class MatchHUD : MonoBehaviour
                 if (soldierClass == null) continue;
                 SoldierClassData option = soldierClass;
                 UIKit.LiveButton(row,
-                    () => tower.Soldiers[slot].Class == option ? option.displayName : $"{option.displayName} {tower.RespawnCostOf(option)}",
+                    () => tower.Soldiers[slot].Class == option ? option.displayName : $"{option.displayName} - ({tower.RespawnCostOf(option)}g)",
                     () => tower.SetSlotClass(slot, option), panelRefreshers,
                     () => tower.Soldiers[slot].Class == option || (!tower.IsDisabled && tower.Reserve >= tower.RespawnCostOf(option)),
                     () => tower.Soldiers[slot].Class == option, width: 70f, height: 22f);
