@@ -211,6 +211,10 @@ public class WorldMap
 // How much harder matches get further into the run. Layer 0 plays the match data as authored.
 public static class RunScaling
 {
+    // The layer a match plays as: elite cities play eliteBonus layers further on.
+    public static int DifficultyLayer(MapNode node, int eliteBonus) =>
+        node == null ? 0 : node.layer + (node.kind == NodeKind.Elite ? Math.Max(0, eliteBonus) : 0);
+
     public static float HealthMultiplier(int layer, float growthPerLayer) => 1f + Math.Max(0f, growthPerLayer) * Math.Max(0, layer);
 
     // Enemy counts grow by countGrowthPerLayer per layer, rounded, never below the authored count.

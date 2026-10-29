@@ -22,6 +22,7 @@ public class MatchManager : MonoBehaviour
     public MapNode City { get; private set; }
     public CityLayout CityLayout => City != null && data.layouts.Count > 0 ? data.layouts[City.layout % data.layouts.Count] : null;
     public bool IsBaseMatch => City != null && RunState.Current.Map != null && City.id == RunState.Current.Map.BaseId;
+    public bool IsEliteMatch => City != null && City.kind == NodeKind.Elite;
     // The match data's waves, scaled for how far into the run this city is.
     List<WaveDefinition> waves;
     // Seconds until the next wave starts by itself, or below zero when waiting for the player.
@@ -262,13 +263,15 @@ public class MatchManager : MonoBehaviour
     }
 
     // A won city offers a few captains from outside the party to join, while there's room.
+    // Elite cities offer a wider choice.
     void OfferRecruits()
     {
         RunState run = RunState.Current;
         if (run.ActivePartyCount >= data.maxPartySize) return;
         var candidates = data.roster.FindAll(c => c != null && !run.Party.Contains(c));
         var offer = new List<CaptainData>();
-        while (offer.Count < data.recruitChoices && candidates.Count > 0)
+        int choices = data.recruitChoices + (IsEliteMatch ? Mathf.Max(0, data.eliteExtraRecruitChoices) : 0);
+        while (offer.Count < choices && candidates.Count > 0)
         {
             int pick = Random.Range(0, candidates.Count);
             offer.Add(candidates[pick]);
@@ -292,11 +295,12 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
-    // Copies the authored waves with more and tougher enemies further into the run. The enemy base
-    // plays them baseWaveRepeats times over, each pass a layer tougher.
+    // Copies the authored waves with more and tougher enemies further into the run. Elite cities
+    // play a few layers tougher. The enemy base plays them baseWaveRepeats times over, each pass a
+    // layer tougher.
     List<WaveDefinition> ScaledWaves()
     {
-        int layer = City != null ? City.layer : 0;
+        int layer = RunScaling.DifficultyLayer(City, data.eliteLayerBonus);
         int repeats = IsBaseMatch ? Mathf.Max(1, data.baseWaveRepeats) : 1;
         var scaled = new List<WaveDefinition>();
         for (int pass = 0; pass < repeats; pass++)
@@ -375,9 +379,11 @@ public class MatchManager : MonoBehaviour
     }
 
     // The tower that landed the killing blow earns the XP; a destroyed (sold) tower earns nothing.
+    // Elite cities pay extra Gold on top of what the kill already added.
     void OnEnemyKilled(Enemy enemy)
     {
         Kills++;
+        if (IsEliteMatch) RunState.Current.AddGold(Mathf.RoundToInt(enemy.Data.goldReward * (data.eliteGoldMultiplier - 1f)));
         if (enemy.KilledBy != null) enemy.KilledBy.GainXp(enemy.Data.xpReward);
     }
 
