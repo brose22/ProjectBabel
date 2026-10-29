@@ -18,11 +18,12 @@ public class MainMenu : MonoBehaviour
     readonly List<Action> refreshers = new();
 
     // Leaves the match for the menu. The run stays saved as it was; the menu offers to resume it.
-    public static void Open()
-    {
-        RunState.Clear();
-        SceneManager.LoadScene(SceneName);
-    }
+    // The scene only changes at the end of the frame, so the run is cleared once the menu loads
+    // (Awake) rather than here, where the match HUD would still read it this frame.
+    public static void Open() => SceneManager.LoadScene(SceneName);
+
+    // Resume reloads the run from its save, so nothing from the match lingers in memory.
+    void Awake() => RunState.Clear();
 
     void Start()
     {
