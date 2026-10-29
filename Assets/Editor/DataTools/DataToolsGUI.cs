@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -143,23 +144,74 @@ public static class DataToolsGUI
             array.GetArrayElementAtIndex(i).intValue = chosen[i];
     }
 
-    // A labelled row of buttons, one per asset, that each open their asset.
-    public static void AssetButtons<TAsset>(string label, IEnumerable<TAsset> assets, Action<TAsset> open, string empty = "None")
-        where TAsset : UnityEngine.Object
+    // A derived value or explanation under a field, lined up with the values and wrapped to the width.
+    public static void Note(string text)
     {
         using (new EditorGUILayout.HorizontalScope())
         {
-            EditorGUILayout.PrefixLabel(label);
-            bool any = false;
-            foreach (TAsset asset in assets)
-            {
-                any = true;
-                if (GUILayout.Button(asset.name, EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
-                    open(asset);
-            }
-            if (!any) GUILayout.Label(empty, EditorStyles.miniLabel);
-            GUILayout.FlexibleSpace();
+            GUILayout.Space(EditorGUIUtility.labelWidth);
+            GUILayout.Label(text, EditorStyles.wordWrappedMiniLabel);
         }
+    }
+
+    const float ButtonHeight = 18f;
+    const float ButtonGap = 3f;
+    // The width each button row had on its last repaint, by label. The row's height has to be known
+    // before its width is, so it wraps against last frame's width.
+    static readonly Dictionary<string, float> buttonRowWidths = new();
+
+    // A labelled set of buttons, one per asset, that each open their asset. Wraps onto more lines
+    // when the window is too narrow for one.
+    public static void AssetButtons<TAsset>(string label, IEnumerable<TAsset> assets, Action<TAsset> open, string empty = "None")
+        where TAsset : UnityEngine.Object
+    {
+        List<TAsset> list = assets.Where(a => a != null).ToList();
+        if (list.Count == 0)
+        {
+            EditorGUILayout.LabelField(label, empty, EditorStyles.miniLabel);
+            return;
+        }
+
+        float[] widths = list.Select(a => EditorStyles.miniButton.CalcSize(new GUIContent(a.name)).x).ToArray();
+        float available = buttonRowWidths.TryGetValue(label, out float known) ? known : 250f;
+        int rows = WrapRows(widths, available, null);
+        Rect rect = EditorGUILayout.GetControlRect(true, rows * ButtonHeight + (rows - 1) * ButtonGap);
+        Rect area = EditorGUI.PrefixLabel(rect, new GUIContent(label));
+        if (Event.current.type == EventType.Repaint && !Mathf.Approximately(area.width, available))
+        {
+            buttonRowWidths[label] = area.width;
+            // The next frame lays out with the right width.
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
+        }
+
+        var places = new Rect[list.Count];
+        WrapRows(widths, area.width, places);
+        for (int i = 0; i < list.Count; i++)
+        {
+            Rect place = places[i];
+            place.position += area.position;
+            if (GUI.Button(place, list[i].name, EditorStyles.miniButton))
+                open(list[i]);
+        }
+    }
+
+    // Lays buttons out left to right, wrapping at the width. Fills places (relative to the area's
+    // corner) when given, and returns the number of rows.
+    static int WrapRows(float[] widths, float width, Rect[] places)
+    {
+        int row = 0;
+        float x = 0f;
+        for (int i = 0; i < widths.Length; i++)
+        {
+            if (x > 0f && x + widths[i] > width)
+            {
+                row++;
+                x = 0f;
+            }
+            if (places != null) places[i] = new Rect(x, row * (ButtonHeight + ButtonGap), widths[i], ButtonHeight);
+            x += widths[i] + ButtonGap;
+        }
+        return row + 1;
     }
 
     public static List<TAsset> LoadAll<TAsset>() where TAsset : UnityEngine.Object

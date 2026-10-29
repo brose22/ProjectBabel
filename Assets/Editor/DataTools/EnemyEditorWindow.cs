@@ -77,7 +77,7 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
         DataToolsGUI.Field(so, nameof(EnemyData.attackRange));
         DataToolsGUI.Field(so, nameof(EnemyData.attackInterval));
         DataToolsGUI.Field(so, nameof(EnemyData.rangedAttackRange), "Ranged Attack Range");
-        Note(enemy.rangedAttackRange > 0f
+        DataToolsGUI.Note(enemy.rangedAttackRange > 0f
             ? $"{PerSecond(enemy.attackDamage, enemy.attackInterval)} damage per second; shoots soldiers within {enemy.rangedAttackRange:0.##} tiles while walking"
             : $"{PerSecond(enemy.attackDamage, enemy.attackInterval)} damage per second, melee only");
 
@@ -87,14 +87,12 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
             DataToolsGUI.Field(so, nameof(EnemyData.towerAttackRange));
             DataToolsGUI.Field(so, nameof(EnemyData.towerAttackInterval));
         }
-        Note(enemy.towerDamage > 0f ? $"{PerSecond(enemy.towerDamage, enemy.towerAttackInterval)} damage per second to towers" : "Never hits towers");
+        DataToolsGUI.Note(enemy.towerDamage > 0f ? $"{PerSecond(enemy.towerDamage, enemy.towerAttackInterval)} damage per second to towers" : "Never hits towers");
 
         DrawWeakness(so, enemy);
     }
 
     static string PerSecond(float damage, float interval) => interval > 0f ? $"{damage / interval:0.#}" : "∞";
-
-    static void Note(string text) => EditorGUILayout.LabelField(" ", text, EditorStyles.miniLabel);
 
     EnemyData Largest()
     {
@@ -112,19 +110,9 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
             DataToolsGUI.Field(so, nameof(EnemyData.weakness));
             DataToolsGUI.ChipLayout(enemy.weakness.ToString(), DataToolsGUI.ElementColor(enemy.weakness));
         }
-        Note($"Takes {StatusRules.WeaknessDamageMultiplier:0.##}× damage and {StatusRules.WeaknessStatusChanceMultiplier:0.##}× status chance from {enemy.weakness} captains");
+        DataToolsGUI.Note($"Takes {StatusRules.WeaknessDamageMultiplier:0.##}× damage and {StatusRules.WeaknessStatusChanceMultiplier:0.##}× status chance from {enemy.weakness} captains");
 
         captains ??= DataToolsGUI.LoadAll<CaptainData>();
-        List<CaptainData> strong = captains.Where(c => c != null && c.element == enemy.weakness).ToList();
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            EditorGUILayout.PrefixLabel("Strong Captains");
-            if (strong.Count == 0)
-                GUILayout.Label("None yet", EditorStyles.miniLabel);
-            foreach (CaptainData captain in strong)
-                if (GUILayout.Button(captain.name, EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
-                    CaptainEditorWindow.OpenFor(captain);
-            GUILayout.FlexibleSpace();
-        }
+        DataToolsGUI.AssetButtons("Strong Captains", captains.Where(c => c != null && c.element == enemy.weakness), CaptainEditorWindow.OpenFor, "None yet");
     }
 }

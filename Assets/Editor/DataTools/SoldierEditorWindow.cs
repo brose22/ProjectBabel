@@ -100,8 +100,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
         float hit = captain.power * soldierClass.damageMultiplier;
         string splash = soldierClass.attackStyle == SoldierClassData.AttackStyle.Magic && soldierClass.splashRadius > 0f
             ? $" to every enemy within {soldierClass.splashRadius:0.##} tiles" : "";
-        EditorGUILayout.LabelField(" ", $"{hit:0.#} damage per hit{splash}, at most {hit * captain.speed:0.#} per second before travel time",
-            EditorStyles.miniLabel);
+        DataToolsGUI.Note($"{hit:0.#} damage per hit{splash}, at most {hit * captain.speed:0.#} per second before travel time");
     }
 
     // Captains like or dislike a class through the tag its display name pluralises to.
