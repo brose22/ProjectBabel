@@ -32,6 +32,12 @@ public class MatchData : ScriptableObject
     [Tooltip("Share of max health a rest restores (0.3 = 30%).")]
     [Range(0f, 1f)] public float restHealFraction = 0.3f;
 
+    [Header("Shop")]
+    [Tooltip("Gold for one approval gift at a shop.")]
+    public int giftCost = 75;
+    [Tooltip("Approval a gift adds to the captain it is given to (approval runs -100 to 100).")]
+    public float giftApproval = 10f;
+
     [Header("Towers")]
     public int maxTowers = 5;
     [Tooltip("How many roster captains the player picks to start a run.")]

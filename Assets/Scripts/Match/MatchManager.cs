@@ -3,8 +3,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // Setup is the run setup screen, shown before a run's first match while no party is chosen. Map is
-// the world map between matches, while the player picks the next city.
-public enum MatchState { Setup, Map, Preparing, WaveActive, Won, Lost }
+// the world map between matches, while the player picks the next city. Stop is a visit to a rest,
+// shop or event picked on the map, in place of a match.
+public enum MatchState { Setup, Map, Stop, Preparing, WaveActive, Won, Lost }
 
 // Runs one match: wave flow, tower placement, and the win/lose result.
 public class MatchManager : MonoBehaviour
@@ -36,7 +37,7 @@ public class MatchManager : MonoBehaviour
     public int HealthRestored { get; private set; }
 
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
-    public bool IsBetweenMatches => State is MatchState.Setup or MatchState.Map;
+    public bool IsBetweenMatches => State is MatchState.Setup or MatchState.Map or MatchState.Stop;
     public bool IsHitStopped => hitStopRemaining > 0f;
 
     // Real-time seconds left on the current ability hit-stop.
@@ -89,10 +90,11 @@ public class MatchManager : MonoBehaviour
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
         City = run.Map?.Target;
-        State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : MatchState.Preparing;
+        State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : City.IsMatch ? MatchState.Preparing : MatchState.Stop;
         waves = ScaledWaves();
         if (CityLayout != null) grid.ApplyLayout(CityLayout);
-        if (State == MatchState.Map) RunSave.Save(run);
+        // A stop is saved with it picked, so quitting there (say after shopping) comes back to it.
+        if (State is MatchState.Map or MatchState.Stop) RunSave.Save(run);
         Time.timeScale = GameSpeed;
 
         // Added at runtime so existing scenes need no rebuild.
@@ -286,6 +288,43 @@ public class MatchManager : MonoBehaviour
     public void ChooseCity(int id)
     {
         if (State != MatchState.Map || !RunState.Current.Map.TryChoose(id)) return;
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
+    // ---------- Stops ----------
+
+    public int RestAmount => RunHealing.RestAmount(RunState.Current.MaxHealth, data.restHealFraction);
+
+    // Rests restore part of the run's health, then the player moves on.
+    public void Rest()
+    {
+        if (State != MatchState.Stop || City.kind != NodeKind.Rest) return;
+        RunState.Current.Heal(RestAmount);
+        LeaveStop();
+    }
+
+    // Party members who can take a gift at the shop: everyone who hasn't walked out.
+    public bool CanBuyGift(CaptainData captain) =>
+        State == MatchState.Stop && City.kind == NodeKind.Shop && captain != null && RunState.Current.Party.Contains(captain)
+        && !RunState.Current.HasDeparted(captain) && ApprovalStore.ApprovalOf(captain) < BondMath.MaxApproval
+        && RunState.Current.Gold >= data.giftCost;
+
+    // Buys a gift for a captain at the shop: Gold for approval. Saved straight away, since approval
+    // is saved with the bonds as soon as it changes.
+    public void BuyGift(CaptainData captain)
+    {
+        if (!CanBuyGift(captain) || !RunState.Current.TrySpendGold(data.giftCost)) return;
+        ApprovalStore.Change(captain, data.giftApproval);
+        ApprovalStore.Save();
+        RunSave.Save(RunState.Current);
+    }
+
+    // Moves on from a rest, shop or event: it counts as visited and the map opens again.
+    public void LeaveStop()
+    {
+        if (State != MatchState.Stop) return;
+        RunState.Current.CompleteStop(data.intelDepth);
+        RunSave.Save(RunState.Current);
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
