@@ -56,8 +56,31 @@ public class MainMenu : MonoBehaviour
 
         UIKit.Button(column, "Start run", () => { if (RunSave.Exists) BuildConfirmNewRun(); else StartRun(); }, 240f, 34f);
         UIKit.LiveButton(column, () => "Resume run", ResumeRun, refreshers, () => RunSave.Exists, width: 240f, height: 34f);
+        UIKit.Button(column, "AI Run", BuildAiRun, 240f, 34f);
         UIKit.Button(column, "Settings", BuildSettings, 240f, 34f);
         UIKit.Button(column, "Exit", Quit, 240f, 34f);
+    }
+
+    // ---------- AI Run ----------
+
+    static readonly float[] AiSpeeds = { 1f, 2f, 4f, 8f };
+    int aiRuns = 1;
+    float aiSpeed = 4f;
+
+    // The AI plays whole runs by itself with its own saves, then writes a report to Reports/.
+    void BuildAiRun()
+    {
+        RectTransform column = NewScreen("AI Run", 520f);
+        UIKit.Label(column, "AI RUN", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, "The AI plays whole runs on its own, using separate saves, and writes a report to the project's Reports folder when it is done.",
+            14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        SettingRow(column, "Runs", () => aiRuns.ToString(), step => aiRuns = Mathf.Clamp(aiRuns + step, 1, 50));
+        SettingRow(column, "Speed", () => $"{aiSpeed:0}x",
+            step => aiSpeed = AiSpeeds[Wrap(Array.IndexOf(AiSpeeds, aiSpeed) + step, AiSpeeds.Length)]);
+        RectTransform buttons = UIKit.Group(column, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
+        UIKit.Button(buttons, "Start", () => AiPlayer.Begin(new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff }), 180f, 32f);
+        UIKit.Button(buttons, "Back", BuildMain, 140f, 32f);
     }
 
     void BuildConfirmNewRun()

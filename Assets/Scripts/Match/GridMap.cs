@@ -27,6 +27,8 @@ public class GridMap : MonoBehaviour
     readonly Dictionary<Vector2Int, Tower> occupants = new();
 
     public Vector2Int Size => size;
+    // The road's on-map cells from the gate to the castle.
+    public IReadOnlyList<Vector2Int> RoadCells => orderedPathCells;
 
     void Awake() => Paint();
 

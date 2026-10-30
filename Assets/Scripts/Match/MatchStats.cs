@@ -31,6 +31,9 @@ public class MatchStats : MonoBehaviour
         public int GoldSpent => GoldStart + GoldEarned + GoldBonus - GoldEnd;
     }
 
+    // The AI Run turns this off so its matches don't fill the player's stats folder.
+    public static bool WriteCsvEnabled { get; set; } = true;
+
     public List<WaveRecord> Waves { get; } = new();
     WaveRecord current;
     float waveStartTime;
@@ -92,7 +95,7 @@ public class MatchStats : MonoBehaviour
     void OnMatchEnded(bool won)
     {
         CloseWave();
-        WriteCsv(won);
+        if (WriteCsvEnabled) WriteCsv(won);
     }
 
     void CloseWave()

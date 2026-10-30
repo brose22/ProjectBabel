@@ -275,6 +275,18 @@ public class MatchManager : MonoBehaviour
         ApplyTimeScale();
     }
 
+    public const float MaxGameSpeed = 8f;
+
+    // Any speed from 1x to 8x, for the AI Run; the time scale still resolves through TimeScaleRules.
+    public void SetGameSpeed(float speed)
+    {
+        GameSpeed = Mathf.Clamp(speed, 1f, MaxGameSpeed);
+        ApplyTimeScale();
+    }
+
+    public GridMap Grid => grid;
+    public bool IsSpawning => spawner != null && spawner.IsSpawning;
+
     // Zooms the camera in on a tower, such as a captain making a request, or back out with null.
     public void FocusCamera(Tower tower)
     {

@@ -271,9 +271,10 @@ public class Enemy : MonoBehaviour
         if (!IsTargetable) return;
         bool weak = source != null && IsWeakTo(source.Captain.element);
         if (weak) amount *= StatusRules.WeaknessDamageMultiplier;
+        Element? element = source != null ? source.Captain.element : numberElement;
+        GameEvents.RaiseDamageDealt(source, Mathf.Min(amount, Health), element);
         Health -= amount;
         healthBar.SetFraction(Health / MaxHealth);
-        Element? element = source != null ? source.Captain.element : numberElement;
         if (overTime) AccumulateDot(amount, element);
         else
         {

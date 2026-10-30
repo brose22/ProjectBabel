@@ -14,6 +14,9 @@ public static class GameEvents
     public static event Action<Tower> TowerMoved;
     public static event Action<Tower> TowerSold;
     public static event Action<Tower> AbilityUsed;
+    // Damage an enemy took, after weakness: the tower whose soldier, ability or burn dealt it (null
+    // when none did), the amount actually taken and the element it came as, if any.
+    public static event Action<Tower, float, Element?> DamageDealt;
     public static event Action<Tower> DrawRateChanged;
     public static event Action<int> WaveStarted;
     public static event Action<int> WaveEnded;
@@ -34,6 +37,7 @@ public static class GameEvents
     public static void RaiseTowerMoved(Tower tower) => TowerMoved?.Invoke(tower);
     public static void RaiseTowerSold(Tower tower) => TowerSold?.Invoke(tower);
     public static void RaiseAbilityUsed(Tower tower) => AbilityUsed?.Invoke(tower);
+    public static void RaiseDamageDealt(Tower source, float amount, Element? element) => DamageDealt?.Invoke(source, amount, element);
     public static void RaiseDrawRateChanged(Tower tower) => DrawRateChanged?.Invoke(tower);
     public static void RaiseWaveStarted(int waveNumber) => WaveStarted?.Invoke(waveNumber);
     public static void RaiseWaveEnded(int waveNumber) => WaveEnded?.Invoke(waveNumber);
@@ -57,6 +61,7 @@ public static class GameEvents
         TowerMoved = null;
         TowerSold = null;
         AbilityUsed = null;
+        DamageDealt = null;
         DrawRateChanged = null;
         WaveStarted = null;
         WaveEnded = null;

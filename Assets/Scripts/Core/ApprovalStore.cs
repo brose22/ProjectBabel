@@ -24,7 +24,21 @@ public static class ApprovalStore
 
     static Dictionary<string, Entry> entries;
 
-    static string FilePath => Path.Combine(Application.persistentDataPath, "bonds.json");
+    static string pathOverride;
+
+    // Where the AI Run keeps its own bonds, so it never touches the player's. Switching drops the
+    // loaded bonds so the next read comes from the new file.
+    public static string PathOverride
+    {
+        get => pathOverride;
+        set
+        {
+            pathOverride = value;
+            entries = null;
+        }
+    }
+
+    static string FilePath => pathOverride ?? Path.Combine(Application.persistentDataPath, "bonds.json");
 
     public static float ApprovalOf(CaptainData captain) => Get(captain).approval;
 
@@ -102,5 +116,9 @@ public static class ApprovalStore
 
     // Reload from disk on entering Play mode, in case the file changed while domain reload is off.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetStatics() => entries = null;
+    static void ResetStatics()
+    {
+        entries = null;
+        pathOverride = null;
+    }
 }
