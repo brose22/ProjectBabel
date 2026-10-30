@@ -16,6 +16,8 @@ public class Enemy : MonoBehaviour
     [SerializeField] HealthBar healthBar;
 
     public EnemyData Data { get; private set; }
+    // True for the enemy base's boss, set by the match once it has walked on.
+    public bool IsBoss { get; private set; }
     public float Health { get; private set; }
     public float MaxHealth { get; private set; }
     // False once the enemy has died or leaked, even before the GameObject is destroyed.
@@ -71,6 +73,7 @@ public class Enemy : MonoBehaviour
         MaxHealth = Health = data.maxHealth * healthMultiplier;
         transform.position = path[0];
         ApplyArt(data);
+        healthBar.UseEnemyStyle(Data.elite ? 1 : 0);
         healthBar.SetFraction(1f);
         statusIcons = StatusIcons.Create(transform, new Vector3(0f, StatusIconHeight, 0f), body.sortingOrder + 1);
         AddStunStars();
@@ -95,6 +98,12 @@ public class Enemy : MonoBehaviour
         }
         body.color = baseColor;
         bodyScale = body.transform.localScale;
+    }
+
+    public void MarkBoss()
+    {
+        IsBoss = true;
+        healthBar.SetTier(2);
     }
 
     public bool IsWeakTo(Element element) => Data.hasWeakness && Data.weakness == element;

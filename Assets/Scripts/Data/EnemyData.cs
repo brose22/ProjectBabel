@@ -11,6 +11,8 @@ public class EnemyData : ScriptableObject
     public Sprite portrait;
     [Tooltip("Body size in tiles.")]
     public float size = 0.6f;
+    [Tooltip("A tougher enemy: it gets a wider health bar with a gold marker and an arrival banner.")]
+    public bool elite;
 
     [Header("Stats")]
     public float maxHealth = 30f;
