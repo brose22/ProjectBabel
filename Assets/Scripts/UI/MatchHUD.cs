@@ -257,8 +257,7 @@ public class MatchHUD : MonoBehaviour
         UIKit.Size(UIKit.Label(row, $"<color={accent}>{request.Tower.Captain.displayName}</color>  \"{request.Text}\"{more}", 12),
             flexibleWidth: 1f);
         AnswerButton(row, request, "No", RequestAnswer.No, NoColor, 40f);
-        // A move is all or nothing.
-        if (request.Kind != RequestKind.Relocate)
+        if (!CaptainRequests.IsYesNo(request.Kind))
             AnswerButton(row, request, "Some", RequestAnswer.Some, UIKit.ButtonColor, 50f);
         AnswerButton(row, request, "Yes", RequestAnswer.Yes, YesColor, 40f);
 
