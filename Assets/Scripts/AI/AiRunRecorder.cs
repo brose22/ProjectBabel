@@ -1,0 +1,202 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+// Collects what an AI run does into AiRunRecord rows: damage from GameEvents, wave numbers from
+// MatchStats, and the AI's own decisions. Owned by AiPlayer, which outlives each match scene.
+public class AiRunRecorder
+{
+    public AiRunRecord Run { get; private set; }
+    public AiMatchRow CurrentMatch { get; private set; }
+
+    readonly Dictionary<string, float> damageByCaptain = new();
+    readonly Dictionary<string, int> abilitiesByCaptain = new();
+    readonly Dictionary<int, float> damageByWave = new();
+    int currentWave;
+    int nextMatchIndex;
+    float runStartReal;
+    float runStartGame;
+    bool subscribed;
+
+    public string LastDecision { get; private set; } = "";
+
+    public void Subscribe()
+    {
+        if (subscribed) return;
+        subscribed = true;
+        GameEvents.DamageDealt += OnDamage;
+        GameEvents.AbilityUsed += OnAbility;
+        GameEvents.WaveStarted += OnWaveStarted;
+        GameEvents.TowerPlaced += OnTowerPlaced;
+    }
+
+    public void Unsubscribe()
+    {
+        if (!subscribed) return;
+        subscribed = false;
+        GameEvents.DamageDealt -= OnDamage;
+        GameEvents.AbilityUsed -= OnAbility;
+        GameEvents.WaveStarted -= OnWaveStarted;
+        GameEvents.TowerPlaced -= OnTowerPlaced;
+    }
+
+    void OnDamage(Tower source, float amount, Element? element)
+    {
+        string elementName = element.HasValue ? element.Value.ToString() : "Other";
+        Run.damageByElement[elementName] = Run.damageByElement.TryGetValue(elementName, out float byElement) ? byElement + amount : amount;
+        if (source != null)
+        {
+            string name = source.Captain.displayName;
+            damageByCaptain[name] = damageByCaptain.TryGetValue(name, out float byCaptain) ? byCaptain + amount : amount;
+        }
+        damageByWave[currentWave] = damageByWave.TryGetValue(currentWave, out float byWave) ? byWave + amount : amount;
+    }
+
+    void OnAbility(Tower tower)
+    {
+        string name = tower.Captain.displayName;
+        abilitiesByCaptain[name] = abilitiesByCaptain.TryGetValue(name, out int count) ? count + 1 : 1;
+    }
+
+    void OnWaveStarted(int wave) => currentWave = wave;
+
+    void OnTowerPlaced(Tower tower)
+    {
+        if (CurrentMatch != null) CurrentMatch.towersPlaced++;
+    }
+
+    public void BeginRun(int index, int seed, IEnumerable<CaptainData> party, float realNow, float gameNow)
+    {
+        Run = new AiRunRecord { index = index, seed = seed };
+        foreach (CaptainData captain in party) Run.startParty.Add(captain.displayName);
+        damageByCaptain.Clear();
+        abilitiesByCaptain.Clear();
+        CurrentMatch = null;
+        nextMatchIndex = 1;
+        runStartReal = realNow;
+        runStartGame = gameNow;
+        LastDecision = "";
+    }
+
+    public void Decide(float gameTime, string where, string text)
+    {
+        if (Run == null) return;
+        Run.decisions.Add(new AiDecisionRow { seconds = gameTime - runStartGame, where = where, text = text });
+        LastDecision = $"{where}: {text}";
+    }
+
+    public void NoteRoute(NodeKind kind) => Run.route.Add(kind.ToString());
+
+    // Opens the row for the match being played, once its scene is ready.
+    public void BeginMatch(MatchManager match)
+    {
+        RunState run = RunState.Current;
+        MapNode city = match.City;
+        CurrentMatch = new AiMatchRow
+        {
+            index = nextMatchIndex++,
+            nodeId = city.id,
+            kind = city.kind.ToString(),
+            layer = city.layer,
+            layout = city.layout,
+            waveCount = match.WaveCount,
+            healthStart = run.Health,
+            goldStart = run.Gold,
+        };
+        damageByWave.Clear();
+        currentWave = 0;
+        Run.matches.Add(CurrentMatch);
+    }
+
+    // Closes the open match row from the match's own counters and MatchStats' wave records.
+    public void EndMatch(MatchManager match, string result)
+    {
+        AiMatchRow row = CurrentMatch;
+        if (row == null) return;
+        row.result = result;
+        row.wavesCleared = match.WavesCleared;
+        row.kills = match.Kills;
+        row.leaks = match.Leaks;
+        row.casualties = match.Casualties;
+        row.healthEnd = RunState.Current.Health;
+        row.goldEnd = RunState.Current.Gold;
+        if (match.TryGetComponent(out MatchStats stats))
+        {
+            foreach (MatchStats.WaveRecord w in stats.Waves)
+            {
+                row.waves.Add(new AiWaveRow
+                {
+                    wave = w.Wave,
+                    seconds = w.Seconds,
+                    kills = w.Kills,
+                    leaks = w.Leaks,
+                    casualties = w.Casualties,
+                    abilities = w.AbilitiesUsed,
+                    goldStart = w.GoldStart,
+                    goldEarned = w.GoldEarned,
+                    goldBonus = w.GoldBonus,
+                    goldSpent = w.GoldSpent,
+                    goldEnd = w.GoldEnd,
+                    healthEnd = w.HealthEnd,
+                    damage = damageByWave.TryGetValue(w.Wave, out float damage) ? damage : 0f,
+                    killsByCaptain = new Dictionary<string, int>(w.KillsByCaptain),
+                });
+            }
+        }
+        CurrentMatch = null;
+    }
+
+    // A rest, shop or event passed through.
+    public void RecordStop(MatchManager match)
+    {
+        RunState run = RunState.Current;
+        Run.matches.Add(new AiMatchRow
+        {
+            index = nextMatchIndex++,
+            nodeId = match.City.id,
+            kind = match.City.kind.ToString(),
+            layer = match.City.layer,
+            layout = match.City.layout,
+            result = "Visited",
+            healthStart = run.Health,
+            healthEnd = run.Health,
+            goldStart = run.Gold,
+            goldEnd = run.Gold,
+        });
+    }
+
+    public void FinishRun(string result, float realNow, float gameNow)
+    {
+        if (Run == null) return;
+        Run.result = result;
+        RunState run = RunState.Current;
+        if (run != null)
+        {
+            Run.finalHealth = run.Health;
+            Run.maxHealth = run.MaxHealth;
+            Run.finalGold = run.Gold;
+            foreach (CaptainData captain in run.Party)
+            {
+                int kills = 0;
+                foreach (AiMatchRow match in Run.matches)
+                    foreach (AiWaveRow wave in match.waves)
+                        if (wave.killsByCaptain.TryGetValue(captain.displayName, out int k)) kills += k;
+                int xp = run.XpOf(captain);
+                Run.captains.Add(new AiCaptainRow
+                {
+                    name = captain.displayName,
+                    element = captain.element.ToString(),
+                    role = captain.role.ToString(),
+                    kills = kills,
+                    damage = damageByCaptain.TryGetValue(captain.displayName, out float damage) ? damage : 0f,
+                    abilities = abilitiesByCaptain.TryGetValue(captain.displayName, out int abilities) ? abilities : 0,
+                    level = Mathf.Max(captain.level, LevelMath.LevelForXp(xp)),
+                    xp = xp,
+                    approvalEnd = ApprovalStore.ApprovalOf(captain),
+                    departed = run.HasDeparted(captain),
+                });
+            }
+        }
+        Run.realSeconds = realNow - runStartReal;
+        Run.gameSeconds = gameNow - runStartGame;
+    }
+}

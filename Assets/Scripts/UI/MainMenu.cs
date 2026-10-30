@@ -56,8 +56,31 @@ public class MainMenu : MonoBehaviour
 
         UIKit.Button(column, "Start run", () => { if (RunSave.Exists) BuildConfirmNewRun(); else StartRun(); }, 240f, 34f);
         UIKit.LiveButton(column, () => "Resume run", ResumeRun, refreshers, () => RunSave.Exists, width: 240f, height: 34f);
+        UIKit.Button(column, "AI Run", BuildAiRun, 240f, 34f);
         UIKit.Button(column, "Settings", BuildSettings, 240f, 34f);
         UIKit.Button(column, "Exit", Quit, 240f, 34f);
+    }
+
+    // ---------- AI Run ----------
+
+    static readonly float[] AiSpeeds = { 1f, 2f, 4f, 8f };
+    int aiRuns = 1;
+    float aiSpeed = 4f;
+
+    // The AI plays whole runs by itself with its own saves, then writes a report to Reports/.
+    void BuildAiRun()
+    {
+        RectTransform column = NewScreen("AI Run", 520f);
+        UIKit.Label(column, "AI RUN", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, "The AI plays whole runs on its own, using separate saves, and writes a report to the project's Reports folder when it is done.",
+            14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        SettingRow(column, "Runs", () => aiRuns.ToString(), step => aiRuns = Mathf.Clamp(aiRuns + step, 1, 50));
+        SettingRow(column, "Speed", () => $"{aiSpeed:0}x",
+            step => aiSpeed = AiSpeeds[Wrap(Array.IndexOf(AiSpeeds, aiSpeed) + step, AiSpeeds.Length)]);
+        RectTransform buttons = UIKit.Group(column, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
+        UIKit.Button(buttons, "Start", () => AiPlayer.Begin(new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff }), 180f, 32f);
+        UIKit.Button(buttons, "Back", BuildMain, 140f, 32f);
     }
 
     void BuildConfirmNewRun()
@@ -96,11 +119,48 @@ public class MainMenu : MonoBehaviour
 
     // ---------- Settings ----------
 
+    enum SettingsTab { Graphics, Audio, Gameplay }
+
+    SettingsTab settingsTab;
+
     void BuildSettings()
     {
         RectTransform column = NewScreen("Settings", 520f);
         UIKit.Label(column, "SETTINGS", 24, TextAnchor.MiddleCenter);
 
+        RectTransform tabs = UIKit.Group(column, "Tabs");
+        UIKit.Layout<HorizontalLayoutGroup>(tabs, 0, 6, fitContent: true);
+        foreach (SettingsTab tab in Enum.GetValues(typeof(SettingsTab)))
+        {
+            SettingsTab chosen = tab;
+            UIKit.LiveButton(tabs, () => chosen.ToString(),
+                () => { settingsTab = chosen; BuildSettings(); }, refreshers, selected: () => chosen == settingsTab, width: 120f, height: 30f);
+        }
+
+        // Each tab scrolls in a fixed-height window, so the Back button stays put.
+        // The framed box is the window; the scrolling list fills it.
+        RectTransform frame = UIKit.Box(column, "Options Window");
+        LayoutElement window = UIKit.Size(frame, 520f, 330f);
+        window.minHeight = 330f;
+        window.flexibleHeight = 0f;
+        UIKit.Layout<VerticalLayoutGroup>(frame, 8, 0);
+        ScrollRect list = UIKit.ScrollList(frame, "Options", 10f);
+        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        list.content.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
+        RectTransform options = list.content;
+
+        switch (settingsTab)
+        {
+            case SettingsTab.Graphics: BuildGraphicsTab(options); break;
+            case SettingsTab.Audio: BuildAudioTab(options); break;
+            default: BuildGameplayTab(options); break;
+        }
+
+        UIKit.Button(column, "Back", BuildMain, 200f, 32f);
+    }
+
+    void BuildGraphicsTab(RectTransform column)
+    {
         SettingRow(column, "Resolution", () => $"{GameSettings.Resolution.x} x {GameSettings.Resolution.y}", step =>
         {
             List<Vector2Int> sizes = GameSettings.Resolutions;
@@ -121,13 +181,47 @@ public class MainMenu : MonoBehaviour
             });
         SettingRow(column, "Quality", () => QualitySettings.names[GameSettings.Quality],
             step => GameSettings.SetQuality(Wrap(GameSettings.Quality + step, QualitySettings.names.Length)));
+        SettingsNote(column, "Changes apply at once and are kept between launches. The editor's Game view ignores resolution and window mode.");
+    }
+
+    void BuildAudioTab(RectTransform column)
+    {
         SettingRow(column, "Master volume", () => $"{Mathf.RoundToInt(GameSettings.Volume * 100f)}%",
             step => GameSettings.SetVolume(Mathf.Round(GameSettings.Volume * 10f + step) / 10f));
-
-        UIKit.Label(column, "Changes apply at once and are kept between launches. The editor's Game view ignores resolution and window mode.",
-            12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-        UIKit.Button(column, "Back", BuildMain, 200f, 32f);
+        SettingsNote(column, "Changes apply at once and are kept between launches.");
     }
+
+    void BuildGameplayTab(RectTransform column)
+    {
+        SettingsNote(column, "Combat feedback on enemies. Turn off anything that is too busy or too bright.");
+
+        UIKit.Label(column, "Numbers and labels", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        FlagRow(column, "Damage numbers", "damageNumbers");
+        FlagRow(column, "Weak! / Resist labels", "weaknessLabels");
+
+        UIKit.Label(column, "Enemy body", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        FlagRow(column, "Hit flash and swell", "hitFlash");
+        FlagRow(column, "Stun stars", "stunStars");
+        FlagRow(column, "Dizzy wobble", "dizzyWobble");
+        FlagRow(column, "Knockback squash, dust", "knockbackEffects");
+        FlagRow(column, "Death burst", "deathBurst");
+
+        UIKit.Label(column, "Indicators", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        FlagRow(column, "Status icons", "statusIcons");
+        FlagRow(column, "Health bar extras", "healthBarExtras");
+
+        UIKit.Label(column, "Threat alerts", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        FlagRow(column, "Leak edge flash", "edgeFlash");
+        FlagRow(column, "Elite / boss banner", "threatBanner");
+
+        SettingsNote(column, "Reduce flashing: turn off Hit flash and swell and Leak edge flash. Health bar extras covers the draining ghost segment and hiding full bars.");
+    }
+
+    void SettingsNote(Transform parent, string text) => UIKit.Label(parent, text, 12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+
+    // A name and an On/Off button that flips it.
+    void FlagRow(Transform parent, string name, string flag) =>
+        SettingRow(parent, name, () => GameSettings.Flag(flag) ? "On" : "Off", _ => GameSettings.SetFlag(flag, !GameSettings.Flag(flag)));
 
     // A name, then "<", the current value and ">"; the arrows step through the options.
     void SettingRow(Transform parent, string name, Func<string> value, Action<int> step)

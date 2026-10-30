@@ -704,6 +704,22 @@ public class RunScreens : MonoBehaviour
         UIKit.Place((RectTransform)city.transform, new Vector2(0.5f, 0.5f), Vector2.zero, CitySize);
         ((RectTransform)city.transform).pivot = new Vector2(0.5f, 0.5f);
         ((RectTransform)city.transform).anchoredPosition = CityPosition(map, node);
+        UIKit.HoverTip((RectTransform)city.transform, name, NodeDescription(node, isBase));
+    }
+
+    string NodeDescription(MapNode node, bool isBase)
+    {
+        if (isBase) return "The enemy base. Beat its boss to win the run.";
+        switch (node.kind)
+        {
+            case NodeKind.Elite:
+                return $"A tougher battle: enemies from {match.Data.eliteLayerBonus} layers further on, " +
+                    $"{match.Data.eliteGoldMultiplier:0.#}x Gold from kills, and a wider choice of captains to recruit on a win.";
+            case NodeKind.Rest: return $"Rest instead of fighting. Heals {match.RestAmount} health.";
+            case NodeKind.Shop: return "No battle. Spend Gold to raise captains' approval.";
+            case NodeKind.Event: return "No battle. Something unexpected happens.";
+            default: return "A battle. Defend the city against the waves.";
+        }
     }
 
     // ---------- Stops ----------
@@ -796,6 +812,8 @@ public class RunScreens : MonoBehaviour
         Stat(stats, "CASUALTIES", $"{match.Casualties}");
         Stat(stats, "HEALTH", $"{run.Health}/{run.MaxHealth}");
         Stat(stats, "GOLD", $"{run.Gold}").color = UIKit.AccentColor;
+        if (match.WinGoldEarned + match.ReserveRefunded > 0)
+            UIKit.Label(panel, $"+{match.WinGoldEarned} Gold for the win, +{match.ReserveRefunded} returned from reserves", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
         if (match.HealthRestored > 0)
             UIKit.Label(panel, $"+{match.HealthRestored} health for the win", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
 

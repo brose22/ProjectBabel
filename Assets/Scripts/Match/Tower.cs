@@ -512,6 +512,15 @@ public class Tower : MonoBehaviour
         if (healthBar != null) healthBar.SetFraction(Health / MaxHealth);
     }
 
+    // A won match returns part of the unspent reserve to the shared pool; returns the Gold refunded.
+    public int ReturnReserve(float fraction)
+    {
+        int refund = GoldCosts.Refund(Reserve, fraction);
+        RunState.Current.AddGold(refund);
+        Reserve = 0;
+        return refund;
+    }
+
     // Unspent reserve goes back to the shared pool.
     public void Sell()
     {

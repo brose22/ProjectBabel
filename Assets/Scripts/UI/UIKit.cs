@@ -381,6 +381,35 @@ public static class UIKit
         return button;
     }
 
+    // A box above target with a bold title and a muted description, shown while the pointer is on
+    // it. It has its own sorting override, so it draws over every other widget on the screen.
+    public static void HoverTip(RectTransform target, string title, string description, float width = 220f)
+    {
+        RectTransform tip = Box(target, "Hover Tip", blocksClicks: false);
+        tip.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        var tipCanvas = tip.gameObject.AddComponent<Canvas>();
+        tipCanvas.overrideSorting = true;
+        tipCanvas.sortingOrder = short.MaxValue;
+        tip.anchorMin = tip.anchorMax = new Vector2(0.5f, 1f);
+        tip.pivot = new Vector2(0.5f, 0f);
+        tip.sizeDelta = new Vector2(width, 0f);
+        tip.anchoredPosition = new Vector2(0f, Gap);
+        Layout<VerticalLayoutGroup>(tip, Pad, 2, fitContent: true);
+        Label(tip, title, 13).fontStyle = FontStyle.Bold;
+        if (!string.IsNullOrEmpty(description)) Label(tip, description, 11, color: MutedTextColor);
+        tip.gameObject.SetActive(false);
+
+        var trigger = target.gameObject.AddComponent<EventTrigger>();
+        AddHover(EventTriggerType.PointerEnter, true);
+        AddHover(EventTriggerType.PointerExit, false);
+        void AddHover(EventTriggerType type, bool show)
+        {
+            var entry = new EventTrigger.Entry { eventID = type };
+            entry.callback.AddListener(_ => tip.gameObject.SetActive(show));
+            trigger.triggers.Add(entry);
+        }
+    }
+
     // Marks a button as the screen's main action: gold while it can be pressed.
     public static Button Primary(Button button, List<Action> refreshers)
     {

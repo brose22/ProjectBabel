@@ -11,13 +11,16 @@ public class PlacementGhosts
     const float SoldierSquareScale = 0.3f;
 
     readonly SpriteRenderer template;
+    readonly Sprite fallback;
     readonly SpriteRenderer captainGhost;
     readonly List<SpriteRenderer> soldierGhosts = new();
 
-    // Ghosts draw just above the template, with its material and fallback square.
+    // Ghosts draw just above the template, with its material and its square as the fallback art
+    // (kept now, since the template's own sprite changes with the hover state).
     public PlacementGhosts(SpriteRenderer template)
     {
         this.template = template;
+        fallback = template.sprite;
         captainGhost = MakeGhost("Captain Ghost");
     }
 
@@ -51,7 +54,7 @@ public class PlacementGhosts
     {
         color.a = Opacity;
         ghost.enabled = true;
-        ghost.sprite = art != null ? art : template.sprite;
+        ghost.sprite = art != null ? art : fallback;
         ghost.color = color;
         ghost.transform.position = position;
         ghost.transform.localScale = Vector3.one * (art != null ? 1f : squareScale);

@@ -163,6 +163,8 @@ public abstract class DataEditorWindow<T> : EditorWindow where T : ScriptableObj
                 if (GUILayout.Button("Delete", EditorStyles.toolbarButton)) { DeleteSelected(); Relayout(); }
                 if (GUILayout.Button("Ping", EditorStyles.toolbarButton)) EditorGUIUtility.PingObject(Selected);
             }
+            if (GUILayout.Button(new GUIContent("Export", "Write every data asset to an Excel workbook."), EditorStyles.toolbarButton)) { DataWorkbook.ExportWithPrompt(); Relayout(); }
+            if (GUILayout.Button(new GUIContent("Import", "Update the data assets from an Excel workbook. Results go to the Console."), EditorStyles.toolbarButton)) { DataWorkbook.ImportWithPrompt(); Relayout(); }
         }
     }
 

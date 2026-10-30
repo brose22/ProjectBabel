@@ -17,6 +17,7 @@ public class WaveDefinition
     public List<SpawnGroup> groups = new();
     [Tooltip("Multiplies every enemy's max health in this wave.")]
     public float healthMultiplier = 1f;
+    [HideInInspector] public float goldMultiplier = 1f;
 }
 
 [CreateAssetMenu(menuName = "Babel/Match", fileName = "Match")]
@@ -81,6 +82,16 @@ public class MatchData : ScriptableObject
     public NodeOdds nodeOdds = new(0.15f, 0.12f, 0.1f, 0.15f);
     [Tooltip("Extra enemy health per match into the run (0.12 = +12% per layer).")]
     public float enemyHealthGrowthPerMatch = 0.12f;
+    [Tooltip("Extra Gold per kill and per win further into the run (0.07 = +7% per layer).")]
+    public float goldGrowthPerMatch = 0.07f;
+    [Tooltip("Flat Gold for winning a match, before the per-layer growth.")]
+    public int winGold = 50;
+    [Tooltip("Gold for clearing a wave, before the per-wave step and per-layer growth.")]
+    public int waveClearGold = 5;
+    [Tooltip("Extra Gold per wave number cleared (wave 10 pays waveClearGold + 10 x this).")]
+    public int waveClearGoldPerWave = 2;
+    [Tooltip("Share of each tower's unspent reserve returned to the Gold pool when a match is won.")]
+    [Range(0f, 1f)] public float reserveRefundFraction = 1f;
     [Tooltip("Extra enemies per match into the run (0.08 = +8% per layer, rounded).")]
     public float enemyCountGrowthPerMatch = 0.08f;
     [Tooltip("Elite cities play this many layers tougher than their place on the map.")]

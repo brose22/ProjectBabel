@@ -254,8 +254,8 @@ MonoBehaviour:
   grid: {fileID: 275662357}
   hud: {fileID: 265244870}
   hoverMarker: {fileID: 1581333656}
-  validColor: {r: 0.3, g: 1, b: 0.3, a: 0.45}
-  invalidColor: {r: 1, g: 0.3, b: 0.3, a: 0.45}
+  validSprite: {fileID: 21300000, guid: 75893523c5cd7d94e87ab1777cf8d498, type: 3}
+  invalidSprite: {fileID: 21300000, guid: 6419c3bc333eae14ab68f7e3eb21f762, type: 3}
 --- !u!114 &265244872
 MonoBehaviour:
   m_ObjectHideFlags: 0

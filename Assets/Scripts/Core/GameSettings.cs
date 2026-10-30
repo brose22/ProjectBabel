@@ -19,6 +19,34 @@ public static class GameSettings
     const string QualityKey = "settings.quality";
     const string VolumeKey = "settings.volume";
 
+    // Match feedback switches, all on by default. Read per enemy per frame, so each is cached.
+    static readonly Dictionary<string, bool> flags = new();
+
+    public static bool DamageNumbers => Flag("damageNumbers");
+    public static bool WeaknessLabels => Flag("weaknessLabels");
+    public static bool HitFlash => Flag("hitFlash");
+    public static bool StatusIcons => Flag("statusIcons");
+    public static bool StunStars => Flag("stunStars");
+    public static bool DizzyWobble => Flag("dizzyWobble");
+    public static bool KnockbackEffects => Flag("knockbackEffects");
+    public static bool DeathBurst => Flag("deathBurst");
+    public static bool HealthBarExtras => Flag("healthBarExtras");
+    public static bool EdgeFlash => Flag("edgeFlash");
+    public static bool ThreatBanner => Flag("threatBanner");
+
+    public static bool Flag(string name)
+    {
+        if (!flags.TryGetValue(name, out bool on)) flags[name] = on = PlayerPrefs.GetInt("settings.fx." + name, 1) == 1;
+        return on;
+    }
+
+    public static void SetFlag(string name, bool on)
+    {
+        flags[name] = on;
+        PlayerPrefs.SetInt("settings.fx." + name, on ? 1 : 0);
+        Save();
+    }
+
     public static Vector2Int Resolution =>
         new(PlayerPrefs.GetInt(WidthKey, Screen.width), PlayerPrefs.GetInt(HeightKey, Screen.height));
     public static FullScreenMode WindowMode => (FullScreenMode)PlayerPrefs.GetInt(WindowModeKey, (int)Screen.fullScreenMode);

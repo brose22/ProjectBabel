@@ -46,7 +46,13 @@ public static class RunSave
         public WorldMap map;
     }
 
-    static string FilePath => Path.Combine(Application.persistentDataPath, "run.json");
+    // Where the AI Run keeps its own run, so it never touches the player's save.
+    public static string PathOverride { get; set; }
+
+    static string FilePath => PathOverride ?? Path.Combine(Application.persistentDataPath, "run.json");
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => PathOverride = null;
 
     public static bool Exists => File.Exists(FilePath);
 

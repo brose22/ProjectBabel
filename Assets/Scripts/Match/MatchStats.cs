@@ -16,6 +16,10 @@ public class MatchStats : MonoBehaviour
         public int GoldStart;
         public int GoldEnd;
         public int GoldEarned;
+        // Paid for clearing the wave, on top of kills.
+        public int GoldBonus;
+        // Drained from the pool between the last wave and this one: reserve top-ups, restores, moves.
+        public int GoldBetween;
         public int Kills;
         public int Leaks;
         public int Casualties;
@@ -24,15 +28,23 @@ public class MatchStats : MonoBehaviour
         public readonly Dictionary<string, int> KillsByCaptain = new();
 
         // Spent = what the pool lost beyond what came in: draws into tower reserves, moves, restores.
-        public int GoldSpent => GoldStart + GoldEarned - GoldEnd;
+        public int GoldSpent => GoldStart + GoldEarned + GoldBonus - GoldEnd;
     }
+
+    // The AI Run turns this off so its matches don't fill the player's stats folder.
+    public static bool WriteCsvEnabled { get; set; } = true;
 
     public List<WaveRecord> Waves { get; } = new();
     WaveRecord current;
     float waveStartTime;
+    // Gold when the last wave closed, or at match start; what the next wave's between-wave drain is measured from.
+    int goldAtLastClose = -1;
+    MatchManager match;
 
     void OnEnable()
     {
+        match = GetComponent<MatchManager>();
+        if (goldAtLastClose < 0 && RunState.Current != null) goldAtLastClose = RunState.Current.Gold;
         GameEvents.WaveStarted += OnWaveStarted;
         GameEvents.WaveEnded += OnWaveEnded;
         GameEvents.MatchEnded += OnMatchEnded;
@@ -55,7 +67,8 @@ public class MatchStats : MonoBehaviour
 
     void OnWaveStarted(int wave)
     {
-        current = new WaveRecord { Wave = wave, GoldStart = RunState.Current.Gold };
+        int gold = RunState.Current.Gold;
+        current = new WaveRecord { Wave = wave, GoldStart = gold, GoldBetween = Mathf.Max(0, goldAtLastClose - gold) };
         waveStartTime = Time.time;
     }
 
@@ -63,7 +76,7 @@ public class MatchStats : MonoBehaviour
     {
         if (current == null) return;
         current.Kills++;
-        current.GoldEarned += enemy.Data.goldReward;
+        current.GoldEarned += enemy.GoldReward;
         string killer = enemy.KilledBy != null ? enemy.KilledBy.Captain.displayName : "other";
         current.KillsByCaptain[killer] = current.KillsByCaptain.TryGetValue(killer, out int count) ? count + 1 : 1;
     }
@@ -72,13 +85,17 @@ public class MatchStats : MonoBehaviour
     void OnSoldierDied(Soldier soldier) { if (current != null) current.Casualties++; }
     void OnAbilityUsed(Tower tower) { if (current != null) current.AbilitiesUsed++; }
 
-    void OnWaveEnded(int wave) => CloseWave();
+    void OnWaveEnded(int wave)
+    {
+        if (current != null && match != null) current.GoldBonus = match.LastWaveClearGold;
+        CloseWave();
+    }
 
     // A loss ends the match mid-wave, so the wave in progress is closed here too.
     void OnMatchEnded(bool won)
     {
         CloseWave();
-        WriteCsv(won);
+        if (WriteCsvEnabled) WriteCsv(won);
     }
 
     void CloseWave()
@@ -86,10 +103,12 @@ public class MatchStats : MonoBehaviour
         if (current == null) return;
         current.Seconds = Time.time - waveStartTime;
         current.GoldEnd = RunState.Current.Gold;
+        goldAtLastClose = current.GoldEnd;
         current.HealthEnd = RunState.Current.Health;
         Waves.Add(current);
         Debug.Log($"[Stats] Wave {current.Wave}: {current.Seconds:0}s, kills {current.Kills}, leaks {current.Leaks}, " +
-                  $"casualties {current.Casualties}, Gold +{current.GoldEarned} -{current.GoldSpent} (now {current.GoldEnd}), " +
+                  $"casualties {current.Casualties}, Gold +{current.GoldEarned} +{current.GoldBonus} clear bonus -{current.GoldSpent} " +
+                  $"(-{current.GoldBetween} drawn before the wave, now {current.GoldEnd}), " +
                   $"health {current.HealthEnd}, abilities {current.AbilitiesUsed}, kills by {FormatKills(current)}");
         current = null;
     }
@@ -108,9 +127,9 @@ public class MatchStats : MonoBehaviour
             string folder = Path.Combine(Application.persistentDataPath, "stats");
             Directory.CreateDirectory(folder);
             string path = Path.Combine(folder, $"match_{DateTime.Now:yyyyMMdd_HHmmss}_{(won ? "won" : "lost")}.csv");
-            var csv = new StringBuilder("wave,seconds,kills,leaks,casualties,gold_start,gold_earned,gold_spent,gold_end,health_end,abilities,kills_by\n");
+            var csv = new StringBuilder("wave,seconds,kills,leaks,casualties,gold_start,gold_earned,gold_bonus,gold_spent,gold_between,gold_end,health_end,abilities,kills_by\n");
             foreach (WaveRecord w in Waves)
-                csv.AppendLine($"{w.Wave},{w.Seconds:0.0},{w.Kills},{w.Leaks},{w.Casualties},{w.GoldStart},{w.GoldEarned},{w.GoldSpent},{w.GoldEnd},{w.HealthEnd},{w.AbilitiesUsed},\"{FormatKills(w)}\"");
+                csv.AppendLine($"{w.Wave},{w.Seconds:0.0},{w.Kills},{w.Leaks},{w.Casualties},{w.GoldStart},{w.GoldEarned},{w.GoldBonus},{w.GoldSpent},{w.GoldBetween},{w.GoldEnd},{w.HealthEnd},{w.AbilitiesUsed},\"{FormatKills(w)}\"");
             File.WriteAllText(path, csv.ToString());
             Debug.Log($"[Stats] Match written to {path}");
         }

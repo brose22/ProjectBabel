@@ -12,6 +12,7 @@ public class PartyBar
     const float CardWidth = 112f;
     // The 32 px portraits at 1x, so their pixels stay square.
     const float PortraitSize = 32f;
+    const float TipWidth = 220f;
     static readonly Color CardColor = new(0.17f, 0.2f, 0.28f, 1f);
 
     readonly MatchManager match;
@@ -93,6 +94,8 @@ public class PartyBar
             UIKit.Label(info, "No special", 9, color: UIKit.MutedTextColor);
             actionable = () => false;
         }
+
+        if (captain.ability != null) UIKit.HoverTip(card, captain.ability.displayName, captain.ability.description, TipWidth);
 
         Image ring = UIKit.Outline(card, UIKit.AccentColor);
         ring.rectTransform.offsetMin = new Vector2(2f, 2f);

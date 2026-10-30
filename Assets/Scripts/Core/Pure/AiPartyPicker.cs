@@ -1,0 +1,117 @@
+using System;
+using System.Collections.Generic;
+
+// Mirrors CaptainRole in the game assembly, so this stays free of game types.
+public enum AiRole { Attacker, Buffer, Healer }
+
+// A roster captain as the AI sees it. Element is the Element enum's value (Water, Fire, Earth, Air).
+public struct AiCaptainInfo
+{
+    public string name;
+    public AiRole role;
+    public int element;
+    // Damage per second at level 1: power x speed.
+    public float strength;
+    public float range;
+}
+
+// Chooses the starting party, recruits and the order captains take the field in.
+public static class AiPartyPicker
+{
+    public const int ElementCount = 4;
+
+    // Higher is better. weakness counts how many upcoming enemies are weak to each element.
+    static float Score(AiCaptainInfo captain, IReadOnlyList<AiCaptainInfo> party, int[] weakness, int slotsLeft)
+    {
+        float score = captain.strength + captain.range;
+        int supports = 0;
+        int sameElement = 0;
+        foreach (AiCaptainInfo member in party)
+        {
+            if (member.role != AiRole.Attacker) supports++;
+            if (member.element == captain.element) sameElement++;
+        }
+        if (captain.role == AiRole.Attacker)
+        {
+            // The last slot has to go to a support if the party still has none.
+            if (supports == 0 && slotsLeft <= 1) score -= 100f;
+        }
+        else
+        {
+            // One support is worth a slot; a second adds little.
+            score += supports == 0 ? 12f : supports == 1 ? 3f : -20f;
+        }
+        score -= sameElement * 3f;
+        if (weakness != null && captain.element >= 0 && captain.element < weakness.Length)
+        {
+            int total = 0;
+            foreach (int w in weakness) total += w;
+            if (total > 0) score += 10f * weakness[captain.element] / total;
+        }
+        return score;
+    }
+
+    // The indices of count captains from the roster, best first.
+    public static List<int> PickParty(IReadOnlyList<AiCaptainInfo> roster, int count, int[] weakness)
+    {
+        var chosen = new List<int>();
+        var members = new List<AiCaptainInfo>();
+        while (chosen.Count < count && chosen.Count < roster.Count)
+        {
+            int best = -1;
+            float bestScore = float.MinValue;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                if (chosen.Contains(i)) continue;
+                float score = Score(roster[i], members, weakness, count - chosen.Count);
+                if (score <= bestScore) continue;
+                best = i;
+                bestScore = score;
+            }
+            chosen.Add(best);
+            members.Add(roster[best]);
+        }
+        return chosen;
+    }
+
+    // The index in offer to recruit, or -1 to pass.
+    public static int PickRecruit(IReadOnlyList<AiCaptainInfo> offer, IReadOnlyList<AiCaptainInfo> party, int[] weakness)
+    {
+        int best = -1;
+        float bestScore = 0f;
+        for (int i = 0; i < offer.Count; i++)
+        {
+            float score = Score(offer[i], party, weakness, 2);
+            if (score <= bestScore) continue;
+            best = i;
+            bestScore = score;
+        }
+        return best;
+    }
+
+    // The order to place party members in when the field is smaller than the party: the strongest
+    // attacker, a support (if any), then the rest by strength.
+    public static List<int> FieldOrder(IReadOnlyList<AiCaptainInfo> party)
+    {
+        var order = new List<int>();
+        for (int i = 0; i < party.Count; i++) order.Add(i);
+        order.Sort((a, b) => party[b].strength.CompareTo(party[a].strength));
+        int firstAttacker = order.FindIndex(i => party[i].role == AiRole.Attacker);
+        int firstSupport = order.FindIndex(i => party[i].role != AiRole.Attacker);
+        var result = new List<int>();
+        if (firstAttacker >= 0) result.Add(order[firstAttacker]);
+        if (firstSupport >= 0) result.Add(order[firstSupport]);
+        foreach (int i in order)
+            if (!result.Contains(i)) result.Add(i);
+        return result;
+    }
+
+    // Counts, per element, the enemies that are weak to it; an element outside range is ignored.
+    public static int[] CountWeaknesses(IEnumerable<(int element, int count)> enemies)
+    {
+        var counts = new int[ElementCount];
+        foreach ((int element, int count) in enemies)
+            if (element >= 0 && element < ElementCount) counts[element] += Math.Max(0, count);
+        return counts;
+    }
+}
