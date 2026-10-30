@@ -537,6 +537,20 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
+    // Cheat: turns a rest or event that hasn't been visited into a shop, and redraws the map.
+    public bool CanCheatMakeShop(MapNode node) =>
+        State == MatchState.Map && node != null && !node.cleared && node.id != RunState.Current.Map.current
+        && node.kind is NodeKind.Rest or NodeKind.Event;
+
+    public void CheatMakeShop(int id)
+    {
+        MapNode node = RunState.Current.Map.nodes.Find(n => n.id == id);
+        if (!CanCheatMakeShop(node)) return;
+        node.kind = NodeKind.Shop;
+        RunSave.Save(RunState.Current);
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
     // Jolts the camera and freezes the match for a moment when an ability lands so the hit reads.
     // Overlapping abilities extend the freeze to the longest one rather than stacking.
     void OnAbilityUsed(Tower tower)

@@ -368,6 +368,12 @@ public class RunScreens : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
         UIKit.Button(buttons, "Abandon run", match.RestartRun, 160f, 24f);
+        if (Debug.isDebugBuild)
+        {
+            makeShopArmed = false;
+            UIKit.LiveButton(buttons, () => makeShopArmed ? "DEBUG: pick a rest/event" : "DEBUG: make a shop",
+                () => makeShopArmed = !makeShopArmed, refreshers, () => true, width: 180f, height: 24f);
+        }
 
         // Two drawers share the left edge, the inventory's tab under the party's. Only one is open
         // at a time; each is built over the last, so the later one's blocker covers the earlier.
@@ -393,6 +399,9 @@ public class RunScreens : MonoBehaviour
                 });
             });
     }
+
+    // Debug: the next rest or event picked on the map becomes a shop (see CheatMakeShop).
+    bool makeShopArmed;
 
     // The id of the map drawer that is open, or null when none is.
     string openDrawer;
@@ -833,9 +842,16 @@ public class RunScreens : MonoBehaviour
         if (node.id == map.current) name += " (here)";
         else if (node.cleared) name += " (won)";
 
-        Button city = UIKit.Button(area, name, () => match.ChooseCity(node.id));
+        Button city = UIKit.Button(area, name, () =>
+        {
+            if (makeShopArmed && match.CanCheatMakeShop(node)) match.CheatMakeShop(node.id);
+            else match.ChooseCity(node.id);
+        });
         city.GetComponentInChildren<Text>().fontSize = 11;
         city.interactable = choosable;
+        // Debug: while the make-shop button is armed, rests and events can be picked to convert.
+        if (Debug.isDebugBuild)
+            refreshers.Add(() => city.interactable = choosable || (makeShopArmed && match.CanCheatMakeShop(node)));
         var image = city.GetComponent<Image>();
         image.color = choosable ? UIKit.SelectedButtonColor : node.cleared ? ClearedCityColor : isBase ? BaseColor
             : node.kind == NodeKind.Elite ? EliteColor : node.IsMatch ? UIKit.ButtonColor : StopColor;
