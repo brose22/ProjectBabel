@@ -393,9 +393,23 @@ public class MatchManager : MonoBehaviour
         LeaveStop();
     }
 
+    // The gifts on this shop's shelves: shopSize of the full list, picked by the shop's seed.
+    public List<GiftData> ShopStock
+    {
+        get
+        {
+            var stock = new List<GiftData>();
+            if (State != MatchState.Stop || City.kind != NodeKind.Shop) return stock;
+            foreach (int index in global::ShopStock.Pick(data.shopGifts.Count, data.shopSize, City.seed))
+                if (data.shopGifts[index] != null) stock.Add(data.shopGifts[index]);
+            return stock;
+        }
+    }
+
     // A shop item the player can pay for right now.
     public bool CanBuyGift(GiftData gift) =>
-        State == MatchState.Stop && City.kind == NodeKind.Shop && gift != null && RunState.Current.Gold >= gift.cost;
+        State == MatchState.Stop && City.kind == NodeKind.Shop && gift != null && RunState.Current.Gold >= gift.cost
+        && ShopStock.Contains(gift);
 
     // Buys a gift at the shop for Gold; it goes into the run's inventory. Saved straight away so
     // quitting at the shop keeps it.

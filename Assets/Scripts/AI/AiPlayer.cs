@@ -313,9 +313,9 @@ public class AiPlayer : MonoBehaviour
     {
         GiftData best = null;
         float bestGain = 0f;
-        foreach (GiftData gift in match.Data.shopGifts)
+        foreach (GiftData gift in match.ShopStock)
         {
-            if (gift == null || gift.cost > budget || !match.CanBuyGift(gift)) continue;
+            if (gift.cost > budget || !match.CanBuyGift(gift)) continue;
             float gain = gift.ApprovalFor(captain.ReactionTo(gift));
             if (gain > bestGain || (gain == bestGain && best != null && gift.cost < best.cost))
             {

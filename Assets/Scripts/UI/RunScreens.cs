@@ -35,6 +35,9 @@ public class RunScreens : MonoBehaviour
     const float DetailsWidth = 560f;
     const float DetailsPortraitSize = 96f;
     // Inventory and gift windows.
+    // Shop shelves: three cards across the 520 px stop panel.
+    const int ShopColumns = 3;
+    static readonly Vector2 ShopCardSize = new(152f, 116f);
     // The captain window sits on the right edge and the gift window takes the room to its left.
     const float GiftWindowWidth = UIKit.ReferenceWidth - DetailsWidth - 3f * UIKit.Pad;
     const float GiftListHeight = 220f;
@@ -916,14 +919,27 @@ public class RunScreens : MonoBehaviour
     {
         RunState run = RunState.Current;
         StopHeader(panel, "SHOP", "Buy gifts to carry with you. Give them to captains from the party window on the map.");
-        foreach (GiftData gift in match.Data.shopGifts)
+        // The shelves: a grid of cards, each with the gift's icon, name, price and how many you hold.
+        RectTransform grid = UIKit.Group(panel, "Shelves");
+        var cells = grid.gameObject.AddComponent<GridLayoutGroup>();
+        cells.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        cells.constraintCount = ShopColumns;
+        cells.cellSize = ShopCardSize;
+        cells.spacing = new Vector2(8f, 8f);
+        cells.childAlignment = TextAnchor.UpperCenter;
+        List<GiftData> stock = match.ShopStock;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(stock.Count / (float)ShopColumns));
+        UIKit.Size(grid, height: rows * ShopCardSize.y + (rows - 1) * 8f, flexibleWidth: 1f);
+        foreach (GiftData gift in stock)
         {
-            if (gift == null) continue;
-            Transform row = UIKit.Group(panel, gift.displayName);
-            UIKit.Layout<HorizontalLayoutGroup>(row, 0, 8).childAlignment = TextAnchor.MiddleCenter;
-            UIKit.Icon(row, gift.icon, 32f);
-            UIKit.LiveButton(row, () => $"{gift.displayName}   {gift.cost} Gold   (owned {run.GiftCount(gift)})",
-                () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), width: 360f, height: 32f);
+            RectTransform card = UIKit.Box(grid, gift.displayName, CardColor, blocksClicks: false);
+            UIKit.Layout<VerticalLayoutGroup>(card, 6, 3).childAlignment = TextAnchor.UpperCenter;
+            UIKit.Icon(card, gift.icon, 32f);
+            UIKit.Label(card, gift.displayName, 13, TextAnchor.MiddleCenter).fontStyle = FontStyle.Bold;
+            UIKit.LiveLabel(card, () => $"{gift.cost} Gold   (owned {run.GiftCount(gift)})", refreshers, 11, TextAnchor.MiddleCenter,
+                UIKit.MutedTextColor);
+            UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 24f),
+                flexibleWidth: 1f);
         }
         UIKit.Button(panel, "Leave the shop", match.LeaveStop, 220f, 32f);
     }
