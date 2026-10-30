@@ -47,6 +47,16 @@ public static class GameSettings
         Save();
     }
 
+    public const int MaxTowerDisabledWaves = 3;
+    // Waves a disabled tower sits out. 0 lets it be restored for Gold as soon as the current wave concludes.
+    public static int TowerDisabledWaves => Mathf.Clamp(PlayerPrefs.GetInt("settings.towerDisabledWaves", 1), 0, MaxTowerDisabledWaves);
+
+    public static void SetTowerDisabledWaves(int waves)
+    {
+        PlayerPrefs.SetInt("settings.towerDisabledWaves", Mathf.Clamp(waves, 0, MaxTowerDisabledWaves));
+        Save();
+    }
+
     public static Vector2Int Resolution =>
         new(PlayerPrefs.GetInt(WidthKey, Screen.width), PlayerPrefs.GetInt(HeightKey, Screen.height));
     public static FullScreenMode WindowMode => (FullScreenMode)PlayerPrefs.GetInt(WindowModeKey, (int)Screen.fullScreenMode);

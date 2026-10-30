@@ -587,10 +587,10 @@ public class MatchManager : MonoBehaviour
 
     void OnSoldierDied(Soldier soldier) => Casualties++;
 
-    // A disabled tower sits out the whole of the next wave. Disabled during wave N: restorable
-    // once wave N+1 ends. Disabled between waves (after wave N ended): also once wave N+1 ends.
+    // A disabled tower sits out GameSettings.TowerDisabledWaves waves, counted from the end of the wave
+    // in progress. With 0 it is restorable once the current wave concludes (straight away between waves).
     void OnTowerDisabled(Tower tower) =>
-        tower.SetRestorableAfterWave(WavesCleared + (State == MatchState.WaveActive ? 2 : 1));
+        tower.SetRestorableAfterWave(WavesCleared + (State == MatchState.WaveActive ? 1 : 0) + GameSettings.TowerDisabledWaves);
 
     void OnEnemyLeaked(Enemy enemy)
     {

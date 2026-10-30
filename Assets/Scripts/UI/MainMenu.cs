@@ -193,7 +193,7 @@ public class MainMenu : MonoBehaviour
 
     void BuildGameplayTab(RectTransform column)
     {
-        SettingsNote(column, "Combat feedback on enemies. Turn off anything that is too busy or too bright.");
+        SettingsNote(column, "Combat feedback and tower rules. Turn off anything that is too busy or too bright.");
 
         UIKit.Label(column, "Numbers and labels", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Damage numbers", "damageNumbers");
@@ -213,6 +213,16 @@ public class MainMenu : MonoBehaviour
         UIKit.Label(column, "Threat alerts", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Leak edge flash", "edgeFlash");
         FlagRow(column, "Elite / boss banner", "threatBanner");
+
+        UIKit.Label(column, "Towers", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        SettingRow(column, "Disabled for", () => GameSettings.TowerDisabledWaves switch
+            {
+                0 => "Rest of the wave",
+                1 => "1 more wave",
+                int n => $"{n} more waves",
+            },
+            step => GameSettings.SetTowerDisabledWaves(Wrap(GameSettings.TowerDisabledWaves + step, GameSettings.MaxTowerDisabledWaves + 1)));
+        SettingsNote(column, "Rest of the wave: a disabled tower can be restored for Gold once the current wave ends.");
 
         SettingsNote(column, "Reduce flashing: turn off Hit flash and swell and Leak edge flash. Health bar extras covers the draining ghost segment and hiding full bars.");
     }
