@@ -35,6 +35,11 @@ public class Enemy : MonoBehaviour
     Color baseColor = Color.white;
     // Unscaled time until which the enemy shows the white ability-hit flash.
     float hitFlashUntil;
+    // Every tower or soldier hit flashes white and swells the body briefly.
+    const float HitPopSeconds = 0.05f;
+    const float HitPopScale = 1.15f;
+    Vector3 bodyScale = Vector3.one;
+    float hitPopUntil;
     const int HitFlashTint = -2;
     // Burn and zone damage arrives every frame, so it shows as one number per this many seconds.
     const float DotNumberSeconds = 1f;
@@ -77,6 +82,7 @@ public class Enemy : MonoBehaviour
             baseColor = data.color;
         }
         body.color = baseColor;
+        bodyScale = body.transform.localScale;
     }
 
     public bool IsWeakTo(Element element) => Data.hasWeakness && Data.weakness == element;
@@ -123,6 +129,7 @@ public class Enemy : MonoBehaviour
 
         TickStatuses();
         if (!IsTargetable) return;
+        body.transform.localScale = Time.unscaledTime < hitPopUntil ? bodyScale * HitPopScale : bodyScale;
 
         // Deployed soldiers in reach block the enemy until one side falls back or dies.
         Soldier blocker = Soldier.FindDeployedNear(transform.position, Data.attackRange);
@@ -233,7 +240,12 @@ public class Enemy : MonoBehaviour
         healthBar.SetFraction(Health / MaxHealth);
         Element? element = source != null ? source.Captain.element : numberElement;
         if (overTime) AccumulateDot(amount, element);
-        else ShowDamageNumber(amount, element, weak);
+        else
+        {
+            ShowDamageNumber(amount, element, weak);
+            FlashHit(HitPopSeconds);
+            hitPopUntil = Time.unscaledTime + HitPopSeconds;
+        }
         if (Health > 0f) return;
         FlushDot();
         KilledBy = source;
