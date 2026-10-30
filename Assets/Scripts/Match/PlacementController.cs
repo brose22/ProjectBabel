@@ -83,7 +83,8 @@ public class PlacementController : MonoBehaviour
 
         if (mouse.leftButton.wasPressedThisFrame)
         {
-            if (valid && match.MoveTower(Selected, cell)) IsMoving = false;
+            // Deselecting keeps the widget closed while the captain walks.
+            if (valid && match.MoveTower(Selected, cell)) Select(null);
         }
         else if (mouse.rightButton.wasPressedThisFrame)
         {
