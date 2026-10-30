@@ -9,10 +9,6 @@ public class Tower : MonoBehaviour
 {
     public static readonly List<Tower> All = new();
 
-    static readonly Vector3[] CrossDirections = { Vector3.up, Vector3.right, Vector3.down, Vector3.left };
-    // Far enough that a soldier stands clear of the tower body (0.8 tiles wide).
-    const float SoldierHomeDistance = 1.0f;
-
     [SerializeField] SpriteRenderer body;
     [SerializeField] SpriteRenderer rangeIndicator;
     [SerializeField] HealthBar reserveBar;
@@ -38,12 +34,13 @@ public class Tower : MonoBehaviour
     float autoFireAt = -1f;
 
     readonly List<Soldier> soldiers = new();
-    // Home offset for each soldier slot, kept so a swapped-in soldier stands where the old one did.
-    readonly List<Vector3> slotHomes = new();
+    // The tile each soldier slot waits on.
+    readonly List<Vector2Int> slotCells = new();
     float drawProgress;
     // Fractional free reserve earned from approval, paid out a whole coin at a time.
     float efficiencyBank;
     MatchManager match;
+    GridMap grid;
     // The body colour before disabled dimming or the ready pulse: white for drawn art, so it shows
     // as painted, or the captain colour for squares and tinted generic art.
     Color baseColor = Color.white;
@@ -104,9 +101,10 @@ public class Tower : MonoBehaviour
     };
 
     // One soldier per entry in slotClasses; the soldier list index is the slot index.
-    public void Init(MatchManager owner, CaptainData captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
+    public void Init(MatchManager owner, GridMap map, CaptainData captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
     {
         match = owner;
+        grid = map;
         Captain = captain;
         Cell = cell;
         ApplyArt(captain);
@@ -116,7 +114,7 @@ public class Tower : MonoBehaviour
         Health = MaxHealth;
         UpdateHealthBar();
 
-        AssignSlotHomes(slotClasses.Count);
+        slotCells.AddRange(PickHomes(grid, cell, slotClasses));
         for (int i = 0; i < slotClasses.Count; i++)
             soldiers.Add(SpawnSoldier(slotClasses[i], i));
 
@@ -126,8 +124,14 @@ public class Tower : MonoBehaviour
     Soldier SpawnSoldier(SoldierClassData soldierClass, int slot)
     {
         Soldier soldier = Instantiate(soldierPrefab, transform);
-        soldier.Init(this, soldierClass, slotHomes[slot]);
+        soldier.Init(this, soldierClass, HomeOffset(slot));
         return soldier;
+    }
+
+    Vector3 HomeOffset(int slot)
+    {
+        Vector2Int offset = slotCells[slot] - Cell;
+        return new Vector3(offset.x, offset.y, 0f);
     }
 
     public SoldierClassData SlotClass(int slot) => soldiers[slot].Class;
@@ -137,7 +141,7 @@ public class Tower : MonoBehaviour
     public int RespawnCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.respawnCost, Level);
 
     // Swapping a slot's class costs the new class's respawn, and the replacement starts fresh
-    // at home. The old soldier is retired, not killed, so it is no casualty. A disabled tower has
+    // on a tile of its own choosing. The old soldier is retired, not killed, so it is no casualty. A disabled tower has
     // no soldiers on the field, so its mix is locked until it is restored.
     public bool SetSlotClass(int slot, SoldierClassData newClass, bool free = false)
     {
@@ -146,38 +150,65 @@ public class Tower : MonoBehaviour
         if (!free && !TrySpendReserve(RespawnCostOf(newClass))) return false;
 
         Destroy(soldiers[slot].gameObject);
+        slotCells[slot] = PickHomeInsteadOf(slot, newClass);
         soldiers[slot] = SpawnSoldier(newClass, slot);
         GameEvents.RaiseSoldierMixChanged(this);
         return true;
     }
 
-    // Soldiers wait in a cross around the tower; each slot takes a random free arm.
-    // Past four soldiers the arms are reused.
-    void AssignSlotHomes(int count)
+    // Each soldier waits on the tile around the tower that suits their class best.
+    Vector2Int PickHome(SoldierClassData soldierClass) =>
+        SoldierHomeMath.Pick(Cell, soldierClass.homeTile, grid.IsRoad, grid.CanStandOn, IsHomeTaken);
+
+    // The tiles a full set of soldiers would take around a cell, in slot order. Placing, moving and
+    // the placement preview all come through here, so the preview shows exactly what will happen.
+    // A tower being moved gives up its own tile and its soldiers' tiles.
+    public static List<Vector2Int> PickHomes(GridMap grid, Vector2Int cell, IReadOnlyList<SoldierClassData> classes, Tower moving = null)
     {
-        slotHomes.Clear();
-        for (int i = 0; i < count; i++)
-            slotHomes.Add(PickFreeHome());
+        var homes = new List<Vector2Int>();
+        bool CanStand(Vector2Int home) => grid.CanStandOn(home) || (moving != null && home == moving.Cell);
+        bool IsTaken(Vector2Int home) => homes.Contains(home) || IsSoldierHome(home, moving);
+
+        foreach (SoldierClassData soldierClass in classes)
+            homes.Add(SoldierHomeMath.Pick(cell, soldierClass.homeTile, grid.IsRoad, CanStand, IsTaken));
+        return homes;
     }
 
-    Vector3 PickFreeHome()
+    public List<SoldierClassData> SlotClasses()
     {
-        var free = new List<Vector3>();
-        foreach (Vector3 direction in CrossDirections)
-            if (!slotHomes.Contains(direction * SoldierHomeDistance)) free.Add(direction);
-        if (free.Count == 0) free.AddRange(CrossDirections);
-        return free[Random.Range(0, free.Count)] * SoldierHomeDistance;
+        var classes = new List<SoldierClassData>();
+        foreach (Soldier soldier in soldiers)
+            classes.Add(soldier.Class);
+        return classes;
     }
 
-    // A rank-up mid-match adds soldiers straight away (GDD: 3 at B, 4 at S), on free arms of the
-    // cross. A disabled tower's new soldiers wait off the field until it is restored.
+    // The slot's own tile counts as free, so its soldier can stay put if that is still the best.
+    Vector2Int PickHomeInsteadOf(int slot, SoldierClassData soldierClass)
+    {
+        slotCells[slot] = Cell;
+        return PickHome(soldierClass);
+    }
+
+    bool IsHomeTaken(Vector2Int cell) => slotCells.Contains(cell) || IsSoldierHome(cell);
+
+    // A disabled tower's tiles count too, since its soldiers come back when it is restored.
+    public static bool IsSoldierHome(Vector2Int cell, Tower except = null)
+    {
+        foreach (Tower tower in All)
+            if (tower != except && tower.slotCells.Contains(cell)) return true;
+        return false;
+    }
+
+    // A rank-up mid-match adds soldiers straight away (GDD: 3 at B, 4 at S). A disabled tower's
+    // new soldiers wait off the field until it is restored.
     public void GrowSoldierSlots(int count, System.Func<int, SoldierClassData> classForSlot)
     {
         while (soldiers.Count < count)
         {
             int slot = soldiers.Count;
-            slotHomes.Add(PickFreeHome());
-            Soldier soldier = SpawnSoldier(classForSlot(slot), slot);
+            SoldierClassData soldierClass = classForSlot(slot);
+            slotCells.Add(PickHome(soldierClass));
+            Soldier soldier = SpawnSoldier(soldierClass, slot);
             soldiers.Add(soldier);
             if (IsDisabled) soldier.Despawn();
         }
@@ -372,8 +403,14 @@ public class Tower : MonoBehaviour
     {
         Cell = cell;
         transform.position = position;
-        foreach (Soldier soldier in soldiers)
-            soldier.ReturnHome();
+        List<Vector2Int> homes = PickHomes(grid, cell, SlotClasses(), this);
+        slotCells.Clear();
+        slotCells.AddRange(homes);
+        for (int slot = 0; slot < soldiers.Count; slot++)
+        {
+            soldiers[slot].SetHome(HomeOffset(slot));
+            soldiers[slot].ReturnHome();
+        }
     }
 
     public bool IsInRange(Vector3 position, float slack = 0f) =>

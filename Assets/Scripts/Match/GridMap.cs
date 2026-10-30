@@ -99,6 +99,11 @@ public class GridMap : MonoBehaviour
     public bool IsBuildable(Vector2Int cell) =>
         InBounds(cell) && !pathCells.Contains(cell) && !occupants.ContainsKey(cell) && !HasProp(cell);
 
+    public bool IsRoad(Vector2Int cell) => pathCells.Contains(cell);
+
+    // Soldiers may wait on the road, unlike towers, but not on a tower or a prop.
+    public bool CanStandOn(Vector2Int cell) => InBounds(cell) && !occupants.ContainsKey(cell) && !HasProp(cell);
+
     bool HasProp(Vector2Int cell) => propTilemap != null && propTilemap.HasTile(new Vector3Int(cell.x, cell.y, 0));
 
     public Vector2Int WorldToCell(Vector3 world) => new(Mathf.FloorToInt(world.x), Mathf.FloorToInt(world.y));

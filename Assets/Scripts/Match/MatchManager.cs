@@ -197,15 +197,25 @@ public class MatchManager : MonoBehaviour
     public SoldierClassData ClassForSlot(CaptainData captain, int slot) =>
         RunState.Current.LoadoutClass(captain, slot) ?? data.DefaultClassForSlot(slot);
 
-    public Tower PlaceTower(Vector2Int cell)
+    public SoldierClassData[] SlotClassesFor(CaptainData captain)
     {
-        if (!CanPlaceTower || !grid.IsBuildable(cell)) return null;
-        Tower tower = Instantiate(towerPrefab, grid.CellCenter(cell), Quaternion.identity);
-        CaptainData captain = NextCaptain;
         var slotClasses = new SoldierClassData[SoldierCountFor(captain)];
         for (int i = 0; i < slotClasses.Length; i++)
             slotClasses[i] = ClassForSlot(captain, i);
-        tower.Init(this, captain, slotClasses, cell);
+        return slotClasses;
+    }
+
+    // Captains can't stand on a soldier's tile. A moving captain's own soldiers will pick new
+    // tiles anyway, so theirs don't count.
+    public bool CanPlaceOn(Vector2Int cell) => CanPlaceTower && grid.IsBuildable(cell) && !Tower.IsSoldierHome(cell);
+    public bool CanMoveTo(Tower tower, Vector2Int cell) => grid.IsBuildable(cell) && !Tower.IsSoldierHome(cell, tower);
+
+    public Tower PlaceTower(Vector2Int cell)
+    {
+        if (!CanPlaceOn(cell)) return null;
+        Tower tower = Instantiate(towerPrefab, grid.CellCenter(cell), Quaternion.identity);
+        CaptainData captain = NextCaptain;
+        tower.Init(this, grid, captain, SlotClassesFor(captain), cell);
         grid.SetOccupant(cell, tower);
         GameEvents.RaiseTowerPlaced(tower);
         return tower;
@@ -235,7 +245,7 @@ public class MatchManager : MonoBehaviour
 
     public bool MoveTower(Tower tower, Vector2Int cell)
     {
-        if (!CanMove(tower) || !grid.IsBuildable(cell)) return false;
+        if (!CanMove(tower) || !CanMoveTo(tower, cell)) return false;
         int cost = MoveCost(tower);
         if (cost > 0 && !RunState.Current.TrySpendGold(cost)) return false;
         tower.ClearMoveDiscount();

@@ -22,6 +22,7 @@ MonoBehaviour:
   damageMultiplier: 1.1
   attackRange: 0.4
   moveSpeed: 3
+  homeTile: 1
   attackStyle: 0
   knockbackDistance: 0.5
   projectileSpeed: 10

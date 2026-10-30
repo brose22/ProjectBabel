@@ -26,7 +26,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
     {
         nameof(SoldierClassData.attackStyle), nameof(SoldierClassData.actCost), nameof(SoldierClassData.respawnCost),
         nameof(SoldierClassData.maxHealth), nameof(SoldierClassData.damageMultiplier), nameof(SoldierClassData.attackRange),
-        nameof(SoldierClassData.moveSpeed), nameof(SoldierClassData.knockbackDistance),
+        nameof(SoldierClassData.moveSpeed), nameof(SoldierClassData.homeTile), nameof(SoldierClassData.knockbackDistance),
         nameof(SoldierClassData.projectileSpeed), nameof(SoldierClassData.splashRadius), nameof(SoldierClassData.color),
     };
 
@@ -71,6 +71,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
         DataToolsGUI.Field(so, nameof(SoldierClassData.damageMultiplier));
         DataToolsGUI.Field(so, nameof(SoldierClassData.attackRange));
         DataToolsGUI.Field(so, nameof(SoldierClassData.moveSpeed));
+        DataToolsGUI.Field(so, nameof(SoldierClassData.homeTile));
         DrawDamagePreview(soldierClass);
 
         SerializedProperty style = DataToolsGUI.Field(so, nameof(SoldierClassData.attackStyle));
