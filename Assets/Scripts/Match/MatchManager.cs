@@ -41,6 +41,8 @@ public class MatchManager : MonoBehaviour
     // Gold the win paid into the pool: the flat bonus plus the towers' unspent reserves.
     public int WinGoldEarned { get; private set; }
     public int ReserveRefunded { get; private set; }
+    // Gold the wave just cleared paid out.
+    public int LastWaveClearGold { get; private set; }
 
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
     public bool IsBetweenMatches => State is MatchState.Setup or MatchState.Map or MatchState.Stop;
@@ -181,6 +183,9 @@ public class MatchManager : MonoBehaviour
         WavesCleared++;
         // Buffer specials last for the rest of the wave.
         Tower.ClearWaveBoosts();
+        LastWaveClearGold = RunScaling.WaveClearGold(data.waveClearGold, data.waveClearGoldPerWave, WavesCleared,
+            RunScaling.DifficultyLayer(City, data.eliteLayerBonus), data.goldGrowthPerMatch);
+        RunState.Current.AddGold(LastWaveClearGold);
         GameEvents.RaiseWaveEnded(WavesCleared);
         if (WavesCleared >= WaveCount)
         {
@@ -434,7 +439,8 @@ public class MatchManager : MonoBehaviour
                 var copy = new WaveDefinition
                 {
                     healthMultiplier = wave.healthMultiplier * health,
-                    goldMultiplier = wave.goldMultiplier * RunScaling.GoldMultiplier(layer + pass, data.goldGrowthPerMatch),
+                    // Kill Gold follows the wave's health: tankier waves cost more attacks per kill.
+                    goldMultiplier = wave.goldMultiplier * wave.healthMultiplier * RunScaling.GoldMultiplier(layer + pass, data.goldGrowthPerMatch),
                 };
                 foreach (SpawnGroup group in wave.groups)
                     copy.groups.Add(new SpawnGroup

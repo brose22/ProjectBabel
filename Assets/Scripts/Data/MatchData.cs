@@ -86,6 +86,10 @@ public class MatchData : ScriptableObject
     public float goldGrowthPerMatch = 0.07f;
     [Tooltip("Flat Gold for winning a match, before the per-layer growth.")]
     public int winGold = 50;
+    [Tooltip("Gold for clearing a wave, before the per-wave step and per-layer growth.")]
+    public int waveClearGold = 5;
+    [Tooltip("Extra Gold per wave number cleared (wave 10 pays waveClearGold + 10 x this).")]
+    public int waveClearGoldPerWave = 2;
     [Tooltip("Share of each tower's unspent reserve returned to the Gold pool when a match is won.")]
     [Range(0f, 1f)] public float reserveRefundFraction = 1f;
     [Tooltip("Extra enemies per match into the run (0.08 = +8% per layer, rounded).")]

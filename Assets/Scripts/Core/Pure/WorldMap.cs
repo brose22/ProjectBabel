@@ -224,6 +224,11 @@ public static class RunScaling
     public static int WinGold(int baseGold, int layer, float growthPerLayer) =>
         Math.Max(0, (int)Math.Round(Math.Max(0, baseGold) * GoldMultiplier(layer, growthPerLayer)));
 
+    // Gold for clearing a wave: a base plus a step for each wave cleared so far (wave is 1-based),
+    // grown with the layer like kill rewards. Later waves cost more to fight, so they pay more.
+    public static int WaveClearGold(int baseGold, int goldPerWave, int wave, int layer, float growthPerLayer) =>
+        Math.Max(0, (int)Math.Round((Math.Max(0, baseGold) + Math.Max(0, goldPerWave) * Math.Max(0, wave)) * GoldMultiplier(layer, growthPerLayer)));
+
     // Enemy counts grow by countGrowthPerLayer per layer, rounded, never below the authored count.
     public static int EnemyCount(int count, int layer, float countGrowthPerLayer) =>
         Math.Max(count, (int)Math.Round(count * (1f + Math.Max(0f, countGrowthPerLayer) * Math.Max(0, layer))));

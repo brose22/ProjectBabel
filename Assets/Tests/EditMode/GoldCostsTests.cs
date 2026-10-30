@@ -65,4 +65,14 @@ public class GoldCostsTests
         Assert.That(RunScaling.WinGold(50, 5, 0.07f), Is.EqualTo(68));
         Assert.That(RunScaling.WinGold(-10, 3, 0.07f), Is.EqualTo(0));
     }
+
+    [TestCase(5, 2, 1, 0, 7)]
+    [TestCase(5, 2, 10, 0, 25)]
+    [TestCase(5, 2, 10, 5, 34)]
+    [TestCase(5, 0, 10, 0, 5)]
+    [TestCase(-5, 2, 3, 0, 6)]
+    public void WaveClearGold_GrowsWithWaveAndLayer(int baseGold, int perWave, int wave, int layer, int expected)
+    {
+        Assert.That(RunScaling.WaveClearGold(baseGold, perWave, wave, layer, 0.07f), Is.EqualTo(expected));
+    }
 }
