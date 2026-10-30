@@ -9,7 +9,7 @@ public enum RequestAnswer { No, Some, Yes }
 // Captains ask for things when something happens in the match (GDD: up to 2 per wave, often none):
 //   MoreDraw   - a soldier fell and the reserve can't pay to bring it back.
 //   Relocate   - nothing has come within the captain's range for a while. Yes only: the captain
-//                moves themselves, free, to the spot nearest the enemy gate that still covers road.
+//                moves themselves, free, 10% closer to the enemy gate along the road.
 //   NewMix     - the captain levelled up and a class they like isn't in every slot.
 //   UseSpecial - an elite or the boss walked on, or the special just finished charging. Yes only:
 //                the captain fires it by themselves, as soon as it can be used.
@@ -43,6 +43,8 @@ public class CaptainRequests : MonoBehaviour
     const int CooldownWaves = 2;
     // Game seconds with nothing in range, while enemies are elsewhere on the field, before a captain asks to move.
     const float IdleSeconds = 20f;
+    // A Relocate moves the captain this share closer to the gate, measured along the road.
+    const float MoveCloserFraction = 0.1f;
     // Game seconds between checks of the conditions that have no event of their own.
     const float PollSeconds = 0.5f;
 
@@ -209,14 +211,32 @@ public class CaptainRequests : MonoBehaviour
         ShowNext();
     }
 
-    // The free cell closest to the enemy gate that is nearer to it than the captain is now and
-    // still has road in the captain's range, or null when there is none.
+    // How far along the road, in tiles from the gate, a position is: the road tile nearest it.
+    int RoadDistanceFromGate(Vector3 position)
+    {
+        IReadOnlyList<Vector2Int> road = match.Grid.RoadCells;
+        int nearest = 0;
+        float nearestDistance = float.MaxValue;
+        for (int i = 0; i < road.Count; i++)
+        {
+            float distance = Vector2.Distance(position, match.Grid.CellCenter(road[i]));
+            if (distance >= nearestDistance) continue;
+            nearest = i;
+            nearestDistance = distance;
+        }
+        return nearest;
+    }
+
+    // Among free cells nearer the gate along the road than the captain is now, and still with road
+    // in the captain's range, the one whose road distance is closest to MoveCloserFraction less
+    // than the captain's current one. Null when there is none.
     Vector2Int? FindCellNearerSpawner(Tower tower)
     {
         GridMap grid = match.Grid;
         if (grid.RoadCells.Count == 0) return null;
-        Vector3 spawn = grid.CellCenter(grid.RoadCells[0]);
-        float best = Vector2.Distance(tower.transform.position, spawn);
+        int current = RoadDistanceFromGate(tower.transform.position);
+        float target = current * (1f - MoveCloserFraction);
+        float bestError = float.MaxValue;
         Vector2Int? pick = null;
         for (int x = 0; x < grid.Size.x; x++)
         {
@@ -225,9 +245,11 @@ public class CaptainRequests : MonoBehaviour
                 var cell = new Vector2Int(x, y);
                 if (!match.CanMoveTo(tower, cell)) continue;
                 Vector3 center = grid.CellCenter(cell);
-                float distance = Vector2.Distance(center, spawn);
-                if (distance >= best || !HasRoadInRange(center, tower.Range)) continue;
-                best = distance;
+                int distance = RoadDistanceFromGate(center);
+                if (distance >= current || !HasRoadInRange(center, tower.Range)) continue;
+                float error = Mathf.Abs(distance - target);
+                if (error >= bestError) continue;
+                bestError = error;
                 pick = cell;
             }
         }
