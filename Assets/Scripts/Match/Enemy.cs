@@ -8,6 +8,7 @@ public class Enemy : MonoBehaviour
     const float WeaknessMarkerSize = 0.15f;
     const float ShotStreakWidth = 0.05f;
     const float ShotStreakSeconds = 0.12f;
+    const float StatusIconHeight = 0.7f;
     // Enemy art is drawn for this size; other sizes scale the sprite.
     const float ArtSize = 0.6f;
 
@@ -30,6 +31,7 @@ public class Enemy : MonoBehaviour
     readonly float[] statusTime = new float[StatusRules.KindCount];
     float burnDamagePerSecond;
     Tower burnSource;
+    StatusIcons statusIcons;
     int tintedStatus = -1;
     // The body colour with no status: white for drawn art, or the data colour for squares.
     Color baseColor = Color.white;
@@ -62,6 +64,7 @@ public class Enemy : MonoBehaviour
         transform.position = path[0];
         ApplyArt(data);
         healthBar.SetFraction(1f);
+        statusIcons = StatusIcons.Create(transform, new Vector3(0f, StatusIconHeight, 0f), body.sortingOrder + 1);
         if (data.hasWeakness) AddWeaknessMarker();
         IsTargetable = true;
         Active.Add(this);
@@ -189,6 +192,7 @@ public class Enemy : MonoBehaviour
             if (statusTime[i] > 0f && tint < 0) tint = i;
         }
         UpdateTint(tint);
+        statusIcons.Refresh(statusTime);
 
         if (HasStatus(StatusKind.Burn))
             TakeDamage(burnDamagePerSecond * Time.deltaTime, burnSource, true, Element.Fire);
@@ -305,7 +309,10 @@ public class Enemy : MonoBehaviour
         IsTargetable = false;
         Active.Remove(this);
         if (Time.unscaledTime < hitFlashUntil)
+        {
             healthBar.gameObject.SetActive(false);
+            statusIcons.gameObject.SetActive(false);
+        }
         else
             Destroy(gameObject);
     }
