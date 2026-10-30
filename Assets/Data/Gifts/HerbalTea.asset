@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Herbal Tea
   description: A pouch of calming mountain herbs.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 6d149cf106991d24d8ede2f765b767d5, type: 3}
   cost: 40
   neutralApproval: 5
   likedApproval: 15

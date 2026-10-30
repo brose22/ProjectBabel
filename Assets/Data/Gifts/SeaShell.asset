@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Sea Shell
   description: A pearly shell that still hums like the tide.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 24c99d7e231b5114092dbb376b196154, type: 3}
   cost: 50
   neutralApproval: 5
   likedApproval: 15

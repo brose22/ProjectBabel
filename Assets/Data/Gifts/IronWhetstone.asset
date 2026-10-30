@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Iron Whetstone
   description: Keeps any edge keen.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8b09de3217955bd47acd720264d9dc63, type: 3}
   cost: 60
   neutralApproval: 5
   likedApproval: 15

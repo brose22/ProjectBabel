@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Ancient Book
   description: A brittle volume of forgotten battle lore.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 872e576392efa6f48b400b08f367726d, type: 3}
   cost: 100
   neutralApproval: 5
   likedApproval: 15
