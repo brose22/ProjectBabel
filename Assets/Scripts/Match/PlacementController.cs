@@ -10,8 +10,10 @@ public class PlacementController : MonoBehaviour
     [SerializeField] GridMap grid;
     [SerializeField] MatchHUD hud;
     [SerializeField] SpriteRenderer hoverMarker;
-    [SerializeField] Color validColor = new(0.3f, 1f, 0.3f, 0.45f);
-    [SerializeField] Color invalidColor = new(1f, 0.3f, 0.3f, 0.45f);
+    [Tooltip("Tile frame drawn on a tile the player can use (place, select or move to).")]
+    [SerializeField] Sprite validSprite;
+    [Tooltip("Tile frame drawn on a tile the player cannot use.")]
+    [SerializeField] Sprite invalidSprite;
 
     public Tower Selected { get; private set; }
     // While moving, clicks pick a new tile for the selected tower instead of placing or selecting.
@@ -51,9 +53,7 @@ public class PlacementController : MonoBehaviour
         Tower hovered = grid.GetOccupant(cell);
         bool canBuild = match.CanPlaceOn(cell);
 
-        hoverMarker.enabled = grid.InBounds(cell);
-        hoverMarker.transform.position = grid.CellCenter(cell);
-        hoverMarker.color = hovered != null || canBuild ? validColor : invalidColor;
+        ShowMarker(cell, hovered != null || canBuild);
         if (canBuild) ShowGhosts(cell, match.NextCaptain, match.SlotClassesFor(match.NextCaptain));
         else ghosts.Hide();
 
@@ -77,9 +77,7 @@ public class PlacementController : MonoBehaviour
     void UpdateMove(Mouse mouse, Vector2Int cell)
     {
         bool valid = match.CanMoveTo(Selected, cell) && match.CanAffordMove(Selected);
-        hoverMarker.enabled = grid.InBounds(cell);
-        hoverMarker.transform.position = grid.CellCenter(cell);
-        hoverMarker.color = valid ? validColor : invalidColor;
+        ShowMarker(cell, valid);
         if (valid) ShowGhosts(cell, Selected.Captain, Selected.SlotClasses(), Selected);
         else ghosts.Hide();
 
@@ -91,6 +89,15 @@ public class PlacementController : MonoBehaviour
         {
             CancelMove();
         }
+    }
+
+    // Frames the hovered tile with the valid or invalid art; out-of-bounds tiles get no frame.
+    void ShowMarker(Vector2Int cell, bool valid)
+    {
+        hoverMarker.enabled = grid.InBounds(cell);
+        hoverMarker.transform.position = grid.CellCenter(cell);
+        hoverMarker.sprite = valid ? validSprite : invalidSprite;
+        hoverMarker.color = Color.white;
     }
 
     void ShowGhosts(Vector2Int cell, CaptainData captain, IReadOnlyList<SoldierClassData> classes, Tower moving = null) =>
