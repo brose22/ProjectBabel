@@ -37,7 +37,7 @@ public class RunScreens : MonoBehaviour
     // Inventory and gift windows.
     // Shop shelves: three cards across the 520 px stop panel.
     const int ShopColumns = 3;
-    static readonly Vector2 ShopCardSize = new(152f, 116f);
+    static readonly Vector2 ShopCardSize = new(152f, 136f);
     // The captain window sits on the right edge and the gift window takes the room to its left.
     const float GiftWindowWidth = UIKit.ReferenceWidth - DetailsWidth - 3f * UIKit.Pad;
     const float GiftListHeight = 220f;
@@ -938,7 +938,7 @@ public class RunScreens : MonoBehaviour
             UIKit.Label(card, gift.displayName, 13, TextAnchor.MiddleCenter).fontStyle = FontStyle.Bold;
             UIKit.LiveLabel(card, () => $"{gift.cost} Gold   (owned {run.GiftCount(gift)})", refreshers, 11, TextAnchor.MiddleCenter,
                 UIKit.MutedTextColor);
-            UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 24f),
+            UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 34f),
                 flexibleWidth: 1f);
         }
         UIKit.Button(panel, "Leave the shop", match.LeaveStop, 220f, 32f);
