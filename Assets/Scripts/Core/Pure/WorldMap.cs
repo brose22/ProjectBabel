@@ -217,6 +217,13 @@ public static class RunScaling
 
     public static float HealthMultiplier(int layer, float growthPerLayer) => 1f + Math.Max(0f, growthPerLayer) * Math.Max(0, layer);
 
+    // Kill rewards grow with the layer so Gold keeps pace with the tougher enemies they cost to kill.
+    public static float GoldMultiplier(int layer, float growthPerLayer) => 1f + Math.Max(0f, growthPerLayer) * Math.Max(0, layer);
+
+    // The flat Gold for winning a match, grown the same way as kill rewards.
+    public static int WinGold(int baseGold, int layer, float growthPerLayer) =>
+        Math.Max(0, (int)Math.Round(Math.Max(0, baseGold) * GoldMultiplier(layer, growthPerLayer)));
+
     // Enemy counts grow by countGrowthPerLayer per layer, rounded, never below the authored count.
     public static int EnemyCount(int count, int layer, float countGrowthPerLayer) =>
         Math.Max(count, (int)Math.Round(count * (1f + Math.Max(0f, countGrowthPerLayer) * Math.Max(0, layer))));

@@ -38,6 +38,9 @@ public class MatchManager : MonoBehaviour
     public int Casualties { get; private set; }
     // Global health restored by winning this match.
     public int HealthRestored { get; private set; }
+    // Gold the win paid into the pool: the flat bonus plus the towers' unspent reserves.
+    public int WinGoldEarned { get; private set; }
+    public int ReserveRefunded { get; private set; }
 
     public bool IsOver => State is MatchState.Won or MatchState.Lost;
     public bool IsBetweenMatches => State is MatchState.Setup or MatchState.Map or MatchState.Stop;
@@ -166,7 +169,8 @@ public class MatchManager : MonoBehaviour
         spawner.SpawnWave(waves[WavesCleared]);
         if (IsBaseMatch && data.boss != null && Boss == null)
         {
-            Boss = spawner.SpawnOne(data.boss, RunScaling.HealthMultiplier(City.layer, data.enemyHealthGrowthPerMatch));
+            Boss = spawner.SpawnOne(data.boss, RunScaling.HealthMultiplier(City.layer, data.enemyHealthGrowthPerMatch),
+                RunScaling.GoldMultiplier(City.layer, data.goldGrowthPerMatch));
             Boss.MarkBoss();
         }
         GameEvents.RaiseWaveStarted(WavesCleared + 1);
@@ -427,7 +431,11 @@ public class MatchManager : MonoBehaviour
             float health = RunScaling.HealthMultiplier(layer + pass, data.enemyHealthGrowthPerMatch);
             foreach (WaveDefinition wave in data.waves)
             {
-                var copy = new WaveDefinition { healthMultiplier = wave.healthMultiplier * health };
+                var copy = new WaveDefinition
+                {
+                    healthMultiplier = wave.healthMultiplier * health,
+                    goldMultiplier = wave.goldMultiplier * RunScaling.GoldMultiplier(layer + pass, data.goldGrowthPerMatch),
+                };
                 foreach (SpawnGroup group in wave.groups)
                     copy.groups.Add(new SpawnGroup
                     {
@@ -507,7 +515,14 @@ public class MatchManager : MonoBehaviour
         Tower.ClearWaveBoosts();
         ApplyTimeScale();
         bool won = result == MatchState.Won;
-        if (won) RunState.Current.CompleteMatch(data.intelDepth);
+        if (won)
+        {
+            // Pay the win before the run moves on: the flat bonus, then the towers' unspent reserves.
+            WinGoldEarned = RunScaling.WinGold(data.winGold, RunScaling.DifficultyLayer(City, data.eliteLayerBonus), data.goldGrowthPerMatch);
+            RunState.Current.AddGold(WinGoldEarned);
+            foreach (Tower tower in Tower.All) ReserveRefunded += tower.ReturnReserve(data.reserveRefundFraction);
+            RunState.Current.CompleteMatch(data.intelDepth);
+        }
         // Walkouts are judged on this, so recruits are offered after it.
         GameEvents.RaiseMatchEnded(won);
 
@@ -531,7 +546,7 @@ public class MatchManager : MonoBehaviour
     {
         Kills++;
         if (enemy == Boss && !IsOver && BossRules.IsMatchWon(WavesCleared, WaveCount, false)) Finish(MatchState.Won);
-        if (IsEliteMatch) RunState.Current.AddGold(Mathf.RoundToInt(enemy.Data.goldReward * (data.eliteGoldMultiplier - 1f)));
+        if (IsEliteMatch) RunState.Current.AddGold(Mathf.RoundToInt(enemy.GoldReward * (data.eliteGoldMultiplier - 1f)));
         if (enemy.KilledBy != null) enemy.KilledBy.GainXp(enemy.Data.xpReward);
     }
 

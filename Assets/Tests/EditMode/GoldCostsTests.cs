@@ -44,4 +44,25 @@ public class GoldCostsTests
     {
         Assert.That(GoldCosts.Scaled(baseCost, level), Is.EqualTo(0));
     }
+
+    [TestCase(20, 1f, 20)]
+    [TestCase(20, 0.5f, 10)]
+    [TestCase(7, 0.5f, 4)]
+    [TestCase(20, 0f, 0)]
+    [TestCase(20, 2f, 20)]
+    [TestCase(-3, 1f, 0)]
+    public void Refund_ReturnsTheClampedShareOfTheReserve(int reserve, float fraction, int expected)
+    {
+        Assert.That(GoldCosts.Refund(reserve, fraction), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void RunScaling_GoldGrowsWithLayerAndStartsAsAuthored()
+    {
+        Assert.That(RunScaling.GoldMultiplier(0, 0.07f), Is.EqualTo(1f));
+        Assert.That(RunScaling.GoldMultiplier(5, 0.07f), Is.EqualTo(1.35f).Within(1e-5f));
+        Assert.That(RunScaling.WinGold(50, 0, 0.07f), Is.EqualTo(50));
+        Assert.That(RunScaling.WinGold(50, 5, 0.07f), Is.EqualTo(68));
+        Assert.That(RunScaling.WinGold(-10, 3, 0.07f), Is.EqualTo(0));
+    }
 }

@@ -796,6 +796,8 @@ public class RunScreens : MonoBehaviour
         Stat(stats, "CASUALTIES", $"{match.Casualties}");
         Stat(stats, "HEALTH", $"{run.Health}/{run.MaxHealth}");
         Stat(stats, "GOLD", $"{run.Gold}").color = UIKit.AccentColor;
+        if (match.WinGoldEarned + match.ReserveRefunded > 0)
+            UIKit.Label(panel, $"+{match.WinGoldEarned} Gold for the win, +{match.ReserveRefunded} returned from reserves", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
         if (match.HealthRestored > 0)
             UIKit.Label(panel, $"+{match.HealthRestored} health for the win", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
 

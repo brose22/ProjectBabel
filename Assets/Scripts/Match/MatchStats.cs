@@ -63,7 +63,7 @@ public class MatchStats : MonoBehaviour
     {
         if (current == null) return;
         current.Kills++;
-        current.GoldEarned += enemy.Data.goldReward;
+        current.GoldEarned += enemy.GoldReward;
         string killer = enemy.KilledBy != null ? enemy.KilledBy.Captain.displayName : "other";
         current.KillsByCaptain[killer] = current.KillsByCaptain.TryGetValue(killer, out int count) ? count + 1 : 1;
     }

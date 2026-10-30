@@ -70,9 +70,13 @@ public class Enemy : MonoBehaviour
     float MoveSpeed => Data.moveSpeed * (HasStatus(StatusKind.Slow) ? StatusRules.SlowSpeedMultiplier : 1f);
     float AttackIntervalMultiplier => HasStatus(StatusKind.Stun) ? StatusRules.StunAttackIntervalMultiplier : 1f;
 
-    public void Init(EnemyData data, Vector3[] pathPoints, float healthMultiplier)
+    // Gold paid into the shared pool when this enemy dies, after the run's per-layer growth.
+    public int GoldReward { get; private set; }
+
+    public void Init(EnemyData data, Vector3[] pathPoints, float healthMultiplier, float goldMultiplier = 1f)
     {
         Data = data;
+        GoldReward = Mathf.RoundToInt(data.goldReward * goldMultiplier);
         path = pathPoints;
         nextPoint = 1;
         MaxHealth = Health = data.maxHealth * healthMultiplier;
@@ -404,14 +408,14 @@ public class Enemy : MonoBehaviour
     void ShowDeath()
     {
         if (GameSettings.DeathBurst) Burst.Spawn(transform.position, Data.color, 8, 1.8f, 0.14f, 0.4f);
-        if (GameSettings.DamageNumbers) FloatingText.Spawn(transform.position + Vector3.up * 0.2f, "+" + Data.goldReward, UIKit.AccentColor, 1.2f, 1f);
+        if (GameSettings.DamageNumbers) FloatingText.Spawn(transform.position + Vector3.up * 0.2f, "+" + GoldReward, UIKit.AccentColor, 1.2f, 1f);
     }
 
     void Die()
     {
         ShowDeath();
         Remove();
-        RunState.Current?.AddGold(Data.goldReward);
+        RunState.Current?.AddGold(GoldReward);
         GameEvents.RaiseEnemyKilled(this);
     }
 

@@ -11,11 +11,11 @@ public class WaveSpawner : MonoBehaviour
     public void SpawnWave(WaveDefinition wave) => StartCoroutine(Run(wave));
 
     // One enemy straight onto the road, outside any wave (the enemy base's boss).
-    public Enemy SpawnOne(EnemyData data, float healthMultiplier)
+    public Enemy SpawnOne(EnemyData data, float healthMultiplier, float goldMultiplier = 1f)
     {
         Vector3[] points = path.GetPoints();
         Enemy enemy = Instantiate(enemyPrefab, points[0], Quaternion.identity);
-        enemy.Init(data, points, healthMultiplier);
+        enemy.Init(data, points, healthMultiplier, goldMultiplier);
         return enemy;
     }
 
@@ -38,7 +38,7 @@ public class WaveSpawner : MonoBehaviour
             for (int i = 0; i < group.count; i++)
             {
                 Enemy enemy = Instantiate(enemyPrefab, points[0], Quaternion.identity);
-                enemy.Init(group.enemy, points, wave.healthMultiplier);
+                enemy.Init(group.enemy, points, wave.healthMultiplier, wave.goldMultiplier);
                 if (i < group.count - 1)
                     yield return new WaitForSeconds(group.spawnInterval);
             }
