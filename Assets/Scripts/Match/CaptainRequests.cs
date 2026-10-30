@@ -11,7 +11,8 @@ public enum RequestAnswer { No, Some, Yes }
 //   Relocate   - nothing has come within the captain's range for a while. Yes only: the captain
 //                moves themselves, free, to the spot nearest the enemy gate that still covers road.
 //   NewMix     - the captain levelled up and a class they like isn't in every slot.
-//   UseSpecial - an elite or the boss walked on, or the special just finished charging.
+//   UseSpecial - an elite or the boss walked on, or the special just finished charging. Yes only:
+//                the captain fires it by themselves, as soon as it can be used.
 // The player answers No (0%), Some (50%) or Yes (100%): the answer grants that share of the request
 // and of the approval reward. Refusing always costs approval, scaled by request and captain.
 // Requests are shown one at a time and the match pauses while one waits; one left unanswered when
@@ -32,8 +33,8 @@ public class CaptainRequests : MonoBehaviour
 
     const float ApprovalReward = 4f;
     const float RefusalPenalty = 3f;
-    // A Some on a special fires it after this delay instead of now.
-    const float SomeSpecialDelaySeconds = 5f;
+    // A Yes on a special that can't fire yet waits this long for it to be able to.
+    const float AutoFireTimeoutSeconds = 20f;
     // Real-time seconds the player has to answer a shown request.
     public const float ResponseSeconds = 10f;
     // At most this many requests come in a wave.
@@ -275,12 +276,15 @@ public class CaptainRequests : MonoBehaviour
             return;
         }
 
-        // A move is all or nothing, so Some counts as Yes.
-        if (request.Kind == RequestKind.Relocate) answer = RequestAnswer.Yes;
+        // A move or a special is all or nothing, so Some counts as Yes.
+        if (IsYesNo(request.Kind)) answer = RequestAnswer.Yes;
         bool full = answer == RequestAnswer.Yes;
         Grant(request, full);
         relationships.Change(tower, full ? ApprovalReward : ApprovalReward * 0.5f, full ? "got their way" : "got some of their way");
     }
+
+    // Requests that can only be answered Yes or No.
+    public static bool IsYesNo(RequestKind kind) => kind is RequestKind.Relocate or RequestKind.UseSpecial;
 
     // How much a refusal stings, by request.
     static float RefusalWeight(RequestKind kind) => kind switch
@@ -309,8 +313,8 @@ public class CaptainRequests : MonoBehaviour
                     if (tower.SetSlotClass(slot, request.WantedClass, free: true)) switches--;
                 break;
             case RequestKind.UseSpecial:
-                if (full) tower.TryUseAbility();
-                else tower.FireAbilitySoon(SomeSpecialDelaySeconds);
+                // Fires now, or the moment it can if nothing is in reach yet.
+                if (!tower.TryUseAbility()) tower.FireAbilityWhenAble(AutoFireTimeoutSeconds);
                 break;
         }
     }

@@ -30,8 +30,8 @@ public class Tower : MonoBehaviour
     public float SpecialCharge { get; private set; }
     // Multiplies the next relocation's Gold cost; a granted request can make it cheaper or free.
     public float MoveCostMultiplier { get; private set; } = 1f;
-    // Game time a requested special fires by itself, or below zero for none.
-    float autoFireAt = -1f;
+    // Game time a requested special stops waiting to fire by itself, or below zero for none.
+    float autoFireUntil = -1f;
 
     readonly List<Soldier> soldiers = new();
     // The tile each soldier slot waits on.
@@ -375,14 +375,13 @@ public class Tower : MonoBehaviour
         return closest;
     }
 
-    // Fires the special by itself after a delay, if it can still be used then.
-    public void FireAbilitySoon(float seconds) => autoFireAt = Time.time + seconds;
+    // Fires the special as soon as it can be used (a target in range, say), giving up after the timeout.
+    public void FireAbilityWhenAble(float timeoutSeconds) => autoFireUntil = Time.time + timeoutSeconds;
 
     void TickAutoFire()
     {
-        if (autoFireAt < 0f || Time.time < autoFireAt) return;
-        autoFireAt = -1f;
-        TryUseAbility();
+        if (autoFireUntil < 0f) return;
+        if (Time.time > autoFireUntil || IsDisabled || !IsSpecialReady || TryUseAbility()) autoFireUntil = -1f;
     }
 
     public void GrantMoveDiscount(float costMultiplier) => MoveCostMultiplier = Mathf.Min(MoveCostMultiplier, costMultiplier);
