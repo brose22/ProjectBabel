@@ -369,25 +369,57 @@ public class RunScreens : MonoBehaviour
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
         UIKit.Button(buttons, "Abandon run", match.RestartRun, 160f, 24f);
 
-        // Built first so the party drawer and its blocker draw over it when they slide in.
-        BuildInventoryTab(root, run);
-        BuildPartyDrawer(root, run);
+        // Two drawers share the left edge, the inventory's tab under the party's. Only one is open
+        // at a time; each is built over the last, so the later one's blocker covers the earlier.
+        openDrawer = null;
+        BuildDrawer(root, "Party", "PARTY", 0f,
+            $"PARTY   <color={UIKit.Hex(UIKit.MutedTextColor)}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>",
+            list =>
+            {
+                foreach (CaptainData captain in run.Party)
+                    PartyCard(list.content, run, captain);
+            });
+        BuildDrawer(root, "Inventory", "INVENTORY", -(DrawerTabSize.y + UIKit.Gap), "INVENTORY",
+            list =>
+            {
+                // Rebuilt when a gift is given from a captain's window.
+                string shown = null;
+                refreshers.Add(() =>
+                {
+                    string now = InventorySignature(run);
+                    if (now == shown) return;
+                    shown = now;
+                    BuildGiftRows(list.content, run, null, null);
+                });
+            });
     }
 
-    // The party in a drawer that slides in from the left. Its tab stays on the screen edge while
-    // it's closed; the tab, the Close button or a click beside the drawer toggles it.
-    void BuildPartyDrawer(RectTransform root, RunState run)
-    {
-        bool open = false;
-        float shown = 0f;
+    // The id of the map drawer that is open, or null when none is.
+    string openDrawer;
 
-        RectTransform blocker = UIKit.Stretch(UIKit.Panel(root, "Drawer Blocker", new Color(0f, 0f, 0f, 0.4f)));
+    string InventorySignature(RunState run)
+    {
+        var parts = new List<string>();
+        foreach (GiftData gift in match.Data.shopGifts)
+            if (gift != null) parts.Add(run.GiftCount(gift).ToString());
+        return string.Join(",", parts);
+    }
+
+    // A drawer that slides in from the left. Its tab stays on the screen edge while it's closed,
+    // tabOffsetY below the middle; the tab, the Close button or a click beside the drawer toggles
+    // it. fill adds the contents to the scrolling list.
+    void BuildDrawer(RectTransform root, string id, string tabText, float tabOffsetY, string headerText, Action<ScrollRect> fill)
+    {
+        float shown = 0f;
+        Action<bool> setOpen = open => openDrawer = open ? id : null;
+
+        RectTransform blocker = UIKit.Stretch(UIKit.Panel(root, id + " Drawer Blocker", new Color(0f, 0f, 0f, 0.4f)));
         var dismiss = blocker.gameObject.AddComponent<Button>();
         dismiss.transition = Selectable.Transition.None;
-        dismiss.onClick.AddListener(() => open = false);
+        dismiss.onClick.AddListener(() => setOpen(false));
         var blockerFade = blocker.gameObject.AddComponent<CanvasGroup>();
 
-        RectTransform drawer = UIKit.Box(root, "Party Drawer");
+        RectTransform drawer = UIKit.Box(root, id + " Drawer");
         drawer.anchorMin = Vector2.zero;
         drawer.anchorMax = new Vector2(0f, 1f);
         drawer.pivot = new Vector2(0f, 0.5f);
@@ -396,22 +428,19 @@ public class RunScreens : MonoBehaviour
 
         Transform title = UIKit.Group(drawer, "Title");
         UIKit.Layout<HorizontalLayoutGroup>(title, 0, 6);
-        string muted = UIKit.Hex(UIKit.MutedTextColor);
-        Text header = UIKit.Label(title, $"PARTY   <color={muted}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>", 10,
-            color: UIKit.AccentColor);
+        Text header = UIKit.Label(title, headerText, 10, color: UIKit.AccentColor);
         header.fontStyle = FontStyle.Bold;
         UIKit.Size(header, flexibleWidth: 1f);
-        UIKit.Button(title, "Close", () => open = false, 60f, 22f);
+        UIKit.Button(title, "Close", () => setOpen(false), 60f, 22f);
 
-        ScrollRect list = UIKit.ScrollList(drawer, "Captains", UIKit.Gap);
+        ScrollRect list = UIKit.ScrollList(drawer, "Contents", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        foreach (CaptainData captain in run.Party)
-            PartyCard(list.content, run, captain);
+        fill(list);
 
         // The tab hangs off the drawer's right edge, so it rides along as the drawer slides.
-        Button tab = UIKit.Button(drawer, "", () => open = !open, DrawerTabSize.x, DrawerTabSize.y);
+        Button tab = UIKit.Button(drawer, "", () => setOpen(openDrawer != id), DrawerTabSize.x, DrawerTabSize.y);
         tab.GetComponent<LayoutElement>().ignoreLayout = true;
-        UIKit.Place((RectTransform)tab.transform, new Vector2(1f, 0.5f), Vector2.zero, DrawerTabSize);
+        UIKit.Place((RectTransform)tab.transform, new Vector2(1f, 0.5f), new Vector2(0f, tabOffsetY), DrawerTabSize);
         ((RectTransform)tab.transform).pivot = new Vector2(0f, 0.5f);
         Text tabLabel = tab.GetComponentInChildren<Text>();
         tabLabel.fontStyle = FontStyle.Bold;
@@ -420,13 +449,16 @@ public class RunScreens : MonoBehaviour
 
         refreshers.Add(() =>
         {
+            bool open = openDrawer == id;
             shown = Mathf.MoveTowards(shown, open ? 1f : 0f, Time.unscaledDeltaTime / DrawerSlideSeconds);
             float eased = shown * shown * (3f - 2f * shown);
             // Whole reference pixels, so the frame's texels stay crisp mid-slide.
             drawer.anchoredPosition = new Vector2(Mathf.Round(Mathf.Lerp(-DrawerWidth, 0f, eased)), 0f);
             blocker.gameObject.SetActive(shown > 0f);
             blockerFade.alpha = eased;
-            tabLabel.text = open ? "CLOSE" : "PARTY";
+            tabLabel.text = open ? "CLOSE" : tabText;
+            // While the other drawer is open its tab would sit on top of this one, so this one waits.
+            drawer.gameObject.SetActive(shown > 0f || openDrawer == null);
         });
     }
 
@@ -561,33 +593,6 @@ public class RunScreens : MonoBehaviour
         UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, 0f));
         UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
         return window;
-    }
-
-    // The tab under the party tab, on the left screen edge, that opens the inventory.
-    void BuildInventoryTab(RectTransform root, RunState run)
-    {
-        Button tab = UIKit.Button(root, "", () => ShowInventory(run), DrawerTabSize.x, DrawerTabSize.y);
-        var rect = (RectTransform)tab.transform;
-        UIKit.Place(rect, new Vector2(0f, 0.5f), new Vector2(0f, -(DrawerTabSize.y + UIKit.Gap)), DrawerTabSize);
-        rect.pivot = new Vector2(0f, 0.5f);
-        Text label = tab.GetComponentInChildren<Text>();
-        label.text = "INVENTORY";
-        label.fontStyle = FontStyle.Bold;
-        UIKit.Place(label.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, UIKit.Gap / 2f), new Vector2(DrawerTabSize.y, DrawerTabSize.x));
-        label.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-    }
-
-    // The gifts the party is carrying; they last until the run ends.
-    void ShowInventory(RunState run)
-    {
-        RectTransform window = OpenWindow("Inventory", InventoryWidth);
-        GameObject backdrop = window.parent.gameObject;
-        UIKit.Label(window, "INVENTORY", 20, TextAnchor.MiddleCenter);
-        UIKit.Label(window, "Gifts last for this run. Give one from a captain's details window.", 12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-        ScrollRect list = UIKit.ScrollList(window, "Items", UIKit.Gap);
-        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
-        BuildGiftRows(list.content, run, null, null);
-        UIKit.Size(UIKit.Button(window, "Close", () => Destroy(backdrop)), height: 26f, flexibleWidth: 1f);
     }
 
     // The window for giving a captain a gift: their portrait, what they say, and the items you
