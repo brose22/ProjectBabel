@@ -42,6 +42,14 @@ public class Enemy : MonoBehaviour
     const float HitPopScale = 1.15f;
     Vector3 bodyScale = Vector3.one;
     float hitPopUntil;
+    const float SquashSeconds = 0.15f;
+    const float DustStreakWidth = 0.08f;
+    static readonly Color DustColor = new(0.8f, 0.76f, 0.65f, 0.8f);
+    static readonly Color StarColor = new(1f, 0.9f, 0.3f);
+    const int StarCount = 3;
+    const float DizzyWobbleDegrees = 18f;
+    float squashUntil;
+    Transform[] stars;
     const int HitFlashTint = -2;
     // Burn and zone damage arrives every frame, so it shows as one number per this many seconds.
     const float DotNumberSeconds = 1f;
@@ -65,6 +73,7 @@ public class Enemy : MonoBehaviour
         ApplyArt(data);
         healthBar.SetFraction(1f);
         statusIcons = StatusIcons.Create(transform, new Vector3(0f, StatusIconHeight, 0f), body.sortingOrder + 1);
+        AddStunStars();
         if (data.hasWeakness) AddWeaknessMarker();
         IsTargetable = true;
         Active.Add(this);
@@ -132,7 +141,7 @@ public class Enemy : MonoBehaviour
 
         TickStatuses();
         if (!IsTargetable) return;
-        body.transform.localScale = Time.unscaledTime < hitPopUntil ? bodyScale * HitPopScale : bodyScale;
+        UpdateBodyLook();
 
         // Deployed soldiers in reach block the enemy until one side falls back or dies.
         Soldier blocker = Soldier.FindDeployedNear(transform.position, Data.attackRange);
@@ -285,7 +294,63 @@ public class Enemy : MonoBehaviour
     public void Knockback(float distance)
     {
         if (!IsTargetable || !(distance > 0f)) return;
+        Vector3 from = transform.position;
         transform.position = PathMath.MoveBack(path, nextPoint, transform.position, distance, out nextPoint);
+        ShowKnockback(from);
+    }
+
+    // Three small stars that circle above the head while stunned; shown only then.
+    void AddStunStars()
+    {
+        stars = new Transform[StarCount];
+        for (int i = 0; i < StarCount; i++)
+        {
+            var star = new GameObject("Stun Star");
+            star.transform.SetParent(transform, false);
+            star.transform.localScale = Vector3.one * 0.1f;
+            star.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            var renderer = star.AddComponent<SpriteRenderer>();
+            renderer.sprite = SpriteUtil.Square;
+            renderer.color = StarColor;
+            renderer.sortingOrder = body.sortingOrder + 1;
+            star.SetActive(false);
+            stars[i] = star.transform;
+        }
+    }
+
+    // Body squash and hit swell, the dizzy wobble, and the stun stars, each shown only while it applies.
+    void UpdateBodyLook()
+    {
+        Vector3 scale = bodyScale;
+        if (Time.unscaledTime < hitPopUntil) scale *= HitPopScale;
+        float squash = Mathf.Clamp01((squashUntil - Time.unscaledTime) / SquashSeconds);
+        if (squash > 0f) scale = Vector3.Scale(scale, new Vector3(1f - 0.3f * squash, 1f + 0.25f * squash, 1f));
+        body.transform.localScale = scale;
+
+        body.transform.localRotation = HasStatus(StatusKind.Dizzy)
+            ? Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 14f) * DizzyWobbleDegrees)
+            : Quaternion.identity;
+
+        bool stunned = HasStatus(StatusKind.Stun);
+        for (int i = 0; i < stars.Length; i++)
+        {
+            stars[i].gameObject.SetActive(stunned);
+            if (!stunned) continue;
+            float angle = Time.time * 6f + Mathf.PI * 2f * i / stars.Length;
+            stars[i].localPosition = new Vector3(Mathf.Cos(angle) * 0.28f, 0.3f + Mathf.Sin(angle) * 0.07f, 0f);
+        }
+    }
+
+    // The knockback squashes the body against the push and leaves a dust streak and a few puffs
+    // where the enemy was.
+    void ShowKnockback(Vector3 from)
+    {
+        squashUntil = Time.unscaledTime + SquashSeconds;
+        Vector2 push = transform.position - from;
+        if (push.sqrMagnitude < 0.0001f) return;
+        AbilityZone.Spawn((Vector2)from + push * 0.5f, Mathf.Atan2(push.y, push.x) * Mathf.Rad2Deg,
+            new Vector3(push.magnitude, DustStreakWidth, 1f), SpriteUtil.Square, DustColor, ShotStreakSeconds, 0f);
+        Burst.Spawn(from, DustColor, 4, 0.8f, 0.08f, 0.25f);
     }
 
     void Die()
