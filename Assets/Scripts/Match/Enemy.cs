@@ -353,8 +353,16 @@ public class Enemy : MonoBehaviour
         Burst.Spawn(from, DustColor, 4, 0.8f, 0.08f, 0.25f);
     }
 
+    // A pop of squares in the enemy colour and a floating gold reward where it fell.
+    void ShowDeath()
+    {
+        Burst.Spawn(transform.position, Data.color, 8, 1.8f, 0.14f, 0.4f);
+        FloatingText.Spawn(transform.position + Vector3.up * 0.2f, "+" + Data.goldReward, UIKit.AccentColor, 1.2f, 1f);
+    }
+
     void Die()
     {
+        ShowDeath();
         Remove();
         RunState.Current?.AddGold(Data.goldReward);
         GameEvents.RaiseEnemyKilled(this);
