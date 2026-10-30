@@ -48,4 +48,33 @@ public class CaptainData : ScriptableObject
     public float refusalTemper = 1f;
     public CaptainTag[] likes = new CaptainTag[3];
     public CaptainTag[] dislikes = new CaptainTag[3];
+
+    [Header("Gifts")]
+    [Tooltip("Items this captain likes. Items in neither list are neutral.")]
+    public GiftData[] likedGifts = new GiftData[0];
+    public GiftData[] dislikedGifts = new GiftData[0];
+    [Tooltip("What the captain says when the gift window opens. Blank uses a default line.")]
+    [TextArea] public string giftGreeting;
+    [TextArea] public string giftLikedLine;
+    [TextArea] public string giftNeutralLine;
+    [TextArea] public string giftDislikedLine;
+
+    public GiftReaction ReactionTo(GiftData gift)
+    {
+        if (gift == null) return GiftReaction.Neutral;
+        if (System.Array.IndexOf(likedGifts, gift) >= 0) return GiftReaction.Liked;
+        if (System.Array.IndexOf(dislikedGifts, gift) >= 0) return GiftReaction.Disliked;
+        return GiftReaction.Neutral;
+    }
+
+    public string GiftGreeting => Line(giftGreeting, "Oh, is that for me?");
+
+    public string GiftLine(GiftReaction reaction) => reaction switch
+    {
+        GiftReaction.Liked => Line(giftLikedLine, "This is exactly what I wanted. Thank you!"),
+        GiftReaction.Disliked => Line(giftDislikedLine, "Oh. Well. I suppose it's the thought that counts."),
+        _ => Line(giftNeutralLine, "That's kind of you. Thanks."),
+    };
+
+    static string Line(string line, string fallback) => string.IsNullOrWhiteSpace(line) ? fallback : line;
 }

@@ -31,6 +31,13 @@ public static class RunSave
     }
 
     [Serializable]
+    class GiftStack
+    {
+        public string gift;
+        public int count;
+    }
+
+    [Serializable]
     class SaveFile
     {
         public int health;
@@ -43,6 +50,7 @@ public static class RunSave
         public List<CaptainXp> xp = new();
         public List<CaptainApproval> bestApproval = new();
         public List<CaptainLoadout> loadouts = new();
+        public List<GiftStack> gifts = new();
         public WorldMap map;
     }
 
@@ -80,6 +88,8 @@ public static class RunSave
             foreach (SoldierClassData soldierClass in entry.Value) loadout.classes.Add(soldierClass != null ? soldierClass.name : "");
             file.loadouts.Add(loadout);
         }
+        foreach (KeyValuePair<GiftData, int> entry in run.AllGifts)
+            file.gifts.Add(new GiftStack { gift = entry.Key.name, count = entry.Value });
         try
         {
             File.WriteAllText(FilePath, JsonUtility.ToJson(file, true));
@@ -92,7 +102,7 @@ public static class RunSave
 
     // Restores the saved run as RunState.Current, looking captains up in the roster and soldier
     // classes in classes. Returns false, leaving no run, if there is no save or it can't be used.
-    public static bool TryResume(IEnumerable<CaptainData> roster, IEnumerable<SoldierClassData> classes = null)
+    public static bool TryResume(IEnumerable<CaptainData> roster, IEnumerable<SoldierClassData> classes = null, IEnumerable<GiftData> gifts = null)
     {
         if (!Exists) return false;
         SaveFile file;
@@ -137,6 +147,13 @@ public static class RunSave
                 if (classByName.TryGetValue(entry.classes[slot], out SoldierClassData soldierClass))
                     run.SetLoadoutClass(captain, slot, soldierClass);
         }
+
+        var giftByName = new Dictionary<string, GiftData>();
+        if (gifts != null)
+            foreach (GiftData gift in gifts)
+                if (gift != null) giftByName[gift.name] = gift;
+        foreach (GiftStack entry in file.gifts ?? new List<GiftStack>())
+            if (giftByName.TryGetValue(entry.gift, out GiftData gift)) run.AddGift(gift, entry.count);
         return true;
     }
 

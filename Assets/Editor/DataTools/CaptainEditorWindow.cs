@@ -190,6 +190,14 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
         DataToolsGUI.EnumSetPicker(likes, Tags(dislikes));
         EditorGUILayout.LabelField("Dislikes", EditorStyles.miniBoldLabel);
         DataToolsGUI.EnumSetPicker(dislikes, Tags(likes));
+
+        DataToolsGUI.Section("Gifts");
+        DataToolsGUI.Field(so, nameof(CaptainData.likedGifts));
+        DataToolsGUI.Field(so, nameof(CaptainData.dislikedGifts));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftGreeting));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftLikedLine));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftNeutralLine));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftDislikedLine));
     }
 
     static HashSet<CaptainTag> Tags(SerializedProperty array)

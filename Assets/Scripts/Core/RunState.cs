@@ -17,6 +17,9 @@ public class RunState
     // window. A slot with no pick uses the match's default mix.
     readonly Dictionary<CaptainData, SoldierClassData[]> loadouts = new();
 
+    // Gifts bought this run and not yet given. They don't carry over to the next run.
+    readonly Dictionary<GiftData, int> gifts = new();
+
     public const int MaxSoldierSlots = 4;
 
     public int Health { get; private set; }
@@ -132,6 +135,24 @@ public class RunState
         if (!loadouts.TryGetValue(captain, out SoldierClassData[] classes))
             loadouts[captain] = classes = new SoldierClassData[MaxSoldierSlots];
         classes[slot] = soldierClass;
+    }
+
+    public IEnumerable<KeyValuePair<GiftData, int>> AllGifts => gifts;
+
+    public int GiftCount(GiftData gift) => gift != null && gifts.TryGetValue(gift, out int count) ? count : 0;
+
+    public void AddGift(GiftData gift, int count = 1)
+    {
+        if (gift != null && count > 0) gifts[gift] = GiftCount(gift) + count;
+    }
+
+    public bool TryRemoveGift(GiftData gift)
+    {
+        int count = GiftCount(gift);
+        if (count <= 0) return false;
+        if (count == 1) gifts.Remove(gift);
+        else gifts[gift] = count - 1;
+        return true;
     }
 
     public bool HasDeparted(CaptainData captain) => departed.Contains(captain);

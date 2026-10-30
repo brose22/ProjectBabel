@@ -104,6 +104,7 @@ public static class DataWorkbook
         (typeof(SoldierClassData), "Soldiers"),
         (typeof(ElementData), "Elements"),
         (typeof(EventData), "Events"),
+        (typeof(GiftData), "Gifts"),
         (typeof(MatchData), "Matches"),
         (typeof(CityLayout), "Layouts"),
     };

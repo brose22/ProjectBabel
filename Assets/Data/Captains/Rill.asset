@@ -33,3 +33,13 @@ MonoBehaviour:
   refusalTemper: 1
   likes: 030000000700000008000000
   dislikes: 020000000400000009000000
+  likedGifts:
+  - {fileID: 11400000, guid: 12d5231594a9bdc499de3f355e7aa4fa, type: 2}
+  - {fileID: 11400000, guid: b49912cd3a7fc20439aff751b1b404d6, type: 2}
+  dislikedGifts:
+  - {fileID: 11400000, guid: f5c7811a3475d204da5102a6d745b720, type: 2}
+  - {fileID: 11400000, guid: ddaa5009a7f47924db5a3dde9f06d22b, type: 2}
+  giftGreeting: Oh, a gift? How thoughtful of you.
+  giftLikedLine: It's lovely. You remembered what I like.
+  giftNeutralLine: That's kind. I'll find a use for it.
+  giftDislikedLine: Oh. It's not really to my taste, but thank you.
