@@ -38,8 +38,8 @@ public static class AiPartyPicker
         }
         else
         {
-            // One support is worth a slot; a second adds little.
-            score += supports == 0 ? 12f : supports == 1 ? 3f : -20f;
+            // One support is worth a slot; a second costs an attacker's damage.
+            score += supports == 0 ? 12f : supports == 1 ? -10f : -30f;
         }
         score -= sameElement * 3f;
         if (weakness != null && captain.element >= 0 && captain.element < weakness.Length)

@@ -52,6 +52,15 @@ public class AiReportFormatterTests
     }
 
     [Test]
+    public void Markdown_ShowsTheRunNote()
+    {
+        AiRunRecord run = Run(1, "Victory");
+        run.note = "All 20 waves of the enemy base were completed";
+        Assert.That(AiReportFormatter.Markdown(new[] { run }, "now"), Does.Contain("- Note: All 20 waves"));
+        Assert.That(AiReportFormatter.Markdown(new[] { Run(1, "Victory") }, "now"), Does.Not.Contain("Note:"));
+    }
+
+    [Test]
     public void Markdown_BatchAddsAnAggregate()
     {
         string md = AiReportFormatter.Markdown(new[] { Run(1, "Victory"), Run(2, "Defeat") }, "now");

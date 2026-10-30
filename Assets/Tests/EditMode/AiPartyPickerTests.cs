@@ -52,7 +52,7 @@ public class AiPartyPickerTests
     public void Recruit_TakesTheFirstSupportWhenPartyHasNone()
     {
         var party = new[] { Captain("A", AiRole.Attacker, 0, 30) };
-        var offer = new[] { Captain("B", AiRole.Attacker, 1, 31), Captain("Buffer", AiRole.Buffer, 2, 8) };
+        var offer = new[] { Captain("B", AiRole.Attacker, 1, 15), Captain("Buffer", AiRole.Buffer, 2, 8) };
         Assert.That(AiPartyPicker.PickRecruit(offer, party, null), Is.EqualTo(1));
     }
 

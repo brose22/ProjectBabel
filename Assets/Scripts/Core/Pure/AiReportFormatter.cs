@@ -75,6 +75,8 @@ public class AiRunRecord
     public List<string> startParty = new();
     // "Victory", "Defeat", "Stopped" or "Stalled".
     public string result = "";
+    // Anything worth saying about how the run ended.
+    public string note = "";
     public List<string> route = new();
     public List<AiMatchRow> matches = new();
     public List<AiCaptainRow> captains = new();
@@ -180,6 +182,7 @@ public static class AiReportFormatter
     {
         md.Append($"## Run {run.index}: {run.result}\n\n");
         md.Append($"- Seed: {run.seed}\n");
+        if (!string.IsNullOrEmpty(run.note)) md.Append($"- Note: {run.note}\n");
         md.Append($"- Starting party: {string.Join(", ", run.startParty)}\n");
         md.Append($"- Route: {(run.route.Count > 0 ? string.Join(" > ", run.route) : "none")}\n");
         md.Append($"- Final health {run.finalHealth}/{run.maxHealth}, Gold {run.finalGold}\n");

@@ -146,7 +146,7 @@ public class AiPlayer : MonoBehaviour
 
         if (match == null)
         {
-            match = FindFirstObjectByType<MatchManager>();
+            match = FindAnyObjectByType<MatchManager>();
             if (match == null) return;
             Bind();
         }
@@ -339,6 +339,17 @@ public class AiPlayer : MonoBehaviour
     void ThinkWave()
     {
         EnsureMatchRow();
+        // Clearing every wave at the enemy base ends the run, even with the boss still walking.
+        if (match.IsBaseMatch && match.WavesCleared >= match.WaveCount)
+        {
+            matchEnded = true;
+            recorder.EndMatch(match, "Won");
+            string note = $"All {match.WaveCount} waves of the enemy base were completed; the run ended there{(match.IsBossAlive ? " with the boss still alive" : "")}.";
+            Decide("Match", note);
+            recorder.Run.note = note;
+            NextRunOrFinish("Victory");
+            return;
+        }
         RestoreTowers();
         SetDrawRates();
         foreach (Tower tower in Tower.All.ToArray())
@@ -358,7 +369,11 @@ public class AiPlayer : MonoBehaviour
             Decide("Match", $"{(won ? "won" : "lost")} at {match.WavesCleared}/{match.WaveCount} waves, {match.Kills} kills, {match.Leaks} leaks");
         }
         if (match.State == MatchState.Lost) NextRunOrFinish("Defeat");
-        else if (RunState.Current.Map.IsComplete) NextRunOrFinish("Victory");
+        else if (RunState.Current.Map.IsComplete)
+        {
+            recorder.Run.note = $"The enemy base fell after {match.WavesCleared} of {match.WaveCount} waves.";
+            NextRunOrFinish("Victory");
+        }
         else
         {
             match.ReturnToMap();
