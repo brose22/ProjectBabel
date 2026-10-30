@@ -55,6 +55,14 @@ The run is saved to `run.json` in the persistent data path whenever you're on th
 4. **Babel → Build Windows Player** builds a standalone player into `Builds/Windows`, starting on the main menu.
 5. **Babel → Build Android APK (Fire Tablet)** builds a sideloadable APK into `Builds/Android` for an Amazon Fire tablet (needs Android Build Support from Unity Hub). It sets the Android player to IL2CPP, 32- and 64-bit ARM and landscape only. Copy the APK to the tablet with *Apps from Unknown Sources* allowed, or run `adb install -r Builds/Android/ProjectBabel.apk`.
 
+### Tuning data in Excel
+
+**Export** and **Import** on the toolbar of each **Babel → Data** window, or **Babel → Data → Export to Excel...** and **Import from Excel...**, move all the gameplay data through one `.xlsx` workbook. Every button covers every data type, whichever window it is in.
+
+- **Sheets:** Captains, Abilities, Enemies, Soldiers, Elements, Events, Matches and Layouts have one row per asset, keyed by the file name in the **Asset** column. Lists of records get their own sheets (Events Choices, Matches Waves, Matches Waves Groups, Layouts Props) with one row per record, tied to the asset by **Asset** and the **#** columns. Positions must run 1, 2, 3 within a list.
+- **Cell formats:** enums are written by name, colours as `r, g, b, a`, cells as `x, y`, and lists of plain values in one cell separated by `; `. A data asset reference is its name; a sprite or tile reference is its path, with `#Name` for a sprite inside a file. `None` or an empty cell clears a reference.
+- **Import** updates existing assets and never creates, renames or deletes them. Adding or removing rows on a list sheet grows or shrinks that list. A bad value, unknown row or unknown column is skipped and left as it was, with a Console warning naming the sheet and row; each changed asset is logged, and **Undo** reverts the whole import. Rename an asset in Unity, not in the workbook: a changed name reads as an unknown row.
+
 ### Main menu
 
 - **Start run:** a new run, from the captain pick. If a run is saved, you're asked first, since it is deleted.
@@ -94,7 +102,7 @@ Assets/
 
 ### Conventions
 
-- **Data first:** all tunable numbers live in ScriptableObjects under `Assets/Data` and are edited in the Inspector.
+- **Data first:** all tunable numbers live in ScriptableObjects under `Assets/Data` and are edited in the Inspector, the **Babel → Data** windows or Excel.
 - **Events for play style:** gameplay raises events such as leaks, soldier deaths, selling and moving through `GameEvents`. Later systems like approval and requests listen to them instead of being wired into the gameplay code.
 - **Run vs match:** `RunState` holds what persists across a run. Each match scene only owns its own simulation.
 
