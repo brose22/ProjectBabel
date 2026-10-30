@@ -8,7 +8,8 @@ public enum RequestAnswer { No, Some, Yes }
 
 // Captains ask for things when something happens in the match (GDD: up to 2 per wave, often none):
 //   MoreDraw   - a soldier fell and the reserve can't pay to bring it back.
-//   Relocate   - the captain is badly hurt, or nothing has come within their range for a while.
+//   Relocate   - nothing has come within the captain's range for a while. Yes only: the captain
+//                moves themselves, free, to the spot nearest the enemy gate that still covers road.
 //   NewMix     - the captain levelled up and a class they like isn't in every slot.
 //   UseSpecial - an elite or the boss walked on, or the special just finished charging.
 // The player answers No (0%), Some (50%) or Yes (100%): the answer grants that share of the request
@@ -39,8 +40,6 @@ public class CaptainRequests : MonoBehaviour
     const int MaxRequestsPerWave = 2;
     // A captain doesn't ask for the same thing again until this many waves have passed.
     const int CooldownWaves = 2;
-    // A captain below this share of health asks to move.
-    const float HurtFraction = 0.5f;
     // Game seconds with nothing in range, while enemies are elsewhere on the field, before a captain asks to move.
     const float IdleSeconds = 20f;
     // Game seconds between checks of the conditions that have no event of their own.
@@ -178,13 +177,10 @@ public class CaptainRequests : MonoBehaviour
                 TryAsk(tower, RequestKind.UseSpecial, $"{tower.Captain.ability.displayName} is charged. Use it now?");
             watch.SpecialWasReady = ready;
 
-            if (tower.Health / tower.MaxHealth < HurtFraction)
-                TryAsk(tower, RequestKind.Relocate, "They keep hitting me here. Let me move?");
-
             if (!enemiesOnField || tower.FindClosestEnemy(tower.transform.position) != null)
                 watch.LastEnemyInRange = Time.time;
-            else if (Time.time - watch.LastEnemyInRange >= IdleSeconds)
-                TryAsk(tower, RequestKind.Relocate, "Nothing comes this way. Let me move?");
+            else if (Time.time - watch.LastEnemyInRange >= IdleSeconds && FindCellNearerSpawner(tower) != null)
+                TryAsk(tower, RequestKind.Relocate, "Nothing comes this way. Let me move closer to the gate?");
         }
     }
 
@@ -210,6 +206,47 @@ public class CaptainRequests : MonoBehaviour
         askedThisWave++;
         pending.Add(new Request { Tower = tower, Kind = kind, Text = text, WantedClass = wanted });
         ShowNext();
+    }
+
+    // The free cell closest to the enemy gate that is nearer to it than the captain is now and
+    // still has road in the captain's range, or null when there is none.
+    Vector2Int? FindCellNearerSpawner(Tower tower)
+    {
+        GridMap grid = match.Grid;
+        if (grid.RoadCells.Count == 0) return null;
+        Vector3 spawn = grid.CellCenter(grid.RoadCells[0]);
+        float best = Vector2.Distance(tower.transform.position, spawn);
+        Vector2Int? pick = null;
+        for (int x = 0; x < grid.Size.x; x++)
+        {
+            for (int y = 0; y < grid.Size.y; y++)
+            {
+                var cell = new Vector2Int(x, y);
+                if (!match.CanMoveTo(tower, cell)) continue;
+                Vector3 center = grid.CellCenter(cell);
+                float distance = Vector2.Distance(center, spawn);
+                if (distance >= best || !HasRoadInRange(center, tower.Range)) continue;
+                best = distance;
+                pick = cell;
+            }
+        }
+        return pick;
+    }
+
+    bool HasRoadInRange(Vector3 position, float range)
+    {
+        foreach (Vector2Int road in match.Grid.RoadCells)
+            if (Vector2.Distance(position, match.Grid.CellCenter(road)) <= range) return true;
+        return false;
+    }
+
+    // The move costs the captain's player nothing.
+    void MoveTowardSpawner(Tower tower)
+    {
+        Vector2Int? cell = FindCellNearerSpawner(tower);
+        if (cell == null) return;
+        tower.GrantMoveDiscount(0f);
+        if (!match.MoveTower(tower, cell.Value)) tower.ClearMoveDiscount();
     }
 
     // A soldier class the captain likes that isn't in every slot yet, or null.
@@ -238,6 +275,8 @@ public class CaptainRequests : MonoBehaviour
             return;
         }
 
+        // A move is all or nothing, so Some counts as Yes.
+        if (request.Kind == RequestKind.Relocate) answer = RequestAnswer.Yes;
         bool full = answer == RequestAnswer.Yes;
         Grant(request, full);
         relationships.Change(tower, full ? ApprovalReward : ApprovalReward * 0.5f, full ? "got their way" : "got some of their way");
@@ -261,8 +300,7 @@ public class CaptainRequests : MonoBehaviour
                 tower.SetDrawRate(full ? DrawRate.High : (DrawRate)Mathf.Min((int)tower.DrawRate + 1, (int)DrawRate.High));
                 break;
             case RequestKind.Relocate:
-                // The captain's next move is free, or half price.
-                tower.GrantMoveDiscount(full ? 0f : 0.5f);
+                MoveTowardSpawner(tower);
                 break;
             case RequestKind.NewMix:
                 // All slots switch for free, or half of them (rounded up).
