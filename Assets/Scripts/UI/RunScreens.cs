@@ -439,13 +439,15 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(card, flexibleWidth: 1f);
         UIKit.Clickable(card, () => ShowCaptainDetails(run, captain));
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
-        PartyCardBody(card, captain, departed ? "WALKED OUT" : $"LV {level}", departed ? UIKit.BadColor : UIKit.AccentColor, out _, out _);
+        PartyCardBody(card, captain, departed ? "WALKED OUT" : $"LV {level}", departed ? UIKit.BadColor : UIKit.AccentColor, out _, out _, live: true);
         if (departed) card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
     }
 
     // The party card's face, shared with run setup: portrait on the left; name and tag, element
     // and role icons, bond, and special on the right.
-    void PartyCardBody(RectTransform card, CaptainData captain, string tagText, Color tagColor, out Text name, out Text tag)
+    // With live, the bond follows approval changes; only for cards built with the screen, since
+    // setup rebuilds its cards from inside a refresher, which can't add to the list it is running.
+    void PartyCardBody(RectTransform card, CaptainData captain, string tagText, Color tagColor, out Text name, out Text tag, bool live = false)
     {
         HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(card, 6, 8);
         layout.childAlignment = TextAnchor.UpperLeft;
@@ -477,9 +479,11 @@ public class RunScreens : MonoBehaviour
         UIKit.Label(tags, captain.role.ToString(), 12);
 
         string muted = UIKit.Hex(UIKit.MutedTextColor);
+        string Bond() => $"<color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))} " +
+                         $"<color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>";
         // Live, so a gift given from the details window shows on the card behind it.
-        UIKit.LiveLabel(info, () => $"<color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))} " +
-                                    $"<color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>", refreshers, 12);
+        if (live) UIKit.LiveLabel(info, Bond, refreshers, 12);
+        else UIKit.Label(info, Bond(), 12);
         Transform special = UIKit.Group(info, "Special");
         UIKit.Layout<HorizontalLayoutGroup>(special, 0, 4);
         UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, IconSize);
