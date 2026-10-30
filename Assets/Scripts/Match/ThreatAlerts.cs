@@ -50,10 +50,14 @@ public class ThreatAlerts : MonoBehaviour
         GameEvents.EnemyArrived -= OnEnemyArrived;
     }
 
-    void OnEnemyLeaked(Enemy enemy) => flashUntil = Time.unscaledTime + FlashSeconds;
+    void OnEnemyLeaked(Enemy enemy)
+    {
+        if (GameSettings.EdgeFlash) flashUntil = Time.unscaledTime + FlashSeconds;
+    }
 
     void OnEnemyArrived(Enemy enemy)
     {
+        if (!GameSettings.ThreatBanner) return;
         banner.text = (enemy.IsBoss ? "BOSS: " : "ELITE: ") + enemy.Data.displayName;
         banner.color = enemy.IsBoss ? UIKit.BadColor : UIKit.AccentColor;
         bannerUntil = Time.unscaledTime + BannerSeconds;

@@ -76,14 +76,15 @@ public class StatusIcons : MonoBehaviour
     // anchored to the icon's left edge and shrinks toward it.
     public void Refresh(float[] statusTime)
     {
+        bool show = GameSettings.StatusIcons;
         int active = 0;
         for (int i = 0; i < icons.Length; i++)
-            if (statusTime[i] > 0f) active++;
+            if (show && statusTime[i] > 0f) active++;
 
         int slot = 0;
         for (int i = 0; i < icons.Length; i++)
         {
-            bool on = statusTime[i] > 0f;
+            bool on = show && statusTime[i] > 0f;
             icons[i].root.SetActive(on);
             if (!on) continue;
             icons[i].root.transform.localPosition = new Vector3((slot++ - (active - 1) * 0.5f) * IconSpacing, 0f, 0f);
