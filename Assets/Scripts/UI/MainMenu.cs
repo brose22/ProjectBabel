@@ -116,7 +116,9 @@ public class MainMenu : MonoBehaviour
 
         // Each tab scrolls in a fixed-height window, so the Back button stays put.
         ScrollRect list = UIKit.ScrollList(column, "Options", 10f);
-        UIKit.Size(list, 520f, 330f);
+        LayoutElement window = UIKit.Size(list, 520f, 330f);
+        window.minHeight = 330f;
+        window.flexibleHeight = 0f;
         list.content.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
         RectTransform options = list.content;
 
