@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,8 +18,13 @@ public class PlacementController : MonoBehaviour
     public bool IsMoving { get; private set; }
 
     Camera cam;
+    PlacementGhosts ghosts;
 
-    void Awake() => cam = Camera.main;
+    void Awake()
+    {
+        cam = Camera.main;
+        ghosts = new PlacementGhosts(hoverMarker);
+    }
 
     void Update()
     {
@@ -31,6 +37,7 @@ public class PlacementController : MonoBehaviour
         if (mouse == null || ended || hud.IsPointerOverHud(screen))
         {
             hoverMarker.enabled = false;
+            ghosts.Hide();
             return;
         }
 
@@ -42,11 +49,13 @@ public class PlacementController : MonoBehaviour
         }
 
         Tower hovered = grid.GetOccupant(cell);
-        bool canBuild = grid.IsBuildable(cell) && match.CanPlaceTower;
+        bool canBuild = match.CanPlaceOn(cell);
 
         hoverMarker.enabled = grid.InBounds(cell);
         hoverMarker.transform.position = grid.CellCenter(cell);
         hoverMarker.color = hovered != null || canBuild ? validColor : invalidColor;
+        if (canBuild) ShowGhosts(cell, match.NextCaptain, match.SlotClassesFor(match.NextCaptain));
+        else ghosts.Hide();
 
         // Placing leaves the new captain unselected, so its widget only opens when clicked.
         if (mouse.leftButton.wasPressedThisFrame)
@@ -67,10 +76,12 @@ public class PlacementController : MonoBehaviour
     // Consumes every click while moving so it can't also select or place.
     void UpdateMove(Mouse mouse, Vector2Int cell)
     {
-        bool valid = grid.IsBuildable(cell) && match.CanAffordMove(Selected);
+        bool valid = match.CanMoveTo(Selected, cell) && match.CanAffordMove(Selected);
         hoverMarker.enabled = grid.InBounds(cell);
         hoverMarker.transform.position = grid.CellCenter(cell);
         hoverMarker.color = valid ? validColor : invalidColor;
+        if (valid) ShowGhosts(cell, Selected.Captain, Selected.SlotClasses(), Selected);
+        else ghosts.Hide();
 
         if (mouse.leftButton.wasPressedThisFrame)
         {
@@ -81,6 +92,9 @@ public class PlacementController : MonoBehaviour
             CancelMove();
         }
     }
+
+    void ShowGhosts(Vector2Int cell, CaptainData captain, IReadOnlyList<SoldierClassData> classes, Tower moving = null) =>
+        ghosts.Show(grid, cell, captain, Tower.PickHomes(grid, cell, classes, moving), classes);
 
     void HandleKeys()
     {

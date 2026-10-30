@@ -210,15 +210,15 @@ public static class GreyBoxMatchBuilder
         // GDD cost tiers. Act: Rogue very low, Knight/Archer low, Mage high.
         // Respawn: Rogue/Archer low, Knight medium, Mage high.
         SoldierClassData knight = SoldierClass("Knight", new Color(0.4f, 0.55f, 1f), SoldierClassData.AttackStyle.Melee,
-            actCost: 2, respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, knockback: 0.5f);
+            actCost: 2, respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, knockback: 0.5f);
         // Shorter reach than most captains' range, so archers step out a little for far targets.
         SoldierClassData archer = SoldierClass("Archer", new Color(0.45f, 0.85f, 0.35f), SoldierClassData.AttackStyle.Ranged,
-            actCost: 2, respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f);
+            actCost: 2, respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad);
         SoldierClassData rogue = SoldierClass("Rogue", new Color(0.9f, 0.9f, 0.75f), SoldierClassData.AttackStyle.Melee,
-            actCost: 1, respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f);
+            actCost: 1, respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road);
         // Weak against lone enemies, strong against the bunched-up late waves.
         SoldierClassData mage = SoldierClass("Mage", new Color(1f, 0.45f, 0.75f), SoldierClassData.AttackStyle.Magic,
-            actCost: 5, respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, splash: 1f);
+            actCost: 5, respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, splash: 1f);
         var classes = new List<SoldierClassData> { knight, archer, rogue, mage };
         var defaultMix = new List<SoldierClassData> { knight, archer };
 
@@ -334,7 +334,7 @@ public static class GreyBoxMatchBuilder
     }
 
     static SoldierClassData SoldierClass(string name, Color color, SoldierClassData.AttackStyle style, int actCost, int respawnCost,
-        float maxHealth, float damage, float attackRange, float moveSpeed, float knockback = 0f, float splash = 0f)
+        float maxHealth, float damage, float attackRange, float moveSpeed, HomeTile homeTile, float knockback = 0f, float splash = 0f)
     {
         return LoadOrCreate<SoldierClassData>($"{DataFolder}/Soldiers/{name}.asset", s =>
         {
@@ -347,6 +347,7 @@ public static class GreyBoxMatchBuilder
             s.damageMultiplier = damage;
             s.attackRange = attackRange;
             s.moveSpeed = moveSpeed;
+            s.homeTile = homeTile;
             s.knockbackDistance = knockback;
             s.projectileSpeed = 10f;
             s.splashRadius = splash;

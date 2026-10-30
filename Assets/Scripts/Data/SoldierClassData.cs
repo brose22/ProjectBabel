@@ -26,6 +26,8 @@ public class SoldierClassData : ScriptableObject
     public float attackRange = 0.4f;
     [Tooltip("Tiles per second.")]
     public float moveSpeed = 4f;
+    [Tooltip("The kind of tile around the captain this soldier picks to wait on.")]
+    public HomeTile homeTile = HomeTile.Any;
 
     // Assets made before these fields existed read Melee and zeros, which keeps the original
     // hit-and-return behaviour, so every zero below means "off".

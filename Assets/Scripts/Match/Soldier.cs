@@ -187,6 +187,13 @@ public class Soldier : MonoBehaviour
         return Vector2.Distance(transform.position, destination) <= stopDistance + 0.001f;
     }
 
+    // A soldier out on an act heads for the new home when it returns.
+    public void SetHome(Vector3 offset)
+    {
+        homeOffset = offset;
+        if (!IsDeployed && !IsDead) transform.position = Home;
+    }
+
     // Cancels any act in progress and snaps home. Deployed soldiers recover as if they had
     // returned normally; dead soldiers stay dead and keep their respawn timer.
     public void ReturnHome()
