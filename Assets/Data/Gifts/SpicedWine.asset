@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Spiced Wine
   description: Warm wine with cloves and cinnamon.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 4331d4835e7a85e47b1ead0977fb9ff7, type: 3}
   cost: 60
   neutralApproval: 5
   likedApproval: 15

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Wind Chime
   description: Tiny bells that sing at the faintest breeze.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8501ce72a8847cf4ea60447d01773f82, type: 3}
   cost: 75
   neutralApproval: 5
   likedApproval: 15

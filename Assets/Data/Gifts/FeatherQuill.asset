@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Feather Quill
   description: A long gull feather cut for writing.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: eff36013cdf89b04e9893d91834a3e8c, type: 3}
   cost: 50
   neutralApproval: 5
   likedApproval: 15

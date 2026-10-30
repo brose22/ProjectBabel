@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Ember Charm
   description: A pendant holding a coal that never goes out.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 33c4b9f2fe6caae4494955a4746ee8cd, type: 3}
   cost: 75
   neutralApproval: 5
   likedApproval: 15

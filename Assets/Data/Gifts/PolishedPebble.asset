@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GiftData
   displayName: Polished Pebble
   description: A river stone worn smooth and heavy.
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 32330f0c03256184dbf5aa6c38dcb644, type: 3}
   cost: 40
   neutralApproval: 5
   likedApproval: 15
