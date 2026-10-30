@@ -114,11 +114,17 @@ public class MainMenu : MonoBehaviour
                 () => { settingsTab = chosen; BuildSettings(); }, refreshers, selected: () => chosen == settingsTab, width: 120f, height: 30f);
         }
 
+        // Each tab scrolls in a fixed-height window, so the Back button stays put.
+        ScrollRect list = UIKit.ScrollList(column, "Options", 10f);
+        UIKit.Size(list, 520f, 330f);
+        list.content.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
+        RectTransform options = list.content;
+
         switch (settingsTab)
         {
-            case SettingsTab.Graphics: BuildGraphicsTab(column); break;
-            case SettingsTab.Audio: BuildAudioTab(column); break;
-            default: BuildGameplayTab(column); break;
+            case SettingsTab.Graphics: BuildGraphicsTab(options); break;
+            case SettingsTab.Audio: BuildAudioTab(options); break;
+            default: BuildGameplayTab(options); break;
         }
 
         UIKit.Button(column, "Back", BuildMain, 200f, 32f);
