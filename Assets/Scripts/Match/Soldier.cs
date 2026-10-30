@@ -201,10 +201,14 @@ public class Soldier : MonoBehaviour
         }
     }
 
+    // Cheat: soldiers still take damage but stop at 1 health instead of dying.
+    public static bool CannotDie;
+
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
         health -= amount * Tower.DamageTakenMultiplier;
+        if (CannotDie) health = Mathf.Max(health, 1f);
         healthBar.SetFraction(health / MaxHealth);
         if (health <= 0f) Die();
     }

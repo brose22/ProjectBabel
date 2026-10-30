@@ -29,6 +29,8 @@ public class CheatWindow : MonoBehaviour
         AddCheat("+500 Gold", () => match.CheatAddGold(500), () => RunState.Current != null);
         AddCheat("Full health", match.CheatHealFully, () => RunState.Current != null && RunState.Current.Health < RunState.Current.MaxHealth);
         AddCheat("Reveal the map", match.CheatRevealMap, () => match.CanCheatRevealMap);
+        UIKit.LiveButton(panel, () => Soldier.CannotDie ? "Soldiers can't die: ON" : "Soldiers can't die: OFF",
+            () => Soldier.CannotDie = !Soldier.CannotDie, refreshers, () => true, width: 200f, height: 26f);
 
         panel.gameObject.SetActive(false);
     }
