@@ -71,8 +71,12 @@ public class HealthBar : MonoBehaviour
         fraction = Mathf.Clamp01(value);
         fill.localScale = new Vector3(width * fraction, fill.localScale.y, 1f);
         fill.localPosition = new Vector3(-width * (1f - fraction) * 0.5f, fill.localPosition.y, 0f);
-        gameObject.SetActive(!(hideWhenFull && fraction >= 1f));
+        // Off, an enemy bar is a plain always-visible bar (the tier marker stays).
+        bool extras = !enemyStyle || GameSettings.HealthBarExtras;
+        gameObject.SetActive(!(hideWhenFull && extras && fraction >= 1f));
         if (!enemyStyle) return;
+        ghost.gameObject.SetActive(extras);
+        if (!extras) ghostFraction = fraction;
         if (fraction < ghostFraction) ghostHold = GhostHoldSeconds;
         else ghostFraction = fraction;
         UpdateGhost();

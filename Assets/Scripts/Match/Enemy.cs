@@ -229,7 +229,7 @@ public class Enemy : MonoBehaviour
     // Flashes white for real-time seconds, so the flash shows during an ability's hit-stop.
     public void FlashHit(float seconds)
     {
-        if (seconds <= 0f) return;
+        if (seconds <= 0f || !GameSettings.HitFlash) return;
         hitFlashUntil = Mathf.Max(hitFlashUntil, Time.unscaledTime + seconds);
         UpdateTint(tintedStatus == HitFlashTint ? -1 : tintedStatus);
     }
@@ -276,7 +276,7 @@ public class Enemy : MonoBehaviour
             ShowDamageNumber(amount, element, weak);
             ShowWeaknessLabel(element, weak);
             FlashHit(HitPopSeconds);
-            hitPopUntil = Time.unscaledTime + HitPopSeconds;
+            if (GameSettings.HitFlash) hitPopUntil = Time.unscaledTime + HitPopSeconds;
         }
         if (Health > 0f) return;
         FlushDot();
@@ -294,9 +294,12 @@ public class Enemy : MonoBehaviour
     Vector3 NumberPosition() =>
         transform.position + new Vector3(Random.Range(-DamageNumberSpread, DamageNumberSpread), DamageNumberHeight, 0f);
 
-    void ShowDamageNumber(float amount, Element? element, bool weak) =>
+    void ShowDamageNumber(float amount, Element? element, bool weak)
+    {
+        if (!GameSettings.DamageNumbers) return;
         FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(amount)) + (weak ? "!" : ""),
             NumberColor(element), weak ? 1.5f : 1f);
+    }
 
     void PulseWeaknessMarker()
     {
@@ -311,6 +314,7 @@ public class Enemy : MonoBehaviour
     {
         if (!weak && !IsResistedBy(element)) return;
         if (weak) weaknessHitUntil = Time.unscaledTime + 0.2f;
+        if (!GameSettings.WeaknessLabels) return;
         if (Time.unscaledTime < weaknessLabelUntil) return;
         weaknessLabelUntil = Time.unscaledTime + WeaknessLabelGapSeconds;
         FloatingText.Spawn(transform.position + Vector3.up * 0.65f, weak ? "Weak!" : "Resist",
@@ -326,7 +330,8 @@ public class Enemy : MonoBehaviour
     void FlushDot()
     {
         if (dotDamage <= 0f) return;
-        FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(dotDamage)).ToString(), dotNumberColor);
+        if (GameSettings.DamageNumbers)
+            FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(dotDamage)).ToString(), dotNumberColor);
         dotDamage = 0f;
         dotNumberTimer = 0f;
     }
@@ -368,11 +373,11 @@ public class Enemy : MonoBehaviour
         if (squash > 0f) scale = Vector3.Scale(scale, new Vector3(1f - 0.3f * squash, 1f + 0.25f * squash, 1f));
         body.transform.localScale = scale;
 
-        body.transform.localRotation = HasStatus(StatusKind.Dizzy)
+        body.transform.localRotation = GameSettings.DizzyWobble && HasStatus(StatusKind.Dizzy)
             ? Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 14f) * DizzyWobbleDegrees)
             : Quaternion.identity;
 
-        bool stunned = HasStatus(StatusKind.Stun);
+        bool stunned = GameSettings.StunStars && HasStatus(StatusKind.Stun);
         for (int i = 0; i < stars.Length; i++)
         {
             stars[i].gameObject.SetActive(stunned);
@@ -386,6 +391,7 @@ public class Enemy : MonoBehaviour
     // where the enemy was.
     void ShowKnockback(Vector3 from)
     {
+        if (!GameSettings.KnockbackEffects) return;
         squashUntil = Time.unscaledTime + SquashSeconds;
         Vector2 push = transform.position - from;
         if (push.sqrMagnitude < 0.0001f) return;
@@ -397,8 +403,8 @@ public class Enemy : MonoBehaviour
     // A pop of squares in the enemy colour and a floating gold reward where it fell.
     void ShowDeath()
     {
-        Burst.Spawn(transform.position, Data.color, 8, 1.8f, 0.14f, 0.4f);
-        FloatingText.Spawn(transform.position + Vector3.up * 0.2f, "+" + Data.goldReward, UIKit.AccentColor, 1.2f, 1f);
+        if (GameSettings.DeathBurst) Burst.Spawn(transform.position, Data.color, 8, 1.8f, 0.14f, 0.4f);
+        if (GameSettings.DamageNumbers) FloatingText.Spawn(transform.position + Vector3.up * 0.2f, "+" + Data.goldReward, UIKit.AccentColor, 1.2f, 1f);
     }
 
     void Die()
