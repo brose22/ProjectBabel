@@ -24,6 +24,9 @@ public class CameraFocus : MonoBehaviour
     float blend;
     // Where the camera zoomed in on, kept so zooming out after the target is gone still works.
     Vector3 focusPoint;
+    // Set while this component holds pixel-perfect rendering off, so it only turns back on what it
+    // turned off.
+    bool heldPixelPerfect;
 
     void Awake()
     {
@@ -36,11 +39,12 @@ public class CameraFocus : MonoBehaviour
     // Zooms in on the target, or back out with null.
     public void Focus(Transform newTarget)
     {
-        if (newTarget != null && blend <= 0f)
+        if (newTarget != null && blend <= 0f && !heldPixelPerfect)
         {
             // The pixel-perfect size is the one to return to.
             homeSize = cam.orthographicSize;
-            if (pixelPerfect != null) pixelPerfect.enabled = false;
+            heldPixelPerfect = pixelPerfect != null && pixelPerfect.enabled;
+            if (heldPixelPerfect) pixelPerfect.enabled = false;
         }
         target = newTarget;
     }
@@ -49,7 +53,12 @@ public class CameraFocus : MonoBehaviour
     {
         if (target != null) focusPoint = target.position;
         float goal = target != null ? 1f : 0f;
-        if (blend == goal) return;
+        if (blend == goal)
+        {
+            // Covers a focus released before the camera ever moved.
+            if (blend <= 0f) ReleasePixelPerfect();
+            return;
+        }
 
         blend = Mathf.MoveTowards(blend, goal, Time.unscaledDeltaTime / TransitionSeconds);
         float t = Mathf.SmoothStep(0f, 1f, blend);
@@ -60,6 +69,13 @@ public class CameraFocus : MonoBehaviour
         cam.orthographicSize = size;
         shake.RestPosition = new Vector3(position.x, position.y, homePosition.z);
 
-        if (blend <= 0f && pixelPerfect != null) pixelPerfect.enabled = true;
+        if (blend <= 0f) ReleasePixelPerfect();
+    }
+
+    void ReleasePixelPerfect()
+    {
+        if (!heldPixelPerfect) return;
+        heldPixelPerfect = false;
+        pixelPerfect.enabled = true;
     }
 }
