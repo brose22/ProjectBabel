@@ -36,6 +36,8 @@ public class MatchData : ScriptableObject
     [Header("Shop")]
     [Tooltip("Gifts every shop sells. They go to the run's inventory and are given to captains from the party window.")]
     public List<GiftData> shopGifts = new();
+    [Tooltip("How many of those gifts a single shop has on its shelves.")]
+    public int shopSize = 6;
 
     // The least a gift costs, used by the AI to judge whether a shop is worth visiting.
     public int GiftCost
