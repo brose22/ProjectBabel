@@ -12,6 +12,12 @@ public class Soldier : MonoBehaviour
     // Size of a shot drawn with the body sprite when no projectile sprite is assigned.
     const float FallbackProjectileScale = 0.35f;
 
+    // Spawn pop-in length, and the sparks that gather in or scatter out around a soldier.
+    const float PopTime = 0.25f;
+    const int FxPieces = 6;
+    const float FxSize = 0.08f;
+    const float GatherRadius = 0.35f;
+
     enum State { Ready, Advancing, Returning, Recovering, Dead }
 
     static readonly List<Soldier> deployed = new();
@@ -35,6 +41,8 @@ public class Soldier : MonoBehaviour
     Enemy target;
     float timer;
     float health;
+    Vector3 bodyScale = Vector3.one;
+    float popTimer;
 
     Vector3 Home => Tower.transform.position + homeOffset;
 
@@ -54,6 +62,7 @@ public class Soldier : MonoBehaviour
         {
             body.color = soldierClass.color;
         }
+        bodyScale = body.transform.localScale;
         Revive();
     }
 
@@ -76,6 +85,7 @@ public class Soldier : MonoBehaviour
 
     void Update()
     {
+        if (popTimer > 0f) TickPop();
         switch (state)
         {
             case State.Ready: TickReady(); break;
@@ -231,8 +241,32 @@ public class Soldier : MonoBehaviour
         return healed;
     }
 
+    // Scales the body in from nothing with a small overshoot.
+    void TickPop()
+    {
+        popTimer = Mathf.Max(0f, popTimer - Time.deltaTime);
+        float t = 1f - popTimer / PopTime;
+        float overshoot = 1f + 2.7f * Mathf.Pow(t - 1f, 3f) + 1.7f * Mathf.Pow(t - 1f, 2f);
+        body.transform.localScale = bodyScale * overshoot;
+    }
+
+    void PlaySpawnFx()
+    {
+        if (!GameSettings.SoldierSpawnEffects) return;
+        popTimer = PopTime;
+        body.transform.localScale = Vector3.zero;
+        Burst.Spawn(transform.position, Class.color, FxPieces, 0f, FxSize, PopTime, GatherRadius);
+    }
+
+    void PlayDespawnFx()
+    {
+        if (!GameSettings.SoldierSpawnEffects) return;
+        Burst.Spawn(transform.position, Class.color, FxPieces, 1.2f, FxSize, 0.3f);
+    }
+
     void Die()
     {
+        PlayDespawnFx();
         target = null;
         timer = RespawnDelay;
         SetState(State.Dead);
@@ -244,6 +278,9 @@ public class Soldier : MonoBehaviour
     // Called when the tower is disabled. Not a death: no event, no casualty, no respawn timer.
     public void Despawn()
     {
+        PlayDespawnFx();
+        popTimer = 0f;
+        body.transform.localScale = bodyScale;
         target = null;
         SetState(State.Ready);
         gameObject.SetActive(false);
@@ -263,6 +300,9 @@ public class Soldier : MonoBehaviour
         body.enabled = true;
         healthBar.SetFraction(1f);
         SetState(State.Ready);
+        popTimer = 0f;
+        body.transform.localScale = bodyScale;
+        PlaySpawnFx();
     }
 
     void SetState(State next)

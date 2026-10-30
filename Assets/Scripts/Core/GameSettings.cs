@@ -30,6 +30,7 @@ public static class GameSettings
     public static bool DizzyWobble => Flag("dizzyWobble");
     public static bool KnockbackEffects => Flag("knockbackEffects");
     public static bool DeathBurst => Flag("deathBurst");
+    public static bool SoldierSpawnEffects => Flag("soldierSpawnEffects");
     public static bool HealthBarExtras => Flag("healthBarExtras");
     public static bool EdgeFlash => Flag("edgeFlash");
     public static bool ThreatBanner => Flag("threatBanner");

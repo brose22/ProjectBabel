@@ -206,6 +206,9 @@ public class MainMenu : MonoBehaviour
         FlagRow(column, "Knockback squash, dust", "knockbackEffects");
         FlagRow(column, "Death burst", "deathBurst");
 
+        UIKit.Label(column, "Soldiers", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        FlagRow(column, "Spawn / despawn effects", "soldierSpawnEffects");
+
         UIKit.Label(column, "Indicators", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Status icons", "statusIcons");
         FlagRow(column, "Health bar extras", "healthBarExtras");
