@@ -16,8 +16,17 @@ MonoBehaviour:
   startingGold: 300
   healthPerWin: 2
   restHealFraction: 0.3
-  giftCost: 75
-  giftApproval: 10
+  shopGifts:
+  - {fileID: 11400000, guid: 271fa504e5929804b9c00a22f12ef60a, type: 2}
+  - {fileID: 11400000, guid: ddaa5009a7f47924db5a3dde9f06d22b, type: 2}
+  - {fileID: 11400000, guid: 868f156ada900b44884d4e41677c1d33, type: 2}
+  - {fileID: 11400000, guid: 12d5231594a9bdc499de3f355e7aa4fa, type: 2}
+  - {fileID: 11400000, guid: f5c7811a3475d204da5102a6d745b720, type: 2}
+  - {fileID: 11400000, guid: b5e40e726839e714fa49ea6b47fe4d63, type: 2}
+  - {fileID: 11400000, guid: 2c2e1fb71d008e74faf658f9c5c0b09d, type: 2}
+  - {fileID: 11400000, guid: b49912cd3a7fc20439aff751b1b404d6, type: 2}
+  - {fileID: 11400000, guid: c79cb3c70f6766c49adb4c55a5c68e6a, type: 2}
+  - {fileID: 11400000, guid: c6d96a7a9a1a5054da9b3e1080180468, type: 2}
   events:
   - {fileID: 11400000, guid: e8fb9179c30445f787ca4e29fc612e14, type: 2}
   - {fileID: 11400000, guid: d919d17c362c48c88fff1241c2da6467, type: 2}
@@ -69,6 +78,11 @@ MonoBehaviour:
     shop: 0.1
     event: 0.15
   enemyHealthGrowthPerMatch: 0.12
+  goldGrowthPerMatch: 0.07
+  winGold: 50
+  waveClearGold: 5
+  waveClearGoldPerWave: 2
+  reserveRefundFraction: 1
   enemyCountGrowthPerMatch: 0.08
   eliteLayerBonus: 2
   eliteGoldMultiplier: 2
@@ -84,6 +98,7 @@ MonoBehaviour:
       spawnInterval: 1.4
       delayBefore: 0
     healthMultiplier: 1
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 3
@@ -94,6 +109,7 @@ MonoBehaviour:
       spawnInterval: 1.2
       delayBefore: 1.5
     healthMultiplier: 1.06
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 3
@@ -108,6 +124,7 @@ MonoBehaviour:
       spawnInterval: 1.2
       delayBefore: 1.5
     healthMultiplier: 1.12
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 4
@@ -126,6 +143,7 @@ MonoBehaviour:
       spawnInterval: 2.5
       delayBefore: 2
     healthMultiplier: 1.18
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 4
@@ -144,6 +162,7 @@ MonoBehaviour:
       spawnInterval: 2.5
       delayBefore: 2
     healthMultiplier: 1.24
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 4
@@ -166,6 +185,7 @@ MonoBehaviour:
       spawnInterval: 3
       delayBefore: 2
     healthMultiplier: 1.3
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 4
@@ -188,6 +208,7 @@ MonoBehaviour:
       spawnInterval: 3
       delayBefore: 2
     healthMultiplier: 1.36
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 4
@@ -210,6 +231,7 @@ MonoBehaviour:
       spawnInterval: 3
       delayBefore: 2
     healthMultiplier: 1.42
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 5
@@ -232,6 +254,7 @@ MonoBehaviour:
       spawnInterval: 3
       delayBefore: 2
     healthMultiplier: 1.48
+    goldMultiplier: 1
   - groups:
     - enemy: {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
       count: 5
@@ -254,6 +277,7 @@ MonoBehaviour:
       spawnInterval: 3
       delayBefore: 2
     healthMultiplier: 1.54
+    goldMultiplier: 1
   elements:
   - {fileID: 11400000, guid: d511a4227377bb84e84e8dd9c46fd432, type: 2}
   - {fileID: 11400000, guid: bd1e1a626cde8c94ebc3ef1e860b6ac8, type: 2}

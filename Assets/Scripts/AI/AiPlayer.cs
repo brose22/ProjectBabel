@@ -245,7 +245,7 @@ public class AiPlayer : MonoBehaviour
 
         List<MapNode> choices = run.Map.Choices();
         var roads = choices.ConvertAll(n => new AiRouteOption { id = n.id, kind = n.kind, revealed = n.revealed });
-        int best = AiRoutePicker.Pick(roads, (float)run.Health / run.MaxHealth, run.Gold, match.Data.giftCost, out string reason);
+        int best = AiRoutePicker.Pick(roads, (float)run.Health / run.MaxHealth, run.Gold, match.Data.GiftCost, out string reason);
         if (best < 0)
         {
             Decide("Map", "no road to take");
@@ -276,12 +276,14 @@ public class AiPlayer : MonoBehaviour
             case NodeKind.Shop:
                 var party = run.Party.FindAll(c => !run.HasDeparted(c));
                 var approvals = party.ConvertAll(ApprovalStore.ApprovalOf);
-                var canTake = party.ConvertAll(match.CanBuyGift);
-                int target = AiStopChoice.PickGiftTarget(approvals, canTake, run.Gold, data.giftCost, ShopGoldReserve);
-                if (target >= 0)
+                var canTake = approvals.ConvertAll(a => a < BondMath.MaxApproval);
+                int target = AiStopChoice.PickGiftTarget(approvals, canTake, run.Gold, data.GiftCost, ShopGoldReserve);
+                GiftData gift = target >= 0 ? BestGiftFor(party[target], run.Gold - ShopGoldReserve) : null;
+                if (gift != null)
                 {
-                    Decide("Shop", $"gift for {party[target].displayName} (approval {approvals[target]:0}), the lowest in the party");
-                    match.BuyGift(party[target]);
+                    Decide("Shop", $"{gift.displayName} for {party[target].displayName} (approval {approvals[target]:0}), the lowest in the party");
+                    match.BuyGift(gift);
+                    match.GiveGift(party[target], gift);
                 }
                 else Leave("shop done: no gift worth the Gold");
                 break;
@@ -304,6 +306,24 @@ public class AiPlayer : MonoBehaviour
         stopHandled = true;
         recorder.RecordStop(match);
         Decide("Stop", text);
+    }
+
+    // The shop gift that raises this captain's approval most within the Gold budget; null when none helps.
+    GiftData BestGiftFor(CaptainData captain, int budget)
+    {
+        GiftData best = null;
+        float bestGain = 0f;
+        foreach (GiftData gift in match.Data.shopGifts)
+        {
+            if (gift == null || gift.cost > budget || !match.CanBuyGift(gift)) continue;
+            float gain = gift.ApprovalFor(captain.ReactionTo(gift));
+            if (gain > bestGain || (gain == bestGain && best != null && gift.cost < best.cost))
+            {
+                best = gift;
+                bestGain = gain;
+            }
+        }
+        return best;
     }
 
     void Leave(string text)

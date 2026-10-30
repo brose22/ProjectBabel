@@ -33,3 +33,13 @@ MonoBehaviour:
   refusalTemper: 0.75
   likes: 000000000800000004000000
   dislikes: 030000000900000005000000
+  likedGifts:
+  - {fileID: 11400000, guid: 868f156ada900b44884d4e41677c1d33, type: 2}
+  - {fileID: 11400000, guid: 2c2e1fb71d008e74faf658f9c5c0b09d, type: 2}
+  dislikedGifts:
+  - {fileID: 11400000, guid: c79cb3c70f6766c49adb4c55a5c68e6a, type: 2}
+  - {fileID: 11400000, guid: ddaa5009a7f47924db5a3dde9f06d22b, type: 2}
+  giftGreeting: A gift, commander? Hand it over, then.
+  giftLikedLine: Solid. Dependable. Exactly what I like.
+  giftNeutralLine: It'll do. Thanks.
+  giftDislikedLine: Hmph. What am I supposed to do with this?

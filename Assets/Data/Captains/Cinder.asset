@@ -33,3 +33,14 @@ MonoBehaviour:
   refusalTemper: 1.25
   likes: 020000000700000009000000
   dislikes: 000000000800000006000000
+  likedGifts:
+  - {fileID: 11400000, guid: f5c7811a3475d204da5102a6d745b720, type: 2}
+  - {fileID: 11400000, guid: ddaa5009a7f47924db5a3dde9f06d22b, type: 2}
+  - {fileID: 11400000, guid: 271fa504e5929804b9c00a22f12ef60a, type: 2}
+  dislikedGifts:
+  - {fileID: 11400000, guid: 12d5231594a9bdc499de3f355e7aa4fa, type: 2}
+  - {fileID: 11400000, guid: c6d96a7a9a1a5054da9b3e1080180468, type: 2}
+  giftGreeting: Got something for me? Don't keep a fire waiting.
+  giftLikedLine: Now that's got some heat to it! I'll treasure it.
+  giftNeutralLine: Hm. Warm enough, I suppose. Thanks.
+  giftDislikedLine: You thought this would please me? It leaves me cold.
