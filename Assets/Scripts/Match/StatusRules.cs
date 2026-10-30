@@ -26,6 +26,16 @@ public static class StatusRules
         _ => StatusKind.Dizzy,
     };
 
+    // Fire and Water oppose each other, as do Earth and Air. A hit from the element opposing an
+    // enemy's weakness reads as resisted.
+    public static Element OppositeOf(Element element) => element switch
+    {
+        Element.Fire => Element.Water,
+        Element.Water => Element.Fire,
+        Element.Earth => Element.Air,
+        _ => Element.Earth,
+    };
+
     public static float DurationOf(StatusKind kind) => kind switch
     {
         StatusKind.Dizzy => 1.5f,

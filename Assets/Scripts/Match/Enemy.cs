@@ -36,6 +36,14 @@ public class Enemy : MonoBehaviour
     // Unscaled time until which the enemy shows the white ability-hit flash.
     float hitFlashUntil;
     const int HitFlashTint = -2;
+    // Burn and zone damage arrives every frame, so it shows as one number per this many seconds.
+    const float DotNumberSeconds = 1f;
+    const float DamageNumberHeight = 0.4f;
+    const float DamageNumberSpread = 0.2f;
+    static readonly Color ResistedNumberColor = new(0.6f, 0.6f, 0.6f);
+    float dotDamage;
+    float dotNumberTimer;
+    Color dotNumberColor;
 
     float MoveSpeed => Data.moveSpeed * (HasStatus(StatusKind.Slow) ? StatusRules.SlowSpeedMultiplier : 1f);
     float AttackIntervalMultiplier => HasStatus(StatusKind.Stun) ? StatusRules.StunAttackIntervalMultiplier : 1f;
@@ -176,7 +184,8 @@ public class Enemy : MonoBehaviour
         UpdateTint(tint);
 
         if (HasStatus(StatusKind.Burn))
-            TakeDamage(burnDamagePerSecond * Time.deltaTime, burnSource);
+            TakeDamage(burnDamagePerSecond * Time.deltaTime, burnSource, true, Element.Fire);
+        if (IsTargetable && dotDamage > 0f && (dotNumberTimer += Time.deltaTime) >= DotNumberSeconds) FlushDot();
     }
 
     // Flashes white for real-time seconds, so the flash shows during an ability's hit-stop.
@@ -212,15 +221,48 @@ public class Enemy : MonoBehaviour
 
     // source is the tower whose soldier, ability or burn dealt the damage, if any; the one that
     // lands the killing blow is remembered in KilledBy for XP.
-    public void TakeDamage(float amount, Tower source = null)
+    // overTime marks damage dealt a slice per frame (burn, zones), which shows as a periodic
+    // number instead of one per call. The number is coloured by the source's element, or by
+    // numberElement when there is no source.
+    public void TakeDamage(float amount, Tower source = null, bool overTime = false, Element? numberElement = null)
     {
         if (!IsTargetable) return;
-        if (source != null && IsWeakTo(source.Captain.element)) amount *= StatusRules.WeaknessDamageMultiplier;
+        bool weak = source != null && IsWeakTo(source.Captain.element);
+        if (weak) amount *= StatusRules.WeaknessDamageMultiplier;
         Health -= amount;
         healthBar.SetFraction(Health / MaxHealth);
+        Element? element = source != null ? source.Captain.element : numberElement;
+        if (overTime) AccumulateDot(amount, element);
+        else ShowDamageNumber(amount, element, weak);
         if (Health > 0f) return;
+        FlushDot();
         KilledBy = source;
         Die();
+    }
+
+    Color NumberColor(Element? element) =>
+        element.HasValue && Data.hasWeakness && element.Value == StatusRules.OppositeOf(Data.weakness) ? ResistedNumberColor
+        : element.HasValue ? UIKit.ElementColor(element.Value) : Color.white;
+
+    Vector3 NumberPosition() =>
+        transform.position + new Vector3(Random.Range(-DamageNumberSpread, DamageNumberSpread), DamageNumberHeight, 0f);
+
+    void ShowDamageNumber(float amount, Element? element, bool weak) =>
+        FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(amount)) + (weak ? "!" : ""),
+            NumberColor(element), weak ? 1.5f : 1f);
+
+    void AccumulateDot(float amount, Element? element)
+    {
+        dotDamage += amount;
+        dotNumberColor = NumberColor(element);
+    }
+
+    void FlushDot()
+    {
+        if (dotDamage <= 0f) return;
+        FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(dotDamage)).ToString(), dotNumberColor);
+        dotDamage = 0f;
+        dotNumberTimer = 0f;
     }
 
     // Pushes the enemy back along its path (never before the start); it then walks on as usual.

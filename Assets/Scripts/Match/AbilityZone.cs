@@ -67,7 +67,7 @@ public class AbilityZone : MonoBehaviour
             // Snapshot first: damage can kill enemies, which removes them from Enemy.Active.
             foreach (Enemy enemy in new List<Enemy>(Enemy.Active))
                 if (Vector2.Distance(transform.position, enemy.transform.position) <= radius)
-                    enemy.TakeDamage(damagePerSecond * Time.deltaTime, source);
+                    enemy.TakeDamage(damagePerSecond * Time.deltaTime, source, true);
         }
 
         if (age >= lifetime) Destroy(gameObject);
