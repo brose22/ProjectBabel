@@ -73,6 +73,9 @@ public class Tower : MonoBehaviour
     float supportXpBank;
     int supportXpThisWave;
     float supportXpWaveStart = -1f;
+    float fightChargeThisWave;
+    float fightChargeWaveStart = -1f;
+    bool casting;
 
     public bool HasAbility => Captain.ability != null;
     public bool IsSpecialReady => HasAbility && SpecialCharge >= 1f;
@@ -303,12 +306,31 @@ public class Tower : MonoBehaviour
         GainXp(allowed);
     }
 
-    // Fills only while enemies are on the field, so the special can't be stockpiled between waves.
+    // The slow timer fills only while enemies are on the field, so the special can't be stockpiled
+    // between waves. Most charge comes from fighting (AddFightCharge).
     void ChargeSpecial()
     {
         if (!HasAbility || IsDisabled || Enemy.Active.Count == 0) return;
         float perSecond = Captain.specialChargeRate * BondMath.ChargeRateMultiplier(Approval) / Mathf.Max(1f, Captain.ability.chargeSeconds);
-        SpecialCharge = Mathf.Min(1f, SpecialCharge + perSecond * Time.deltaTime);
+        SpecialCharge = Mathf.Min(1f, SpecialCharge + perSecond * ChargeMath.TrickleMultiplier * Time.deltaTime);
+    }
+
+    // Charge earned by this captain's soldiers hitting and killing enemies, as a fraction of a full
+    // meter. Scaled by charge rate and approval, capped per wave, and ignored while the special
+    // itself is being cast so it cannot refill itself.
+    public void AddFightCharge(float amount)
+    {
+        if (amount <= 0f || casting || !HasAbility || IsDisabled || match == null) return;
+        if (fightChargeWaveStart != match.WaveStartTime)
+        {
+            fightChargeWaveStart = match.WaveStartTime;
+            fightChargeThisWave = 0f;
+        }
+        amount *= Captain.specialChargeRate * BondMath.ChargeRateMultiplier(Approval);
+        amount = Mathf.Min(amount, ChargeMath.WaveCap - fightChargeThisWave);
+        if (amount <= 0f) return;
+        fightChargeThisWave += amount;
+        SpecialCharge = Mathf.Min(1f, SpecialCharge + amount);
     }
 
     // Drawn captain art replaces the placeholder square at full tile size.
@@ -369,6 +391,7 @@ public class Tower : MonoBehaviour
     public bool TryUseAbility()
     {
         if (!CanUseAbility) return false;
+        casting = true;
         if (IsSupportAbility)
         {
             float healed = AbilityCaster.CastSupport(this, rangeIndicator.sprite);
@@ -376,6 +399,7 @@ public class Tower : MonoBehaviour
             GainSupportXp(healed * SupportXpPerHealthHealed + boosted * SupportXpPerTowerBoosted);
         }
         else AbilityCaster.Cast(this, FindAbilityTarget(), SpriteUtil.Square, rangeIndicator.sprite);
+        casting = false;
         SpecialCharge = 0f;
         GameEvents.RaiseAbilityUsed(this);
         return true;

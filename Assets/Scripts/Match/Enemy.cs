@@ -267,6 +267,7 @@ public class Enemy : MonoBehaviour
         if (!IsTargetable) return;
         bool weak = source != null && IsWeakTo(source.Captain.element);
         if (weak) amount *= StatusRules.WeaknessDamageMultiplier;
+        if (source != null && !overTime) source.AddFightCharge(FightCharge(amount, weak));
         Health -= amount;
         healthBar.SetFraction(Health / MaxHealth);
         Element? element = source != null ? source.Captain.element : numberElement;
@@ -281,7 +282,23 @@ public class Enemy : MonoBehaviour
         if (Health > 0f) return;
         FlushDot();
         KilledBy = source;
+        if (source != null) source.AddFightCharge(ChargeMath.ForKill(Data.elite, IsBoss));
         Die();
+    }
+
+    // Charge a soldier hit earns its captain: the health it removed, plus bonuses for hitting a
+    // weakness or an enemy another captain has already afflicted.
+    float FightCharge(float damage, bool weak)
+    {
+        float charge = ChargeMath.ForDamage(Mathf.Min(damage, Health), MaxHealth);
+        if (weak) charge += ChargeMath.WeaknessHitBonus;
+        for (int i = 0; i < statusTime.Length; i++)
+        {
+            if (statusTime[i] <= 0f) continue;
+            charge += ChargeMath.AfflictedHitBonus;
+            break;
+        }
+        return charge;
     }
 
     bool IsResistedBy(Element? element) =>
@@ -332,12 +349,14 @@ public class Enemy : MonoBehaviour
     }
 
     // Pushes the enemy back along its path (never before the start); it then walks on as usual.
-    public void Knockback(float distance)
+    // The boss cannot be pushed. source, if given, earns special charge for a push that lands.
+    public void Knockback(float distance, Tower source = null)
     {
-        if (!IsTargetable || !(distance > 0f)) return;
+        if (!IsTargetable || IsBoss || !(distance > 0f)) return;
         Vector3 from = transform.position;
         transform.position = PathMath.MoveBack(path, nextPoint, transform.position, distance, out nextPoint);
         ShowKnockback(from);
+        if (source != null) source.AddFightCharge(ChargeMath.KnockbackBonus);
     }
 
     // Three small stars that circle above the head while stunned; shown only then.

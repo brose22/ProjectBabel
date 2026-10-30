@@ -136,7 +136,7 @@ public class Soldier : MonoBehaviour
                 break;
             default:
                 enemy.TakeDamage(damage, Tower);
-                enemy.Knockback(Class.knockbackDistance);
+                enemy.Knockback(Class.knockbackDistance, Tower);
                 break;
         }
     }
