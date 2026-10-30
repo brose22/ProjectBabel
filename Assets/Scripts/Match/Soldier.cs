@@ -98,6 +98,7 @@ public class Soldier : MonoBehaviour
 
     void TickReady()
     {
+        if (Tower.IsWalking) return;
         Enemy enemy = Tower.FindClosestEnemy(transform.position);
         if (enemy == null || !Tower.TrySpendReserve(ActCost)) return;
         target = enemy;

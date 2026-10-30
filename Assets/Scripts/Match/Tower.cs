@@ -33,8 +33,17 @@ public class Tower : MonoBehaviour
     // Tiles per second a captain walks to a new cell.
     const float WalkSpeed = 3f;
     // True while the captain is on their way to Cell.
+    // While it is true the captain and their soldiers hold fire.
     public bool IsWalking { get; private set; }
     Vector3 walkTarget;
+    float walkTime;
+    const float WalkStepsPerSecond = 3f;
+    const float WalkHopHeight = 0.12f;
+    const float WalkSquash = 0.1f;
+    const float WalkSwayDegrees = 6f;
+    // The body as drawn, so the walk animation can return to it.
+    Vector3 bodyRestPosition;
+    Vector3 bodyRestScale = Vector3.one;
     // Game time a requested special stops waiting to fire by itself, or below zero for none.
     float autoFireUntil = -1f;
 
@@ -87,7 +96,7 @@ public class Tower : MonoBehaviour
     public float AbilityRange => Range * (HasAbility ? Captain.ability.rangeMultiplier : 1f);
     public bool IsSupportAbility => HasAbility && Captain.ability.shape == AbilityData.Shape.Support;
     // A boost lasts only until the wave ends, so a Buffer's special waits for a wave to be running.
-    public bool CanUseAbility => IsSpecialReady && !IsDisabled &&
+    public bool CanUseAbility => IsSpecialReady && !IsDisabled && !IsWalking &&
         (IsSupportAbility ? IsWaveRunning || !Captain.ability.HasBuff : FindAbilityTarget() != null);
 
     public int LivingSoldiers
@@ -116,6 +125,8 @@ public class Tower : MonoBehaviour
         Captain = captain;
         Cell = cell;
         ApplyArt(captain);
+        bodyRestPosition = body.transform.localPosition;
+        bodyRestScale = body.transform.localScale;
         // The range sprite is a disc two units across, so its scale equals the radius.
         rangeIndicator.transform.localScale = Vector3.one * captain.range;
         rangeIndicator.enabled = false;
@@ -255,10 +266,21 @@ public class Tower : MonoBehaviour
         UpdateBodyColor();
     }
 
+    // Steps toward the new cell with a hop, a squash on each landing and a little sway.
     void Walk()
     {
         transform.position = Vector3.MoveTowards(transform.position, walkTarget, WalkSpeed * Time.deltaTime);
-        if (transform.position == walkTarget) IsWalking = false;
+        bool arrived = transform.position == walkTarget;
+        if (arrived) IsWalking = false;
+
+        walkTime += Time.deltaTime * WalkStepsPerSecond;
+        float phase = walkTime * Mathf.PI;
+        float hop = arrived ? 0f : Mathf.Abs(Mathf.Sin(phase));
+        float squash = arrived ? 0f : 1f - hop;
+        Transform visual = body.transform;
+        visual.localPosition = bodyRestPosition + Vector3.up * (hop * WalkHopHeight);
+        visual.localScale = Vector3.Scale(bodyRestScale, new Vector3(1f + WalkSquash * squash, 1f - WalkSquash * squash, 1f));
+        visual.localRotation = Quaternion.Euler(0f, 0f, arrived ? 0f : Mathf.Sin(phase) * WalkSwayDegrees);
     }
 
     // How strong a stat boost on the tower and its soldiers is right now (0.5 = +50%).
