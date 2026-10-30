@@ -70,6 +70,42 @@ public class WorldMapTests
     }
 
     [Test]
+    public void AddStop_AtTheStartJoinsTheFirstLayer()
+    {
+        WorldMap map = Map();
+        int before = map.Choices().Count;
+        MapNode shop = map.AddStop(NodeKind.Shop);
+        Assert.That(shop, Is.Not.Null);
+        Assert.That(shop.kind, Is.EqualTo(NodeKind.Shop));
+        Assert.That(map.Choices().Count, Is.EqualTo(before + 1));
+        Assert.That(map.Choices().Contains(shop));
+        Assert.That(shop.next, Is.Not.Empty);
+        Assert.That(map.TryChoose(shop.id), Is.True);
+    }
+
+    [Test]
+    public void AddStop_AfterAWinIsReachableFromTheCurrentCity()
+    {
+        WorldMap map = Map();
+        map.TryChoose(0);
+        map.ClearTarget(2);
+        MapNode shop = map.AddStop(NodeKind.Shop);
+        Assert.That(map.nodes[map.current].next, Does.Contain(shop.id));
+        Assert.That(shop.layer, Is.EqualTo(map.nodes[map.current].layer + 1));
+        Assert.That(map.BaseId, Is.Not.EqualTo(shop.id));
+        Assert.That(map.Base.layer, Is.EqualTo(map.layerCount - 1));
+    }
+
+    [Test]
+    public void AddStop_RefusesWhenTheBaseIsNext()
+    {
+        WorldMap map = Map(matches: 2);
+        map.TryChoose(map.Choices()[0].id);
+        map.ClearTarget(2);
+        Assert.That(map.AddStop(NodeKind.Shop), Is.Null);
+    }
+
+    [Test]
     public void TryChoose_OnlyAcceptsReachableCities()
     {
         WorldMap map = Map();
