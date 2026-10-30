@@ -301,7 +301,24 @@ public class MatchManager : MonoBehaviour
 
     // Every freeze (match over, hit-stop, a waiting request) goes through here, so ending one
     // never restarts the match while another still holds it.
-    void ApplyTimeScale() => Time.timeScale = TimeScaleRules.Resolve(IsOver, IsHitStopped, IsRequestPaused, GameSpeed);
+    void ApplyTimeScale() => Time.timeScale = TimeScaleRules.Resolve(IsOver, IsHitStopped, IsRequestPaused, GameSpeed, IsPaused);
+
+    // The player's pause from the header menu; held until they resume or leave.
+    public bool IsPaused { get; private set; }
+
+    public void SetPaused(bool paused)
+    {
+        if (paused && (IsOver || IsBetweenMatches)) return;
+        IsPaused = paused;
+        ApplyTimeScale();
+    }
+
+    // Leaves the match for the main menu. The run keeps its last save, so Resume run restarts this stop.
+    public void ExitMatch()
+    {
+        IsPaused = false;
+        MainMenu.Open();
+    }
 
     // Ends the run: back to the setup screen with fresh health and Gold. Approval and bond ranks
     // are untouched, since they carry between runs.

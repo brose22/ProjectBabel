@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // The match HUD, built in uGUI at runtime: top bar, party bar, captain widget, move hint, captain
@@ -35,6 +36,7 @@ public class MatchHUD : MonoBehaviour
     Text moveHint;
     Text messages;
     string requestKey;
+    RectTransform pauseMenu;
 
     // Added to the match at runtime, so they are looked up rather than wired in the scene.
     Relationships Relationships => relationships != null ? relationships : relationships = match.GetComponent<Relationships>();
@@ -69,6 +71,8 @@ public class MatchHUD : MonoBehaviour
         captainWidget = new CaptainWidget(canvas, TopBarHeight + UIKit.Pad, match, placement);
         // The full captain panel is a testing tool, kept out of release builds.
         if (Debug.isDebugBuild) debugPanel = new CaptainDebugPanel(canvas.transform, match, placement);
+        // Last, so it draws over everything else on the canvas.
+        BuildPauseMenu();
     }
 
     void LateUpdate()
@@ -82,6 +86,7 @@ public class MatchHUD : MonoBehaviour
         debugPanel?.Update();
         UpdateRequests();
         UpdateMoveHint();
+        UpdatePauseMenu();
         messages.text = Relationships != null ? MessagesText(Relationships.RecentMessages) : "";
     }
 
@@ -154,6 +159,34 @@ public class MatchHUD : MonoBehaviour
             interactable: () => match.State == MatchState.Preparing, width: 130f), barRefreshers);
         UIKit.LiveButton(bar, () => match.GameSpeed > 1f ? "Speed x2" : "Speed x1", match.ToggleGameSpeed, barRefreshers,
             selected: () => match.GameSpeed > 1f, width: 72f);
+        UIKit.LiveButton(bar, () => "Pause", () => match.SetPaused(true), barRefreshers,
+            interactable: () => !match.IsOver && !match.IsBetweenMatches, width: 60f);
+    }
+
+    // ---------- Pause menu ----------
+
+    // A dimmed overlay with the menu window; it blocks clicks to the match behind it.
+    void BuildPauseMenu()
+    {
+        pauseMenu = UIKit.Stretch(UIKit.Panel(canvas.transform, "Pause Menu", new Color(0f, 0f, 0f, 0.55f)));
+        RectTransform window = UIKit.Box(pauseMenu, "Window");
+        UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(window, 14, 8, fitContent: true);
+        UIKit.Label(window, "PAUSED", 22, TextAnchor.MiddleCenter);
+        UIKit.Size(UIKit.Primary(UIKit.Button(window, "Resume", () => match.SetPaused(false)), barRefreshers), height: 32f, flexibleWidth: 1f);
+        UIKit.Size(UIKit.Button(window, "Exit Match", match.ExitMatch), height: 32f, flexibleWidth: 1f);
+        UIKit.Size(UIKit.Button(window, "Exit Game", MainMenu.Quit), height: 32f, flexibleWidth: 1f);
+        pauseMenu.gameObject.SetActive(false);
+    }
+
+    void UpdatePauseMenu()
+    {
+        if (pauseMenu == null) return;
+        // The match can end under the menu (a request timing out is paused too, but be safe).
+        if (match.IsPaused && (match.IsOver || match.IsBetweenMatches)) match.SetPaused(false);
+        Keyboard keyboard = Keyboard.current;
+        if (match.IsPaused && keyboard != null && keyboard.escapeKey.wasPressedThisFrame) match.SetPaused(false);
+        pauseMenu.gameObject.SetActive(match.IsPaused);
     }
 
     // A small caption over a live value.

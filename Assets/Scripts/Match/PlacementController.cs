@@ -108,6 +108,8 @@ public class PlacementController : MonoBehaviour
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return;
 
+        // The pause menu owns the keyboard while it's up; its own Esc handling resumes.
+        if (match.IsPaused) return;
         if (keyboard.spaceKey.wasPressedThisFrame) match.StartNextWave();
         if (keyboard.escapeKey.wasPressedThisFrame)
         {
