@@ -35,7 +35,8 @@ public class RunScreens : MonoBehaviour
     const float DetailsWidth = 560f;
     const float DetailsPortraitSize = 96f;
     // Inventory and gift windows.
-    const float InventoryWidth = 560f;
+    // The captain window sits on the right edge and the gift window takes the room to its left.
+    const float GiftWindowWidth = UIKit.ReferenceWidth - DetailsWidth - 3f * UIKit.Pad;
     const float GiftListHeight = 220f;
     // Opaque, so the map never shows through the window.
     static readonly Color WindowColor = new(UIKit.PanelColor.r, UIKit.PanelColor.g, UIKit.PanelColor.b, 1f);
@@ -536,7 +537,7 @@ public class RunScreens : MonoBehaviour
         RectTransform window = UIKit.Box(overlay, "Window", WindowColor);
         // Swallows clicks on the window, which would otherwise bubble up to the overlay and close it.
         window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(DetailsWidth, 0f));
+        UIKit.Place(window, new Vector2(1f, 0.5f), new Vector2(-UIKit.Pad, 0f), new Vector2(DetailsWidth, 0f));
         UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
 
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
@@ -582,9 +583,9 @@ public class RunScreens : MonoBehaviour
     // ---------- Inventory and gifts ----------
 
     // A window over the map. A click beside it dismisses it, and so does rebuilding the screen.
-    RectTransform OpenWindow(string name, float width)
+    RectTransform OpenWindow(string name, float width, Vector2 anchor, Vector2 offset, float dim)
     {
-        RectTransform backdrop = UIKit.Stretch(UIKit.Panel(screen, name, new Color(0f, 0f, 0f, 0.55f)));
+        RectTransform backdrop = UIKit.Stretch(UIKit.Panel(screen, name, new Color(0f, 0f, 0f, dim)));
         var dismiss = backdrop.gameObject.AddComponent<Button>();
         dismiss.transition = Selectable.Transition.None;
         dismiss.onClick.AddListener(() => Destroy(backdrop.gameObject));
@@ -592,7 +593,7 @@ public class RunScreens : MonoBehaviour
         RectTransform window = UIKit.Box(backdrop, "Window", WindowColor);
         // Swallows clicks on the window, which would otherwise bubble up to the backdrop and close it.
         window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, 0f));
+        UIKit.Place(window, anchor, offset, new Vector2(width, 0f));
         UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
         return window;
     }
@@ -601,7 +602,9 @@ public class RunScreens : MonoBehaviour
     // carry, each marked liked, disliked or neutral. onGiven runs after each gift.
     void ShowGiftWindow(RunState run, CaptainData captain, Action onGiven)
     {
-        RectTransform window = OpenWindow("Gift", InventoryWidth);
+        // Beside the captain window, not over it, and no second dimming layer.
+        RectTransform window = OpenWindow("Gift", GiftWindowWidth, new Vector2(1f, 0.5f),
+            new Vector2(-(DetailsWidth + 2f * UIKit.Pad), 0f), 0f);
         GameObject backdrop = window.parent.gameObject;
 
         RectTransform top = UIKit.Group(window, "Top");
@@ -659,14 +662,17 @@ public class RunScreens : MonoBehaviour
             UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
             UIKit.Size(text, flexibleWidth: 1f);
             UIKit.Label(text, count > 1 ? $"{gift.displayName}  x{count}" : gift.displayName, 14).fontStyle = FontStyle.Bold;
-            if (!string.IsNullOrEmpty(gift.description)) UIKit.Label(text, gift.description, 11, color: UIKit.MutedTextColor);
-
-            if (captain == null) continue;
+            if (captain == null)
+            {
+                if (!string.IsNullOrEmpty(gift.description)) UIKit.Label(text, gift.description, 11, color: UIKit.MutedTextColor);
+                continue;
+            }
+            // With a captain, the second line says how they feel about it instead.
             GiftReaction reaction = captain.ReactionTo(gift);
             string change = $"{gift.ApprovalFor(reaction):+0;-0;0}";
             Color color = reaction == GiftReaction.Liked ? UIKit.GoodColor : reaction == GiftReaction.Disliked ? UIKit.BadColor : UIKit.MutedTextColor;
             string word = reaction == GiftReaction.Liked ? "Likes it" : reaction == GiftReaction.Disliked ? "Dislikes it" : "Neutral";
-            UIKit.Size(UIKit.Label(row, $"{word}  {change}", 12, TextAnchor.MiddleRight, color), 110f);
+            UIKit.Label(text, $"{word}  {change}", 12, color: color);
             GiftData chosen = gift;
             UIKit.Button(row, "Give", () => give(chosen), 60f, 24f);
         }
@@ -913,8 +919,11 @@ public class RunScreens : MonoBehaviour
         foreach (GiftData gift in match.Data.shopGifts)
         {
             if (gift == null) continue;
-            UIKit.LiveButton(panel, () => $"{gift.displayName}   {gift.cost} Gold   (owned {run.GiftCount(gift)})",
-                () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), width: 400f, height: 26f);
+            Transform row = UIKit.Group(panel, gift.displayName);
+            UIKit.Layout<HorizontalLayoutGroup>(row, 0, 8).childAlignment = TextAnchor.MiddleCenter;
+            UIKit.Icon(row, gift.icon, 32f);
+            UIKit.LiveButton(row, () => $"{gift.displayName}   {gift.cost} Gold   (owned {run.GiftCount(gift)})",
+                () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), width: 360f, height: 32f);
         }
         UIKit.Button(panel, "Leave the shop", match.LeaveStop, 220f, 32f);
     }
