@@ -48,11 +48,15 @@ public class PlacementController : MonoBehaviour
         hoverMarker.transform.position = grid.CellCenter(cell);
         hoverMarker.color = hovered != null || canBuild ? validColor : invalidColor;
 
+        // Placing leaves the new captain unselected, so its widget only opens when clicked.
         if (mouse.leftButton.wasPressedThisFrame)
         {
             if (hovered != null) Select(hovered);
-            else if (canBuild) Select(match.PlaceTower(cell));
-            else Select(null);
+            else
+            {
+                if (canBuild) match.PlaceTower(cell);
+                Select(null);
+            }
         }
         else if (mouse.rightButton.wasPressedThisFrame)
         {
