@@ -165,8 +165,10 @@ public class MatchManager : MonoBehaviour
         Tower.ClearWaveBoosts();
         spawner.SpawnWave(waves[WavesCleared]);
         if (IsBaseMatch && data.boss != null && Boss == null)
+        {
             Boss = spawner.SpawnOne(data.boss, RunScaling.HealthMultiplier(City.layer, data.enemyHealthGrowthPerMatch));
             Boss.MarkBoss();
+        }
         GameEvents.RaiseWaveStarted(WavesCleared + 1);
     }
 
