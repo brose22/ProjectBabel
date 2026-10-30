@@ -51,6 +51,11 @@ public class Enemy : MonoBehaviour
     const int StarCount = 3;
     const float DizzyWobbleDegrees = 18f;
     float squashUntil;
+    // The weakness dot pulses gently, and harder when a hit matches the weakness.
+    const float WeaknessLabelGapSeconds = 0.6f;
+    Transform weaknessMarker;
+    float weaknessHitUntil;
+    float weaknessLabelUntil;
     Transform[] stars;
     const int HitFlashTint = -2;
     // Burn and zone damage arrives every frame, so it shows as one number per this many seconds.
@@ -114,6 +119,7 @@ public class Enemy : MonoBehaviour
     {
         var marker = new GameObject("Weakness Marker");
         marker.transform.SetParent(transform, false);
+        weaknessMarker = marker.transform;
         marker.transform.localPosition = new Vector3(-0.3f, 0.45f, 0f);
         marker.transform.localScale = Vector3.one * WeaknessMarkerSize;
         var renderer = marker.AddComponent<SpriteRenderer>();
@@ -151,6 +157,7 @@ public class Enemy : MonoBehaviour
         TickStatuses();
         if (!IsTargetable) return;
         UpdateBodyLook();
+        if (weaknessMarker != null) PulseWeaknessMarker();
 
         // Deployed soldiers in reach block the enemy until one side falls back or dies.
         Soldier blocker = Soldier.FindDeployedNear(transform.position, Data.attackRange);
@@ -265,6 +272,7 @@ public class Enemy : MonoBehaviour
         else
         {
             ShowDamageNumber(amount, element, weak);
+            ShowWeaknessLabel(element, weak);
             FlashHit(HitPopSeconds);
             hitPopUntil = Time.unscaledTime + HitPopSeconds;
         }
@@ -274,8 +282,11 @@ public class Enemy : MonoBehaviour
         Die();
     }
 
+    bool IsResistedBy(Element? element) =>
+        element.HasValue && Data.hasWeakness && element.Value == StatusRules.OppositeOf(Data.weakness);
+
     Color NumberColor(Element? element) =>
-        element.HasValue && Data.hasWeakness && element.Value == StatusRules.OppositeOf(Data.weakness) ? ResistedNumberColor
+        IsResistedBy(element) ? ResistedNumberColor
         : element.HasValue ? UIKit.ElementColor(element.Value) : Color.white;
 
     Vector3 NumberPosition() =>
@@ -284,6 +295,25 @@ public class Enemy : MonoBehaviour
     void ShowDamageNumber(float amount, Element? element, bool weak) =>
         FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(amount)) + (weak ? "!" : ""),
             NumberColor(element), weak ? 1.5f : 1f);
+
+    void PulseWeaknessMarker()
+    {
+        float pulse = 1f + 0.2f * Mathf.Sin(Time.time * 5f);
+        if (Time.unscaledTime < weaknessHitUntil) pulse *= 1.8f;
+        weaknessMarker.localScale = Vector3.one * (WeaknessMarkerSize * pulse);
+    }
+
+    // "Weak!" or "Resist" above the enemy when a hit matches or opposes its weakness, at most
+    // once every WeaknessLabelGapSeconds so rapid hits do not stack labels.
+    void ShowWeaknessLabel(Element? element, bool weak)
+    {
+        if (!weak && !IsResistedBy(element)) return;
+        if (weak) weaknessHitUntil = Time.unscaledTime + 0.2f;
+        if (Time.unscaledTime < weaknessLabelUntil) return;
+        weaknessLabelUntil = Time.unscaledTime + WeaknessLabelGapSeconds;
+        FloatingText.Spawn(transform.position + Vector3.up * 0.65f, weak ? "Weak!" : "Resist",
+            weak ? UIKit.ElementColor(element.Value) : ResistedNumberColor, 0.8f, 0.9f);
+    }
 
     void AccumulateDot(float amount, Element? element)
     {
