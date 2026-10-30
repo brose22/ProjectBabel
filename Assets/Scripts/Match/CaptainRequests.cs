@@ -6,11 +6,15 @@ public enum RequestKind { MoreDraw, Relocate, NewMix, UseSpecial }
 
 public enum RequestAnswer { No, Some, Yes }
 
-// Captains ask for things during a wave (GDD: up to 2 per wave, often none). The player answers
-// No (0%), Some (50%) or Yes (100%): the answer grants that share of the request and of the
-// approval reward. Refusing always costs approval, scaled by request and captain. Requests are
-// shown one at a time and the match pauses while one waits; one left unanswered when its
-// countdown runs out, or when the wave ends, counts as a refusal. Added to the match at runtime.
+// Captains ask for things when something happens in the match (GDD: up to 2 per wave, often none):
+//   MoreDraw   - a soldier fell and the reserve can't pay to bring it back.
+//   Relocate   - the captain is badly hurt, or nothing has come within their range for a while.
+//   NewMix     - the captain levelled up and a class they like isn't in every slot.
+//   UseSpecial - an elite or the boss walked on, or the special just finished charging.
+// The player answers No (0%), Some (50%) or Yes (100%): the answer grants that share of the request
+// and of the approval reward. Refusing always costs approval, scaled by request and captain.
+// Requests are shown one at a time and the match pauses while one waits; one left unanswered when
+// its countdown runs out, or when the wave ends, counts as a refusal. Added to the match at runtime.
 public class CaptainRequests : MonoBehaviour
 {
     public class Request
@@ -19,33 +23,45 @@ public class CaptainRequests : MonoBehaviour
         public RequestKind Kind;
         // The soldier class asked for, for NewMix.
         public SoldierClassData WantedClass;
+        // What the captain says; names the reason they are asking.
+        public string Text;
         // Real time the request goes unanswered, set once it is shown.
         public float Deadline = -1f;
-
-        public string Text => Kind switch
-        {
-            RequestKind.MoreDraw => "I need more Gold. Turn my draw up to High?",
-            RequestKind.Relocate => "This spot isn't working. Let me move?",
-            RequestKind.NewMix => $"Give me {WantedClass.displayName}s?",
-            _ => $"Let me use {Tower.Captain.ability.displayName} now?",
-        };
     }
 
     const float ApprovalReward = 4f;
     const float RefusalPenalty = 3f;
     // A Some on a special fires it after this delay instead of now.
     const float SomeSpecialDelaySeconds = 5f;
-    // Requests arrive between these many seconds into the wave.
-    const float EarliestRequestSeconds = 3f;
-    const float LatestRequestSeconds = 15f;
     // Real-time seconds the player has to answer a shown request.
     public const float ResponseSeconds = 10f;
+    // At most this many requests come in a wave.
+    const int MaxRequestsPerWave = 2;
+    // A captain doesn't ask for the same thing again until this many waves have passed.
+    const int CooldownWaves = 2;
+    // A captain below this share of health asks to move.
+    const float HurtFraction = 0.5f;
+    // Game seconds with nothing in range, while enemies are elsewhere on the field, before a captain asks to move.
+    const float IdleSeconds = 20f;
+    // Game seconds between checks of the conditions that have no event of their own.
+    const float PollSeconds = 0.5f;
+
+    class Watch
+    {
+        public float LastEnemyInRange;
+        public bool SpecialWasReady;
+    }
 
     // In arrival order; the first is the one shown.
     readonly List<Request> pending = new();
-    readonly List<float> scheduled = new();
+    readonly Dictionary<Tower, Watch> watches = new();
+    // The wave each captain last asked each thing in.
+    readonly Dictionary<(Tower, RequestKind), int> lastAsked = new();
     MatchManager match;
     Relationships relationships;
+    int wave;
+    int askedThisWave;
+    float nextPoll;
 
     public IReadOnlyList<Request> Pending => pending;
     public Request Active => pending.Count > 0 ? pending[0] : null;
@@ -61,52 +77,115 @@ public class CaptainRequests : MonoBehaviour
     {
         GameEvents.WaveStarted += OnWaveStarted;
         GameEvents.WaveEnded += OnWaveEnded;
-        GameEvents.TowerSold += DropRequestsFor;
+        GameEvents.TowerSold += OnTowerSold;
+        GameEvents.SoldierDied += OnSoldierDied;
+        GameEvents.CaptainLeveledUp += OnCaptainLeveledUp;
+        GameEvents.EnemyArrived += OnEnemyArrived;
     }
 
     void OnDisable()
     {
         GameEvents.WaveStarted -= OnWaveStarted;
         GameEvents.WaveEnded -= OnWaveEnded;
-        GameEvents.TowerSold -= DropRequestsFor;
+        GameEvents.TowerSold -= OnTowerSold;
+        GameEvents.SoldierDied -= OnSoldierDied;
+        GameEvents.CaptainLeveledUp -= OnCaptainLeveledUp;
+        GameEvents.EnemyArrived -= OnEnemyArrived;
     }
 
-    // Half the waves bring no request, about a third one, the rest two.
-    void OnWaveStarted(int wave)
+    void OnWaveStarted(int waveNumber)
     {
-        scheduled.Clear();
-        float roll = UnityEngine.Random.value;
-        int count = roll < 0.5f ? 0 : roll < 0.85f ? 1 : 2;
-        for (int i = 0; i < count; i++)
-            scheduled.Add(Time.time + UnityEngine.Random.Range(EarliestRequestSeconds, LatestRequestSeconds));
+        wave = waveNumber;
+        askedThisWave = 0;
+        watches.Clear();
+        foreach (Tower tower in Tower.All)
+            watches[tower] = new Watch { LastEnemyInRange = Time.time, SpecialWasReady = tower.IsSpecialReady };
     }
 
-    void OnWaveEnded(int wave)
+    void OnWaveEnded(int waveNumber)
     {
-        scheduled.Clear();
         // Unanswered requests count as refusals.
         foreach (Request request in pending.ToArray())
             Answer(request, RequestAnswer.No);
     }
 
-    void DropRequestsFor(Tower tower)
+    void OnTowerSold(Tower tower)
     {
+        watches.Remove(tower);
         pending.RemoveAll(r => r.Tower == tower);
         ShowNext();
     }
 
-    // Scheduled in game time, so no new request comes in while the match is paused.
+    // The reserve can't pay to respawn the fallen soldier, so the captain wants a faster draw.
+    void OnSoldierDied(Soldier soldier)
+    {
+        Tower tower = soldier.Tower;
+        if (tower == null || tower.DrawRate == DrawRate.High || tower.Reserve >= soldier.RespawnCost) return;
+        TryAsk(tower, RequestKind.MoreDraw, "My soldiers fell and I can't afford to bring them back. Turn my draw up to High?");
+    }
+
+    // A level-up is when a captain asks for the soldiers they like.
+    void OnCaptainLeveledUp(Tower tower)
+    {
+        SoldierClassData wanted = LikedClassMissingFrom(tower);
+        if (wanted == null) return;
+        TryAsk(tower, RequestKind.NewMix, $"I've grown stronger. Give me {wanted.displayName}s?", wanted);
+    }
+
+    // The ready captain closest to an elite or the boss asks to unleash their special on it.
+    void OnEnemyArrived(Enemy enemy)
+    {
+        Tower closest = null;
+        float closestDistance = float.MaxValue;
+        foreach (Tower tower in Tower.All)
+        {
+            if (tower.IsDisabled || !tower.IsSpecialReady) continue;
+            float distance = Vector2.Distance(tower.transform.position, enemy.transform.position);
+            if (distance >= closestDistance) continue;
+            closest = tower;
+            closestDistance = distance;
+        }
+        if (closest == null) return;
+        string who = enemy.IsBoss ? "The boss is here" : "An elite is here";
+        TryAsk(closest, RequestKind.UseSpecial, $"{who}. Let me use {closest.Captain.ability.displayName} now?");
+    }
+
+    // The conditions with no event of their own are checked a couple of times a second, in game
+    // time so nothing new comes in while the match is paused.
     void Update()
     {
-        for (int i = scheduled.Count - 1; i >= 0; i--)
+        if (match.State == MatchState.WaveActive && Time.time >= nextPoll)
         {
-            if (Time.time < scheduled[i]) continue;
-            scheduled.RemoveAt(i);
-            TryMakeRequest();
+            nextPoll = Time.time + PollSeconds;
+            Poll();
         }
 
         Request active = Active;
         if (active != null && !match.IsOver && Time.unscaledTime >= active.Deadline) Answer(active, RequestAnswer.No);
+    }
+
+    void Poll()
+    {
+        bool enemiesOnField = Enemy.Active.Count > 0;
+        foreach (Tower tower in Tower.All)
+        {
+            if (tower.IsDisabled) continue;
+            if (!watches.TryGetValue(tower, out Watch watch))
+                watches[tower] = watch = new Watch { LastEnemyInRange = Time.time, SpecialWasReady = tower.IsSpecialReady };
+
+            bool ready = tower.IsSpecialReady;
+            if (ready && !watch.SpecialWasReady)
+                TryAsk(tower, RequestKind.UseSpecial, $"{tower.Captain.ability.displayName} is charged. Use it now?");
+            watch.SpecialWasReady = ready;
+
+            if (tower.Health / tower.MaxHealth < HurtFraction)
+                TryAsk(tower, RequestKind.Relocate, "They keep hitting me here. Let me move?");
+
+            if (!enemiesOnField || tower.FindClosestEnemy(tower.transform.position) != null)
+                watch.LastEnemyInRange = Time.time;
+            else if (Time.time - watch.LastEnemyInRange >= IdleSeconds)
+                TryAsk(tower, RequestKind.Relocate, "Nothing comes this way. Let me move?");
+        }
     }
 
     // Starts the countdown on the request now shown, holds the match while one waits and zooms
@@ -119,20 +198,17 @@ public class CaptainRequests : MonoBehaviour
         match.FocusCamera(active?.Tower);
     }
 
-    // Picks a random working captain without a pending request, and a random request it could
-    // make. Relocate is always possible, so any such captain has something to ask.
-    void TryMakeRequest()
+    // Queues the request unless the wave is out of requests, the captain already has one waiting
+    // or asked for the same thing too recently.
+    void TryAsk(Tower tower, RequestKind kind, string text, SoldierClassData wanted = null)
     {
-        var candidates = Tower.All.FindAll(t => !t.IsDisabled && !pending.Exists(r => r.Tower == t));
-        if (candidates.Count == 0) return;
-        Tower tower = candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        if (match.State != MatchState.WaveActive || match.IsOver || tower.IsDisabled) return;
+        if (askedThisWave >= MaxRequestsPerWave || pending.Exists(r => r.Tower == tower)) return;
+        if (lastAsked.TryGetValue((tower, kind), out int last) && wave - last < CooldownWaves) return;
 
-        var options = new List<Request> { new() { Tower = tower, Kind = RequestKind.Relocate } };
-        if (tower.DrawRate != DrawRate.High) options.Add(new Request { Tower = tower, Kind = RequestKind.MoreDraw });
-        SoldierClassData wanted = LikedClassMissingFrom(tower);
-        if (wanted != null) options.Add(new Request { Tower = tower, Kind = RequestKind.NewMix, WantedClass = wanted });
-        if (tower.IsSpecialReady) options.Add(new Request { Tower = tower, Kind = RequestKind.UseSpecial });
-        pending.Add(options[UnityEngine.Random.Range(0, options.Count)]);
+        lastAsked[(tower, kind)] = wave;
+        askedThisWave++;
+        pending.Add(new Request { Tower = tower, Kind = kind, Text = text, WantedClass = wanted });
         ShowNext();
     }
 
