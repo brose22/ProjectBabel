@@ -242,6 +242,8 @@ public class MatchHUD : MonoBehaviour
         requestRefreshers.Clear();
         UIKit.Clear(requestList);
         if (request == null || request.Tower == null) return;
+        // Deselecting closes the captain widget, so it doesn't sit over the question.
+        placement.Select(null);
         string accent = UIKit.Hex(UIKit.AccentColor);
         RectTransform card = UIKit.Box(requestList, "Request");
         UIKit.Size(card, RequestWidth);
