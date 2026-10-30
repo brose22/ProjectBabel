@@ -537,16 +537,10 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
-    // Cheat: turns a rest or event that hasn't been visited into a shop, and redraws the map.
-    public bool CanCheatMakeShop(MapNode node) =>
-        State == MatchState.Map && node != null && !node.cleared && node.id != RunState.Current.Map.current
-        && node.kind is NodeKind.Rest or NodeKind.Event;
-
-    public void CheatMakeShop(int id)
+    // Cheat: adds a shop as one more choice for the next step on the map, and redraws it.
+    public void CheatAddShop()
     {
-        MapNode node = RunState.Current.Map.nodes.Find(n => n.id == id);
-        if (!CanCheatMakeShop(node)) return;
-        node.kind = NodeKind.Shop;
+        if (State != MatchState.Map || RunState.Current.Map.AddStop(NodeKind.Shop) == null) return;
         RunSave.Save(RunState.Current);
         SceneManager.LoadScene(gameObject.scene.name);
     }
