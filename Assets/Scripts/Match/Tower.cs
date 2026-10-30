@@ -30,6 +30,11 @@ public class Tower : MonoBehaviour
     public float SpecialCharge { get; private set; }
     // Multiplies the next relocation's Gold cost; a granted request can make it cheaper or free.
     public float MoveCostMultiplier { get; private set; } = 1f;
+    // Tiles per second a captain walks to a new cell.
+    const float WalkSpeed = 3f;
+    // True while the captain is on their way to Cell.
+    public bool IsWalking { get; private set; }
+    Vector3 walkTarget;
     // Game time a requested special stops waiting to fire by itself, or below zero for none.
     float autoFireUntil = -1f;
 
@@ -244,9 +249,16 @@ public class Tower : MonoBehaviour
         }
         reserveBar.SetFraction((float)Reserve / capacity);
 
+        if (IsWalking) Walk();
         ChargeSpecial();
         TickAutoFire();
         UpdateBodyColor();
+    }
+
+    void Walk()
+    {
+        transform.position = Vector3.MoveTowards(transform.position, walkTarget, WalkSpeed * Time.deltaTime);
+        if (transform.position == walkTarget) IsWalking = false;
     }
 
     // How strong a stat boost on the tower and its soldiers is right now (0.5 = +50%).
@@ -420,12 +432,14 @@ public class Tower : MonoBehaviour
 
     public void SetSelected(bool selected) => rangeIndicator.enabled = selected;
 
-    // Soldiers are children of the tower, so deployed ones would be dragged along mid-act;
-    // calling everyone home keeps them consistent with the new position.
+    // The captain claims the new cell at once (Cell, the grid and the soldiers' tiles all switch)
+    // and walks there in a straight line; their soldiers, being children, walk along with them.
+    // Calling everyone home keeps deployed soldiers consistent with the new formation.
     public void MoveTo(Vector2Int cell, Vector3 position)
     {
         Cell = cell;
-        transform.position = position;
+        walkTarget = position;
+        IsWalking = true;
         List<Vector2Int> homes = PickHomes(grid, cell, SlotClasses(), this);
         slotCells.Clear();
         slotCells.AddRange(homes);
