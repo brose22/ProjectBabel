@@ -85,6 +85,7 @@ public class Enemy : MonoBehaviour
         if (data.hasWeakness) AddWeaknessMarker();
         IsTargetable = true;
         Active.Add(this);
+        if (data.elite) GameEvents.RaiseEnemyArrived(this);
     }
 
     // Drawn art shows as painted and scales with size; without it the body is a coloured square.
@@ -108,6 +109,7 @@ public class Enemy : MonoBehaviour
     public void MarkBoss()
     {
         IsBoss = true;
+        GameEvents.RaiseEnemyArrived(this);
         healthBar.SetTier(2);
     }
 

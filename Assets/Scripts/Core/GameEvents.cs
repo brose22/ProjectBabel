@@ -7,6 +7,8 @@ public static class GameEvents
 {
     public static event Action<Enemy> EnemyKilled;
     public static event Action<Enemy> EnemyLeaked;
+    // An elite or the boss has walked on.
+    public static event Action<Enemy> EnemyArrived;
     public static event Action<Soldier> SoldierDied;
     public static event Action<Tower> TowerPlaced;
     public static event Action<Tower> TowerMoved;
@@ -26,6 +28,7 @@ public static class GameEvents
 
     public static void RaiseEnemyKilled(Enemy enemy) => EnemyKilled?.Invoke(enemy);
     public static void RaiseEnemyLeaked(Enemy enemy) => EnemyLeaked?.Invoke(enemy);
+    public static void RaiseEnemyArrived(Enemy enemy) => EnemyArrived?.Invoke(enemy);
     public static void RaiseSoldierDied(Soldier soldier) => SoldierDied?.Invoke(soldier);
     public static void RaiseTowerPlaced(Tower tower) => TowerPlaced?.Invoke(tower);
     public static void RaiseTowerMoved(Tower tower) => TowerMoved?.Invoke(tower);
@@ -48,6 +51,7 @@ public static class GameEvents
     {
         EnemyKilled = null;
         EnemyLeaked = null;
+        EnemyArrived = null;
         SoldierDied = null;
         TowerPlaced = null;
         TowerMoved = null;

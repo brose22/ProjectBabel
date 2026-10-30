@@ -112,6 +112,7 @@ public class MatchManager : MonoBehaviour
         if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
         if (!TryGetComponent(out RunScreens _)) gameObject.AddComponent<RunScreens>();
         if (!TryGetComponent(out MatchStats _)) gameObject.AddComponent<MatchStats>();
+        if (!TryGetComponent(out ThreatAlerts _)) gameObject.AddComponent<ThreatAlerts>();
         // Testing cheats stay out of release builds.
         if (Debug.isDebugBuild && !TryGetComponent(out CheatWindow _)) gameObject.AddComponent<CheatWindow>();
     }
