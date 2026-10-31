@@ -270,14 +270,15 @@ public class CaptainRequests : MonoBehaviour
         return nearest;
     }
 
-    // Among free cells nearer the gate along the road than the captain is now, and still with road
-    // in the captain's range, the one whose road distance is closest to MoveCloserFraction less
+    // Among free cells nearer the gate along the road than the captain is now, and still reaching at
+    // least as much road as now, the one whose road distance is closest to MoveCloserFraction less
     // than the captain's current one. Null when there is none.
     Vector2Int? FindCellNearerSpawner(Tower tower)
     {
         GridMap grid = match.Grid;
         if (grid.RoadCells.Count == 0) return null;
         int current = RoadDistanceFromGate(tower.transform.position);
+        int currentCoverage = CountRoadInRange(tower.transform.position, tower.Range);
         float target = current * (1f - MoveCloserFraction);
         float bestError = float.MaxValue;
         Vector2Int? pick = null;
@@ -289,7 +290,7 @@ public class CaptainRequests : MonoBehaviour
                 if (!match.CanMoveTo(tower, cell)) continue;
                 Vector3 center = grid.CellCenter(cell);
                 int distance = RoadDistanceFromGate(center);
-                if (distance >= current || !HasRoadInRange(center, tower.Range)) continue;
+                if (distance >= current || !RoadReach.KeepsCoverage(CountRoadInRange(center, tower.Range), currentCoverage)) continue;
                 float error = Mathf.Abs(distance - target);
                 if (error >= bestError) continue;
                 bestError = error;
@@ -299,19 +300,27 @@ public class CaptainRequests : MonoBehaviour
         return pick;
     }
 
-    bool HasRoadInRange(Vector3 position, float range)
+    readonly List<Vector2> roadCenters = new();
+
+    // How many road tiles a position reaches with the given range.
+    int CountRoadInRange(Vector3 position, float range)
     {
-        foreach (Vector2Int road in match.Grid.RoadCells)
-            if (Vector2.Distance(position, match.Grid.CellCenter(road)) <= range) return true;
-        return false;
+        if (roadCenters.Count != match.Grid.RoadCells.Count)
+        {
+            roadCenters.Clear();
+            foreach (Vector2Int road in match.Grid.RoadCells)
+                roadCenters.Add(match.Grid.CellCenter(road));
+        }
+        return RoadReach.CountInRange(position, roadCenters, range);
     }
 
     // The free cell closest to a point that is nearer to it than the captain is now and still has
-    // road in the captain's range, or null when there is none.
+    // at least as much road in the captain's range as now, or null when there is none.
     Vector2Int? FindCellNear(Tower tower, Vector3 point)
     {
         GridMap grid = match.Grid;
         float best = Vector2.Distance(tower.transform.position, point);
+        int currentCoverage = CountRoadInRange(tower.transform.position, tower.Range);
         Vector2Int? pick = null;
         for (int x = 0; x < grid.Size.x; x++)
         {
@@ -321,7 +330,7 @@ public class CaptainRequests : MonoBehaviour
                 if (!match.CanMoveTo(tower, cell)) continue;
                 Vector3 center = grid.CellCenter(cell);
                 float distance = Vector2.Distance(center, point);
-                if (distance >= best || !HasRoadInRange(center, tower.Range)) continue;
+                if (distance >= best || !RoadReach.KeepsCoverage(CountRoadInRange(center, tower.Range), currentCoverage)) continue;
                 best = distance;
                 pick = cell;
             }
