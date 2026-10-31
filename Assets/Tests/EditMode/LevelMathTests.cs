@@ -33,4 +33,10 @@ public class LevelMathTests
     [TestCase(-3)]
     public void StatFactor_BelowLevelOne_TreatedAsLevelOne(int level) =>
         Assert.That(LevelMath.StatFactor(level), Is.EqualTo(1f).Within(1e-5f));
+
+    [TestCase(1, 100)]
+    [TestCase(2, 110)]
+    [TestCase(10, 190)]
+    public void StatPercent_IsTheFactorAsAWholePercentage(int level, int expected) =>
+        Assert.That(LevelMath.StatPercent(level), Is.EqualTo(expected));
 }

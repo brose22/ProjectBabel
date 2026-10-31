@@ -18,4 +18,7 @@ public static class LevelMath
 
     // Multiplies soldier power and health: +10% per level above 1.
     public static float StatFactor(int level) => 1f + 0.1f * (Mathf.Max(1, level) - 1);
+
+    // The stat factor as a whole percentage, for display: 100 at level 1, 110 at level 2.
+    public static int StatPercent(int level) => Mathf.RoundToInt(StatFactor(level) * 100f);
 }

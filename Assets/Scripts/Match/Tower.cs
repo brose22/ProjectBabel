@@ -319,7 +319,7 @@ public class Tower : MonoBehaviour
         if (amount <= 0 || RunState.Current == null) return;
         int before = Level;
         RunState.Current.AddXp(Captain, amount);
-        if (Level > before) GameEvents.RaiseCaptainLeveledUp(this);
+        if (Level > before) GameEvents.RaiseCaptainLeveledUp(this, before);
     }
 
     // XP from healing and buffing, banked in fractions and capped per wave (GDD).

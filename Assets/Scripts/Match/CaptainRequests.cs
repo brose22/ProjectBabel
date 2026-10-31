@@ -149,7 +149,7 @@ public class CaptainRequests : MonoBehaviour
     }
 
     // A level-up is when a captain asks for the soldiers they like.
-    void OnCaptainLeveledUp(Tower tower)
+    void OnCaptainLeveledUp(Tower tower, int previousLevel)
     {
         SoldierClassData wanted = LikedClassMissingFrom(tower);
         if (wanted == null) return;
