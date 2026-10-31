@@ -249,6 +249,7 @@ public class MatchManager : MonoBehaviour
     {
         if (!CanRestore(tower) || !RunState.Current.TrySpendGold(RestoreCost(tower))) return false;
         tower.Restore();
+        GameEvents.RaiseGoldSpent();
         return true;
     }
 
@@ -265,7 +266,6 @@ public class MatchManager : MonoBehaviour
         grid.ClearOccupant(tower.Cell);
         grid.SetOccupant(cell, tower);
         tower.MoveTo(cell, grid.CellCenter(cell));
-        GameEvents.RaiseTowerMoved(tower);
         return true;
     }
 

@@ -22,10 +22,9 @@ public class Relationships : MonoBehaviour
     class WaveRecord
     {
         public int casualties;
+        public int kills;
         public bool usedAbility;
-        public bool moved;
-        // Stable only counts for captains on the field when the wave started.
-        public bool presentAtStart;
+        public bool hurtBoss;
     }
 
     readonly Dictionary<CaptainData, WaveRecord> records = new();
@@ -33,6 +32,7 @@ public class Relationships : MonoBehaviour
     readonly Dictionary<CaptainData, float> approvalThisMatch = new();
     int waveLeaks;
     bool waveSold;
+    bool waveSpent;
 
     // Total approval change for a captain during this match, for the results screen.
     public float ApprovalChangeThisMatch(CaptainData captain) => approvalThisMatch.TryGetValue(captain, out float change) ? change : 0f;
@@ -57,9 +57,11 @@ public class Relationships : MonoBehaviour
         GameEvents.EnemyLeaked += OnEnemyLeaked;
         GameEvents.SoldierDied += OnSoldierDied;
         GameEvents.TowerSold += OnTowerSold;
-        GameEvents.TowerMoved += OnTowerMoved;
         GameEvents.TowerPlaced += OnTowerPlaced;
         GameEvents.AbilityUsed += OnAbilityUsed;
+        GameEvents.EnemyKilled += OnEnemyKilled;
+        GameEvents.BossDamaged += OnBossDamaged;
+        GameEvents.GoldSpent += OnGoldSpent;
         GameEvents.ApprovalChanged += OnApprovalChanged;
     }
 
@@ -71,9 +73,11 @@ public class Relationships : MonoBehaviour
         GameEvents.EnemyLeaked -= OnEnemyLeaked;
         GameEvents.SoldierDied -= OnSoldierDied;
         GameEvents.TowerSold -= OnTowerSold;
-        GameEvents.TowerMoved -= OnTowerMoved;
         GameEvents.TowerPlaced -= OnTowerPlaced;
         GameEvents.AbilityUsed -= OnAbilityUsed;
+        GameEvents.EnemyKilled -= OnEnemyKilled;
+        GameEvents.BossDamaged -= OnBossDamaged;
+        GameEvents.GoldSpent -= OnGoldSpent;
         GameEvents.ApprovalChanged -= OnApprovalChanged;
     }
 
@@ -106,14 +110,19 @@ public class Relationships : MonoBehaviour
         records.Clear();
         waveLeaks = 0;
         waveSold = false;
-        foreach (Tower tower in Tower.All)
-            RecordFor(tower.Captain).presentAtStart = true;
+        waveSpent = false;
     }
 
     void OnEnemyLeaked(Enemy enemy) => waveLeaks++;
     void OnTowerSold(Tower tower) => waveSold = true;
     void OnSoldierDied(Soldier soldier) => RecordFor(soldier.Tower.Captain).casualties++;
-    void OnTowerMoved(Tower tower) => RecordFor(tower.Captain).moved = true;
+    void OnGoldSpent() => waveSpent = true;
+    void OnBossDamaged(Tower tower) => RecordFor(tower.Captain).hurtBoss = true;
+
+    void OnEnemyKilled(Enemy enemy)
+    {
+        if (enemy.KilledBy != null) RecordFor(enemy.KilledBy.Captain).kills++;
+    }
     void OnAbilityUsed(Tower tower) => RecordFor(tower.Captain).usedAbility = true;
 
     // Starts the walkout baseline from the captain's approval when it first takes the field.
@@ -123,6 +132,10 @@ public class Relationships : MonoBehaviour
     // Each play-style tag a captain likes or dislikes is judged once per wave.
     void OnWaveEnded(int wave)
     {
+        int topKills = 0;
+        foreach (Tower tower in Tower.All)
+            topKills = Mathf.Max(topKills, RecordFor(tower.Captain).kills);
+
         foreach (Tower tower in Tower.All)
         {
             WaveRecord record = RecordFor(tower.Captain);
@@ -130,8 +143,11 @@ public class Relationships : MonoBehaviour
             JudgeTag(tower, CaptainTag.Casualties, record.casualties > 0);
             JudgeTag(tower, CaptainTag.Selling, waveSold);
             JudgeTag(tower, CaptainTag.Ability, record.usedAbility);
-            JudgeTag(tower, CaptainTag.Moving, record.moved);
-            JudgeTag(tower, CaptainTag.Stable, record.presentAtStart && !record.moved);
+            JudgeTag(tower, CaptainTag.Flawless, waveLeaks == 0 && record.casualties == 0);
+            JudgeTag(tower, CaptainTag.Spending, waveSpent);
+            // Kills goes to whoever took the most kills this wave; ties share it.
+            JudgeTag(tower, CaptainTag.Kills, topKills > 0 && record.kills == topKills);
+            JudgeTag(tower, CaptainTag.Boss, record.hurtBoss);
         }
         ApprovalStore.Save();
     }

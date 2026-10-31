@@ -273,6 +273,7 @@ public class Enemy : MonoBehaviour
         if (weak) amount *= StatusRules.WeaknessDamageMultiplier;
         Element? element = source != null ? source.Captain.element : numberElement;
         GameEvents.RaiseDamageDealt(source, Mathf.Min(amount, Health), element);
+        if (IsBoss && source != null) GameEvents.RaiseBossDamaged(source);
         if (source != null && !overTime) source.AddFightCharge(FightCharge(amount, weak));
         Health -= amount;
         healthBar.SetFraction(Health / MaxHealth);

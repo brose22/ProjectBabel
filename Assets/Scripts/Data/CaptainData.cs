@@ -5,7 +5,7 @@ public enum Element { Water, Fire, Earth, Air }
 public enum CaptainRole { Attacker, Buffer, Healer }
 
 // Things a captain can like or dislike: soldier classes and play styles.
-public enum CaptainTag { Knights, Archers, Mages, Rogues, Leaks, Casualties, Selling, Ability, Stable, Moving }
+public enum CaptainTag { Knights, Archers, Mages, Rogues, Leaks, Casualties, Selling, Ability, Flawless, Spending, Kills, Boss }
 
 [CreateAssetMenu(menuName = "Babel/Captain", fileName = "Captain")]
 public class CaptainData : ScriptableObject
