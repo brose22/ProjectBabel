@@ -57,6 +57,17 @@ public static class GameSettings
         Save();
     }
 
+    // Roster captains offered to fill the party at run start. At least the party size, at most the roster.
+    public const int MaxCaptainsOffered = 12;
+    public const int MinCaptainsOffered = 3;
+    public static int CaptainsOffered => Mathf.Clamp(PlayerPrefs.GetInt("settings.captainsOffered", 5), MinCaptainsOffered, MaxCaptainsOffered);
+
+    public static void SetCaptainsOffered(int count)
+    {
+        PlayerPrefs.SetInt("settings.captainsOffered", Mathf.Clamp(count, MinCaptainsOffered, MaxCaptainsOffered));
+        Save();
+    }
+
     public const int MaxTowerDisabledWaves = 3;
     // Waves a disabled tower sits out. 0 lets it be restored for Gold as soon as the current wave concludes.
     public static int TowerDisabledWaves => Mathf.Clamp(PlayerPrefs.GetInt("settings.towerDisabledWaves", 1), 0, MaxTowerDisabledWaves);

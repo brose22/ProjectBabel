@@ -219,11 +219,11 @@ public class AiPlayer : MonoBehaviour
 
     void ThinkSetup()
     {
-        List<CaptainData> roster = match.Data.roster.FindAll(c => c != null);
+        // Seeded before the offer is drawn and the map is generated, which draw from Random.
+        UnityEngine.Random.InitState(runSeed);
+        List<CaptainData> roster = match.SetupOffer.ToList();
         List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), match.Data.partySize, WeaknessCounts());
         var party = picks.ConvertAll(i => roster[i]);
-        // Seeded before the map is generated, which draws its own seed from Random.
-        UnityEngine.Random.InitState(runSeed);
         recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds);
         Decide("Setup", $"party {string.Join(", ", party.Select(c => c.displayName))}: strongest mix with a support and the enemies' weaknesses covered");
         match.BeginRun(party);

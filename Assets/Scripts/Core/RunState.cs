@@ -93,6 +93,10 @@ public class RunState
     // player has picked, which is how the match knows to show the run setup screen.
     public List<CaptainData> Party { get; } = new();
     public bool HasParty => Party.Count > 0;
+
+    // The roster captains drawn for this run's setup screen to pick the party from. Empty until drawn.
+    // Not saved: a run only saves once its party is picked.
+    public List<CaptainData> SetupOffer { get; } = new();
     // Matches finished this run; the next match is MatchesPlayed + 1.
     public int MatchesPlayed { get; private set; }
 

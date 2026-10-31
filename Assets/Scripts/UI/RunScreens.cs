@@ -107,10 +107,7 @@ public class RunScreens : MonoBehaviour
     {
         get
         {
-            var available = new List<CaptainData>();
-            foreach (CaptainData captain in match.Data.roster)
-                if (captain != null) available.Add(captain);
-            return available;
+            return new List<CaptainData>(match.SetupOffer);
         }
     }
 
