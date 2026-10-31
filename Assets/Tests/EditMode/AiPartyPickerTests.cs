@@ -13,7 +13,7 @@ public class AiPartyPickerTests
             Captain("A", AiRole.Attacker, 0, 30), Captain("B", AiRole.Attacker, 1, 28), Captain("C", AiRole.Attacker, 2, 26),
             Captain("D", AiRole.Attacker, 3, 24), Captain("Healer", AiRole.Healer, 0, 5),
         };
-        var party = AiPartyPicker.PickParty(roster, 3, null);
+        var party = AiPartyPicker.PickParty(roster, 3);
         Assert.That(party, Has.Count.EqualTo(3));
         Assert.That(party, Does.Contain(4));
     }
@@ -22,30 +22,21 @@ public class AiPartyPickerTests
     public void Party_HasNoDuplicates()
     {
         var roster = new[] { Captain("A", AiRole.Attacker, 0, 30), Captain("B", AiRole.Attacker, 1, 28), Captain("C", AiRole.Attacker, 2, 26) };
-        Assert.That(AiPartyPicker.PickParty(roster, 3, null), Is.Unique);
+        Assert.That(AiPartyPicker.PickParty(roster, 3), Is.Unique);
     }
 
     [Test]
     public void Party_NeverExceedsRoster()
     {
         var roster = new[] { Captain("A", AiRole.Attacker, 0, 30) };
-        Assert.That(AiPartyPicker.PickParty(roster, 3, null), Has.Count.EqualTo(1));
-    }
-
-    [Test]
-    public void Party_LeansTowardEnemyWeakness()
-    {
-        var roster = new[] { Captain("Water", AiRole.Attacker, 0, 20), Captain("Fire", AiRole.Attacker, 1, 20) };
-        var weakness = AiPartyPicker.CountWeaknesses(new[] { (1, 10), (0, 1) });
-        var party = AiPartyPicker.PickParty(roster, 1, weakness);
-        Assert.That(party[0], Is.EqualTo(1));
+        Assert.That(AiPartyPicker.PickParty(roster, 3), Has.Count.EqualTo(1));
     }
 
     [Test]
     public void Recruit_PassesWhenNothingHelps()
     {
         var party = new[] { Captain("A", AiRole.Attacker, 0, 30) };
-        Assert.That(AiPartyPicker.PickRecruit(new AiCaptainInfo[0], party, null), Is.EqualTo(-1));
+        Assert.That(AiPartyPicker.PickRecruit(new AiCaptainInfo[0], party), Is.EqualTo(-1));
     }
 
     [Test]
@@ -53,7 +44,7 @@ public class AiPartyPickerTests
     {
         var party = new[] { Captain("A", AiRole.Attacker, 0, 30) };
         var offer = new[] { Captain("B", AiRole.Attacker, 1, 15), Captain("Buffer", AiRole.Buffer, 2, 8) };
-        Assert.That(AiPartyPicker.PickRecruit(offer, party, null), Is.EqualTo(1));
+        Assert.That(AiPartyPicker.PickRecruit(offer, party), Is.EqualTo(1));
     }
 
     [Test]

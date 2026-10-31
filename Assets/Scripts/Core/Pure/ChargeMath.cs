@@ -7,7 +7,6 @@ public static class ChargeMath
     // Dealing damage worth a whole enemy's health earns this much.
     public const float PerEnemyHealthDealt = 0.04f;
     // Flat bonuses on top of the damage charge.
-    public const float WeaknessHitBonus = 0.004f;
     public const float KnockbackBonus = 0.004f;
     public const float AfflictedHitBonus = 0.003f;
     public const float KillBonus = 0.01f;

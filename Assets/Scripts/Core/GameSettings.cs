@@ -23,7 +23,7 @@ public static class GameSettings
     static readonly Dictionary<string, bool> flags = new();
 
     public static bool DamageNumbers => Flag("damageNumbers");
-    public static bool WeaknessLabels => Flag("weaknessLabels");
+    public static bool ArmorLabels => Flag("armorLabels");
     public static bool HitFlash => Flag("hitFlash");
     public static bool StatusIcons => Flag("statusIcons");
     public static bool StunStars => Flag("stunStars");

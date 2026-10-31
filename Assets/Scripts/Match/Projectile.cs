@@ -9,9 +9,10 @@ public class Projectile : MonoBehaviour
     Enemy target;
     float damage;
     Tower source;
+    SoldierClassData soldierClass;
     float speed;
 
-    public static Projectile Launch(Vector3 origin, Enemy target, float damage, Tower source, float speed,
+    public static Projectile Launch(Vector3 origin, Enemy target, float damage, Tower source, SoldierClassData soldierClass, float speed,
         Sprite sprite, Color color, float scale, int sortingOrder)
     {
         var shot = new GameObject("Projectile");
@@ -27,6 +28,7 @@ public class Projectile : MonoBehaviour
         projectile.target = target;
         projectile.damage = damage;
         projectile.source = source;
+        projectile.soldierClass = soldierClass;
         projectile.speed = speed;
         return projectile;
     }
@@ -46,7 +48,7 @@ public class Projectile : MonoBehaviour
             : destination;
         if (Vector2.Distance(transform.position, destination) > HitDistance) return;
 
-        target.TakeDamage(damage, source);
+        target.TakeDamage(damage, source, soldierClass: soldierClass);
         Destroy(gameObject);
     }
 }

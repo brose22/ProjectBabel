@@ -18,10 +18,8 @@ public struct AiCaptainInfo
 // Chooses the starting party, recruits and the order captains take the field in.
 public static class AiPartyPicker
 {
-    public const int ElementCount = 4;
-
-    // Higher is better. weakness counts how many upcoming enemies are weak to each element.
-    static float Score(AiCaptainInfo captain, IReadOnlyList<AiCaptainInfo> party, int[] weakness, int slotsLeft)
+    // Higher is better.
+    static float Score(AiCaptainInfo captain, IReadOnlyList<AiCaptainInfo> party, int slotsLeft)
     {
         float score = captain.strength + captain.range;
         int supports = 0;
@@ -42,17 +40,11 @@ public static class AiPartyPicker
             score += supports == 0 ? 12f : supports == 1 ? -10f : -30f;
         }
         score -= sameElement * 3f;
-        if (weakness != null && captain.element >= 0 && captain.element < weakness.Length)
-        {
-            int total = 0;
-            foreach (int w in weakness) total += w;
-            if (total > 0) score += 10f * weakness[captain.element] / total;
-        }
         return score;
     }
 
     // The indices of count captains from the roster, best first.
-    public static List<int> PickParty(IReadOnlyList<AiCaptainInfo> roster, int count, int[] weakness)
+    public static List<int> PickParty(IReadOnlyList<AiCaptainInfo> roster, int count)
     {
         var chosen = new List<int>();
         var members = new List<AiCaptainInfo>();
@@ -63,7 +55,7 @@ public static class AiPartyPicker
             for (int i = 0; i < roster.Count; i++)
             {
                 if (chosen.Contains(i)) continue;
-                float score = Score(roster[i], members, weakness, count - chosen.Count);
+                float score = Score(roster[i], members, count - chosen.Count);
                 if (score <= bestScore) continue;
                 best = i;
                 bestScore = score;
@@ -75,13 +67,13 @@ public static class AiPartyPicker
     }
 
     // The index in offer to recruit, or -1 to pass.
-    public static int PickRecruit(IReadOnlyList<AiCaptainInfo> offer, IReadOnlyList<AiCaptainInfo> party, int[] weakness)
+    public static int PickRecruit(IReadOnlyList<AiCaptainInfo> offer, IReadOnlyList<AiCaptainInfo> party)
     {
         int best = -1;
         float bestScore = 0f;
         for (int i = 0; i < offer.Count; i++)
         {
-            float score = Score(offer[i], party, weakness, 2);
+            float score = Score(offer[i], party, 2);
             if (score <= bestScore) continue;
             best = i;
             bestScore = score;
@@ -105,13 +97,5 @@ public static class AiPartyPicker
             if (!result.Contains(i)) result.Add(i);
         return result;
     }
-
-    // Counts, per element, the enemies that are weak to it; an element outside range is ignored.
-    public static int[] CountWeaknesses(IEnumerable<(int element, int count)> enemies)
-    {
-        var counts = new int[ElementCount];
-        foreach ((int element, int count) in enemies)
-            if (element >= 0 && element < ElementCount) counts[element] += Math.Max(0, count);
-        return counts;
-    }
 }
+

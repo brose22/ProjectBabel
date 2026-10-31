@@ -197,7 +197,7 @@ public class MainMenu : MonoBehaviour
 
         UIKit.Label(column, "Numbers and labels", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Damage numbers", "damageNumbers");
-        FlagRow(column, "Weak! / Resist labels", "weaknessLabels");
+        FlagRow(column, "Strong! / Resist labels", "armorLabels");
 
         UIKit.Label(column, "Enemy body", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Hit flash and swell", "hitFlash");

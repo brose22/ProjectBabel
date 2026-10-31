@@ -29,5 +29,4 @@ MonoBehaviour:
   towerAttackRange: 2
   towerAttackInterval: 2
   rangedAttackRange: 2.75
-  hasWeakness: 1
-  weakness: 3
+  armor: 1

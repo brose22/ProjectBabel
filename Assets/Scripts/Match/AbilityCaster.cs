@@ -95,12 +95,11 @@ public static class AbilityCaster
         TryApplyStatus(tower, enemy);
     }
 
-    // An enemy weak to the captain's element is more likely to get the status.
+    // Rolls the captain's element status on the enemy.
     static void TryApplyStatus(Tower tower, Enemy enemy)
     {
         // The flat chance rises with bond rank (GDD).
         float chance = tower.Captain.ability.statusChance + BondMath.StatusChanceBonus(tower.BondRank);
-        if (enemy.IsWeakTo(tower.Captain.element)) chance *= StatusRules.WeaknessStatusChanceMultiplier;
         if (Random.value < chance)
             enemy.ApplyStatus(StatusRules.ForElement(tower.Captain.element), tower.SoldierPower, tower);
     }

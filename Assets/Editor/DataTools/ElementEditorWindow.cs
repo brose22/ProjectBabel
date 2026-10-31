@@ -120,8 +120,6 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
     {
         DataToolsGUI.Section("Used by");
         captains = DataToolsGUI.LoadAll(captains);
-        enemies = DataToolsGUI.LoadAll(enemies);
         DataToolsGUI.AssetButtons("Captains", captains.Where(c => c != null && c.element == element.element), CaptainEditorWindow.OpenFor);
-        DataToolsGUI.AssetButtons("Weak Enemies", enemies.Where(e => e != null && e.hasWeakness && e.weakness == element.element), EnemyEditorWindow.OpenFor);
     }
 }

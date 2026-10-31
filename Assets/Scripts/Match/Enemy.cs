@@ -5,7 +5,7 @@ public class Enemy : MonoBehaviour
 {
     public static readonly List<Enemy> Active = new();
 
-    const float WeaknessMarkerSize = 0.15f;
+    const float ArmorMarkerSize = 0.15f;
     const float ShotStreakWidth = 0.05f;
     const float ShotStreakSeconds = 0.12f;
     const float StatusIconHeight = 0.7f;
@@ -59,11 +59,9 @@ public class Enemy : MonoBehaviour
     // How fast the lane direction eases round a corner, per second.
     const float LaneTurnSpeed = 10f;
     float squashUntil;
-    // The weakness dot pulses gently, and harder when a hit matches the weakness.
-    const float WeaknessLabelGapSeconds = 0.6f;
-    Transform weaknessMarker;
-    float weaknessHitUntil;
-    float weaknessLabelUntil;
+    // Armor labels show at most this often so rapid hits do not stack them.
+    const float ArmorLabelGapSeconds = 0.6f;
+    float armorLabelUntil;
     Transform[] stars;
     const int HitFlashTint = -2;
     // Burn and zone damage arrives every frame, so it shows as one number per this many seconds.
@@ -97,7 +95,7 @@ public class Enemy : MonoBehaviour
         healthBar.SetFraction(1f);
         statusIcons = StatusIcons.Create(transform, new Vector3(0f, StatusIconHeight, 0f), body.sortingOrder + 1);
         AddStunStars();
-        if (data.hasWeakness) AddWeaknessMarker();
+        if (data.armor != ArmorType.Unarmored) AddArmorMarker();
         IsTargetable = true;
         Active.Add(this);
         if (data.elite) GameEvents.RaiseEnemyArrived(this);
@@ -128,20 +126,17 @@ public class Enemy : MonoBehaviour
         healthBar.SetTier(2);
     }
 
-    public bool IsWeakTo(Element element) => Data.hasWeakness && Data.weakness == element;
-
-    // A small dot in the weakness element's status colour above the body, so players can read
-    // weaknesses in grey-box. Created at runtime so the enemy prefab needs no change.
-    void AddWeaknessMarker()
+    // A small square above the body in the armor's colour (steel for Armored, teal for Swift), so
+    // players can read armor in grey-box. Created at runtime so the enemy prefab needs no change.
+    void AddArmorMarker()
     {
-        var marker = new GameObject("Weakness Marker");
+        var marker = new GameObject("Armor Marker");
         marker.transform.SetParent(transform, false);
-        weaknessMarker = marker.transform;
         marker.transform.localPosition = new Vector3(-0.3f, 0.45f, 0f);
-        marker.transform.localScale = Vector3.one * WeaknessMarkerSize;
+        marker.transform.localScale = Vector3.one * ArmorMarkerSize;
         var renderer = marker.AddComponent<SpriteRenderer>();
         renderer.sprite = SpriteUtil.Square;
-        renderer.color = StatusRules.TintOf(StatusRules.ForElement(Data.weakness));
+        renderer.color = Data.armor == ArmorType.Armored ? new Color(0.7f, 0.74f, 0.82f) : new Color(0.35f, 0.9f, 0.85f);
         renderer.sortingOrder = body.sortingOrder + 1;
     }
 
@@ -174,7 +169,6 @@ public class Enemy : MonoBehaviour
         TickStatuses();
         if (!IsTargetable) return;
         UpdateBodyLook();
-        if (weaknessMarker != null) PulseWeaknessMarker();
 
         // Deployed soldiers in reach block the enemy until one side falls back or dies.
         Soldier blocker = Soldier.FindDeployedNear(transform.position, Data.attackRange);
@@ -288,23 +282,25 @@ public class Enemy : MonoBehaviour
     // lands the killing blow is remembered in KilledBy for XP.
     // overTime marks damage dealt a slice per frame (burn, zones), which shows as a periodic
     // number instead of one per call. The number is coloured by the source's element, or by
-    // numberElement when there is no source.
-    public void TakeDamage(float amount, Tower source = null, bool overTime = false, Element? numberElement = null)
+    // numberElement when there is no source. soldierClass, when a soldier landed the hit, lets the
+    // enemy's armor scale it.
+    public void TakeDamage(float amount, Tower source = null, bool overTime = false, Element? numberElement = null,
+        SoldierClassData soldierClass = null)
     {
         if (!IsTargetable) return;
-        bool weak = source != null && IsWeakTo(source.Captain.element);
-        if (weak) amount *= StatusRules.WeaknessDamageMultiplier;
+        float counter = ArmorMultiplier(soldierClass);
+        amount *= counter;
         Element? element = source != null ? source.Captain.element : numberElement;
         GameEvents.RaiseDamageDealt(source, Mathf.Min(amount, Health), element);
         if (IsBoss && source != null) GameEvents.RaiseBossDamaged(source);
-        if (source != null && !overTime) source.AddFightCharge(FightCharge(amount, weak));
+        if (source != null && !overTime) source.AddFightCharge(FightCharge(amount));
         Health -= amount;
         healthBar.SetFraction(Health / MaxHealth);
         if (overTime) AccumulateDot(amount, element);
         else
         {
-            ShowDamageNumber(amount, element, weak);
-            ShowWeaknessLabel(element, weak);
+            ShowDamageNumber(amount, element, counter);
+            ShowArmorLabel(counter);
             FlashHit(HitPopSeconds);
             if (GameSettings.HitFlash) hitPopUntil = Time.unscaledTime + HitPopSeconds;
         }
@@ -315,12 +311,11 @@ public class Enemy : MonoBehaviour
         Die();
     }
 
-    // Charge a soldier hit earns its captain: the health it removed, plus bonuses for hitting a
-    // weakness or an enemy another captain has already afflicted.
-    float FightCharge(float damage, bool weak)
+    // Charge a soldier hit earns its captain: the health it removed, plus a bonus for hitting an
+    // enemy another captain has already afflicted.
+    float FightCharge(float damage)
     {
         float charge = ChargeMath.ForDamage(Mathf.Min(damage, Health), MaxHealth);
-        if (weak) charge += ChargeMath.WeaknessHitBonus;
         for (int i = 0; i < statusTime.Length; i++)
         {
             if (statusTime[i] <= 0f) continue;
@@ -330,41 +325,37 @@ public class Enemy : MonoBehaviour
         return charge;
     }
 
-    bool IsResistedBy(Element? element) =>
-        element.HasValue && Data.hasWeakness && element.Value == StatusRules.OppositeOf(Data.weakness);
+    // Damage multiplier this enemy's armor gives a soldier class: below 1 when the armor counters
+    // the class, above 1 when the class counters the armor. 1 for anything that is not a soldier.
+    float ArmorMultiplier(SoldierClassData soldierClass) =>
+        soldierClass != null && Relationships.TryGetClassTag(soldierClass, out CaptainTag tag)
+            ? ArmorRules.DamageMultiplier(Data.armor, (int)tag)
+            : 1f;
 
-    Color NumberColor(Element? element) =>
-        IsResistedBy(element) ? ResistedNumberColor
+    Color NumberColor(Element? element, bool resisted = false) =>
+        resisted ? ResistedNumberColor
         : element.HasValue ? UIKit.ElementColor(element.Value) : Color.white;
 
     Vector3 NumberPosition() =>
         transform.position + new Vector3(Random.Range(-DamageNumberSpread, DamageNumberSpread), DamageNumberHeight, 0f);
 
-    void ShowDamageNumber(float amount, Element? element, bool weak)
+    void ShowDamageNumber(float amount, Element? element, float counter)
     {
         if (!GameSettings.DamageNumbers) return;
-        FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(amount)) + (weak ? "!" : ""),
-            NumberColor(element), weak ? 1.5f : 1f);
+        bool strong = counter > 1f;
+        FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(amount)) + (strong ? "!" : ""),
+            NumberColor(element, counter < 1f), strong ? 1.5f : 1f);
     }
 
-    void PulseWeaknessMarker()
+    // "Strong!" or "Resist" above the enemy when its armor counters the hit or is countered by it,
+    // at most once every ArmorLabelGapSeconds so rapid hits do not stack labels.
+    void ShowArmorLabel(float counter)
     {
-        float pulse = 1f + 0.2f * Mathf.Sin(Time.time * 5f);
-        if (Time.unscaledTime < weaknessHitUntil) pulse *= 1.8f;
-        weaknessMarker.localScale = Vector3.one * (WeaknessMarkerSize * pulse);
-    }
-
-    // "Weak!" or "Resist" above the enemy when a hit matches or opposes its weakness, at most
-    // once every WeaknessLabelGapSeconds so rapid hits do not stack labels.
-    void ShowWeaknessLabel(Element? element, bool weak)
-    {
-        if (!weak && !IsResistedBy(element)) return;
-        if (weak) weaknessHitUntil = Time.unscaledTime + 0.2f;
-        if (!GameSettings.WeaknessLabels) return;
-        if (Time.unscaledTime < weaknessLabelUntil) return;
-        weaknessLabelUntil = Time.unscaledTime + WeaknessLabelGapSeconds;
-        FloatingText.Spawn(transform.position + Vector3.up * 0.65f, weak ? "Weak!" : "Resist",
-            weak ? UIKit.ElementColor(element.Value) : ResistedNumberColor, 0.8f, 0.9f);
+        if (Mathf.Approximately(counter, 1f) || !GameSettings.ArmorLabels) return;
+        if (Time.unscaledTime < armorLabelUntil) return;
+        armorLabelUntil = Time.unscaledTime + ArmorLabelGapSeconds;
+        FloatingText.Spawn(transform.position + Vector3.up * 0.65f, counter > 1f ? "Strong!" : "Resist",
+            counter > 1f ? UIKit.AccentColor : ResistedNumberColor, 0.8f, 0.9f);
     }
 
     void AccumulateDot(float amount, Element? element)

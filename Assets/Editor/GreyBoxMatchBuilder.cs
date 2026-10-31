@@ -167,8 +167,7 @@ public static class GreyBoxMatchBuilder
             e.attackDamage = 4f;
             e.attackInterval = 1.5f;
             e.rangedAttackRange = 2f;
-            e.hasWeakness = true;
-            e.weakness = Element.Earth;
+            e.armor = ArmorType.Swift;
         });
 
         EnemyData brute = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Brute.asset", e =>
@@ -183,8 +182,7 @@ public static class GreyBoxMatchBuilder
             e.leakDamage = 2;
             e.attackDamage = 10f;
             e.attackInterval = 1.2f;
-            e.hasWeakness = true;
-            e.weakness = Element.Water;
+            e.armor = ArmorType.Armored;
         });
 
         EnemyData bombard = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Bombard.asset", e =>
@@ -203,8 +201,7 @@ public static class GreyBoxMatchBuilder
             e.towerDamage = 5f;
             e.towerAttackRange = 2f;
             e.towerAttackInterval = 2f;
-            e.hasWeakness = true;
-            e.weakness = Element.Air;
+            e.armor = ArmorType.Armored;
         });
 
         // GDD cost tiers. Act: Rogue very low, Knight/Archer low, Mage high.
