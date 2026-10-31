@@ -25,7 +25,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
     protected override string[] TableColumns => new[]
     {
         nameof(SoldierClassData.attackStyle), nameof(SoldierClassData.actCost), nameof(SoldierClassData.respawnCost),
-        nameof(SoldierClassData.maxHealth), nameof(SoldierClassData.damageMultiplier), nameof(SoldierClassData.attackRange),
+        nameof(SoldierClassData.maxHealth), nameof(SoldierClassData.damageMultiplier), nameof(SoldierClassData.attackRange), nameof(SoldierClassData.reach),
         nameof(SoldierClassData.moveSpeed), nameof(SoldierClassData.homeTile), nameof(SoldierClassData.knockbackDistance),
         nameof(SoldierClassData.projectileSpeed), nameof(SoldierClassData.splashRadius), nameof(SoldierClassData.color),
     };
@@ -70,6 +70,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
         DataToolsGUI.Field(so, nameof(SoldierClassData.maxHealth));
         DataToolsGUI.Field(so, nameof(SoldierClassData.damageMultiplier));
         DataToolsGUI.Field(so, nameof(SoldierClassData.attackRange));
+        DataToolsGUI.Field(so, nameof(SoldierClassData.reach), "Captain Reach");
         DataToolsGUI.Field(so, nameof(SoldierClassData.moveSpeed));
         DataToolsGUI.Field(so, nameof(SoldierClassData.homeTile));
         DrawDamagePreview(soldierClass);
