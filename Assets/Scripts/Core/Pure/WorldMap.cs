@@ -175,9 +175,9 @@ public class WorldMap
     // (past the first layer) and a road out (before the base), so every branch reaches the base.
     // The first layer, intel from the starting position and the base are revealed. Cities get
     // special kinds by odds, except in the first layer, the layer before the base and the base,
-    // which stay plain cities.
+    // which stay plain cities. baseLayouts, when given, are the layouts the base is played on.
     public static WorldMap Generate(int seed, int matchCount, int layoutCount, int minLanes, int maxLanes, int intelDepth,
-        NodeOdds odds = default)
+        NodeOdds odds = default, IReadOnlyList<int> baseLayouts = null)
     {
         var random = new Random(seed);
         matchCount = Math.Max(2, matchCount);
@@ -209,6 +209,8 @@ public class WorldMap
                 foreach (int id in node.next)
                     if (map.nodes[id].layout == node.layout && map.nodes[id].layer < matchCount - 1)
                         map.nodes[id].layout = (node.layout + 1 + random.Next(layoutCount - 1)) % layoutCount;
+
+        if (baseLayouts != null && baseLayouts.Count > 0) map.Base.layout = baseLayouts[random.Next(baseLayouts.Count)];
 
         foreach (MapNode node in map.nodes)
         {

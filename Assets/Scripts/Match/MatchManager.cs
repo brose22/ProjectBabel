@@ -112,6 +112,9 @@ public class MatchManager : MonoBehaviour
         {
             cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
             cameraFocus = cam.TryGetComponent(out CameraFocus focus) ? focus : cam.gameObject.AddComponent<CameraFocus>();
+            // A map of its own size opens centred, since it may not fit the screen.
+            if (CityLayout != null && CityLayout.Area > 0)
+                cameraShake.RestPosition = new Vector3(grid.Size.x * 0.5f, grid.Size.y * 0.5f, cameraShake.RestPosition.z);
             if (!cam.TryGetComponent(out CameraPan pan)) pan = cam.gameObject.AddComponent<CameraPan>();
             pan.Setup(grid);
         }
@@ -363,13 +366,27 @@ public class MatchManager : MonoBehaviour
         }
     }
 
+    // The indices of the layouts with the biggest map, where the enemy base is played. Empty when
+    // no layout sets a map size of its own.
+    List<int> LargestLayouts()
+    {
+        int largest = 0;
+        foreach (CityLayout layout in data.layouts)
+            if (layout != null) largest = Mathf.Max(largest, layout.Area);
+        var indices = new List<int>();
+        if (largest == 0) return indices;
+        for (int i = 0; i < data.layouts.Count; i++)
+            if (data.layouts[i] != null && data.layouts[i].Area == largest) indices.Add(i);
+        return indices;
+    }
+
     // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
     public void BeginRun(IEnumerable<CaptainData> party)
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
         RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
-            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds));
+            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds, LargestLayouts()));
         nextCaptainIndex = 0;
         State = MatchState.Map;
         RunSave.Save(RunState.Current);
