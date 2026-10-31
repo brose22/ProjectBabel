@@ -27,6 +27,7 @@ public class Relationships : MonoBehaviour
     // Likes pay less than dislikes cost, so approval climbs slowly but a neglected captain still sours.
     const float TagLikeApproval = 1.5f;
     const float TagDislikeApproval = 3f;
+    const float CasualtiesDislikeApproval = 1.5f;
     const float MixApprovalPerSoldier = 2f;
     const float VictoryApproval = 5f;
     // While a captain dislikes more of its soldiers than it likes, approval gains are halved
@@ -161,8 +162,11 @@ public class Relationships : MonoBehaviour
     {
         if (!happened) return;
         if (Array.IndexOf(tower.Captain.likes, tag) >= 0) Change(tower, TagLikeApproval, $"liked {tag}");
-        if (Array.IndexOf(tower.Captain.dislikes, tag) >= 0) Change(tower, -TagDislikeApproval, $"disliked {tag}");
+        if (Array.IndexOf(tower.Captain.dislikes, tag) >= 0) Change(tower, -DislikeApproval(tag), $"disliked {tag}");
     }
+
+    // Soldiers die in most waves, so a captain who dislikes Casualties loses less per wave.
+    static float DislikeApproval(CaptainTag tag) => tag == CaptainTag.Casualties ? CasualtiesDislikeApproval : TagDislikeApproval;
 
     void OnMatchEnded(bool won)
     {
