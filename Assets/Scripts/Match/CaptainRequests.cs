@@ -20,7 +20,8 @@ public enum RequestAnswer { No, Some, Yes }
 // The player answers No (0%), Some (50%) or Yes (100%): the answer grants that share of the request
 // and of the approval reward. Refusing always costs approval, scaled by request and captain.
 // Requests are shown one at a time and the match pauses while one waits; one left unanswered when
-// its countdown runs out, or when the wave ends, counts as a refusal. Added to the match at runtime.
+// its countdown runs out counts as a refusal, while one still open when the wave ends is dropped
+// without costing approval. Added to the match at runtime.
 public class CaptainRequests : MonoBehaviour
 {
     public class Request
@@ -120,9 +121,16 @@ public class CaptainRequests : MonoBehaviour
 
     void OnWaveEnded(int waveNumber)
     {
-        // Unanswered requests count as refusals.
+        // Requests still open are dismissed without a verdict; only their own countdown refuses them.
         foreach (Request request in pending.ToArray())
-            Answer(request, RequestAnswer.No);
+            Expire(request);
+    }
+
+    // Drops a request nobody answered in time because the wave ended, with no approval change.
+    void Expire(Request request)
+    {
+        if (!pending.Remove(request)) return;
+        ShowNext();
     }
 
     void OnTowerSold(Tower tower)
@@ -370,7 +378,7 @@ public class CaptainRequests : MonoBehaviour
         if (answer == RequestAnswer.No)
         {
             float penalty = RefusalPenalty * RefusalWeight(request.Kind) * tower.Captain.refusalTemper;
-            relationships.Change(tower, -penalty, "was refused");
+            relationships.Change(tower, RequestRules.ApprovalChange(RequestOutcome.Refused, ApprovalReward, penalty), "was refused");
             return;
         }
 
@@ -378,7 +386,8 @@ public class CaptainRequests : MonoBehaviour
         if (IsYesNo(request.Kind)) answer = RequestAnswer.Yes;
         bool full = answer == RequestAnswer.Yes;
         Grant(request, full);
-        relationships.Change(tower, full ? ApprovalReward : ApprovalReward * 0.5f, full ? "got their way" : "got some of their way");
+        float reward = RequestRules.ApprovalChange(full ? RequestOutcome.Granted : RequestOutcome.Partial, ApprovalReward, 0f);
+        relationships.Change(tower, reward, full ? "got their way" : "got some of their way");
     }
 
     // Requests that can only be answered Yes or No.
