@@ -1,0 +1,49 @@
+run,seed,result,match,node,kind,layer,layout,match_result,wave,seconds,kills,leaks,casualties,abilities,damage,gold_start,gold_earned,gold_bonus,gold_spent,gold_end,health_end,kills_by
+1,3457586,Defeat,1,0,City,0,3,Won,1,21.6,2,0,0,0,60,276,14,7,49,248,20,Terra 2
+1,3457586,Defeat,1,0,City,0,3,Won,2,28,4,0,0,0,121.9,220,29,9,26,232,20,Terra 4
+1,3457586,Defeat,1,0,City,0,3,Won,3,33.5,5,0,0,2,168,228,43,11,29,253,20,Terra 2; Zephyr 3
+1,3457586,Defeat,1,0,City,0,3,Won,4,52.5,8,0,1,2,383.5,250,79,13,87,255,20,Terra 3; Brine 4; Zephyr 1
+1,3457586,Defeat,1,0,City,0,3,Won,5,56.5,9,0,2,3,446.4,228,97,15,88,252,20,Terra 3; Zephyr 2; Brine 4
+1,3457586,Defeat,1,0,City,0,3,Won,6,60.4,10,0,1,4,585,242,120,17,122,257,20,Terra 3; Brine 5; Zephyr 2
+1,3457586,Defeat,1,0,City,0,3,Won,7,66,12,0,4,3,809.2,212,157,19,168,220,20,Brine 7; Terra 2; Zephyr 3
+1,3457586,Defeat,1,0,City,0,3,Won,8,63,13,0,4,3,894.6,208,175,21,170,234,20,Brine 8; Terra 2; Zephyr 3
+1,3457586,Defeat,1,0,City,0,3,Won,9,74.9,15,0,2,4,1110,169,213,23,211,194,20,Zephyr 6; Terra 1; Brine 8
+1,3457586,Defeat,1,0,City,0,3,Won,10,109.5,17,1,7,6,1334.6,176,251,25,319,133,18,Zephyr 7; Brine 9; Terra 1
+1,3457586,Defeat,2,2,City,1,1,Won,1,17.7,2,0,0,0,67.2,215,14,7,59,177,20,Skye 2
+1,3457586,Defeat,2,2,City,1,1,Won,2,28.5,4,0,0,0,136.5,174,33,10,30,187,20,Skye 3; Zephyr 1
+1,3457586,Defeat,2,2,City,1,1,Won,3,25.9,5,0,1,3,188.2,182,45,12,43,196,20,Skye 1; Terra 3; Zephyr 1
+1,3457586,Defeat,2,2,City,1,1,Won,4,39.4,8,0,2,2,429.5,189,86,14,99,190,20,Skye 3; Terra 2; Zephyr 3
+1,3457586,Defeat,2,2,City,1,1,Won,5,41.6,9,0,2,2,500,162,102,16,106,174,20,Skye 2; Zephyr 5; Terra 2
+1,3457586,Defeat,2,2,City,1,1,Won,6,56.7,10,0,3,2,655.2,137,130,18,132,153,20,Skye 5; Zephyr 5
+1,3457586,Defeat,2,2,City,1,1,Won,7,67.1,12,0,1,4,906.3,91,168,20,142,137,20,Skye 4; Zephyr 2; Brine 6
+1,3457586,Defeat,2,2,City,1,1,Won,8,64.4,13,0,2,5,1002,89,191,22,169,133,20,Skye 5; Zephyr 6; Brine 2
+1,3457586,Defeat,2,2,City,1,1,Won,9,84.5,15,0,4,5,1243.2,85,232,25,237,105,20,Skye 6; Zephyr 5; Brine 1; Terra 3
+1,3457586,Defeat,2,2,City,1,1,Won,10,87.7,16,2,4,5,1452.8,78,247,27,259,93,16,Skye 7; Zephyr 4; Brine 5
+1,3457586,Defeat,4,7,City,3,3,Won,1,13.3,2,0,0,0,81.6,219,16,8,62,181,15,Skye 2
+1,3457586,Defeat,4,7,City,3,3,Won,2,21.9,5,0,0,0,209,175,46,11,37,195,15,Skye 1; Terra 4
+1,3457586,Defeat,4,7,City,3,3,Won,3,23.6,6,0,0,2,274.2,157,59,13,49,180,15,Terra 6
+1,3457586,Defeat,4,7,City,3,3,Won,4,35.2,9,0,0,4,569.7,165,106,16,97,190,15,Skye 2; Terra 6; Brine 1
+1,3457586,Defeat,4,7,City,3,3,Won,5,40.3,10,0,1,2,657.7,149,130,18,121,176,15,Skye 1; Terra 6; Cinder 3
+1,3457586,Defeat,4,7,City,3,3,Won,6,51.7,11,0,0,2,848.6,135,157,21,139,174,15,Skye 1; Terra 6; Brine 4
+1,3457586,Defeat,4,7,City,3,3,Won,7,59.8,14,0,1,4,1202.2,156,217,23,192,204,15,Skye 1; Terra 5; Brine 8
+1,3457586,Defeat,4,7,City,3,3,Won,8,65.5,16,0,4,5,1390.5,186,254,25,247,218,15,Terra 5; Brine 5; Cinder 6
+1,3457586,Defeat,4,7,City,3,3,Won,9,67.3,18,0,3,6,1690.8,188,306,28,287,235,15,Skye 1; Terra 5; Brine 7; Cinder 5
+1,3457586,Defeat,4,7,City,3,3,Won,10,78.8,22,0,6,6,2387.6,178,406,30,394,220,15,Skye 2; Terra 4; Brine 8; Cinder 8
+1,3457586,Defeat,6,11,City,5,3,Won,1,18.3,3,0,0,0,144,281,27,9,68,249,20,Brine 2; Terra 1
+1,3457586,Defeat,6,11,City,5,3,Won,2,24.4,5,0,0,1,245.9,240,51,12,39,264,20,Brine 1; Terra 4
+1,3457586,Defeat,6,11,City,5,3,Won,3,26,6,0,0,3,322.6,225,70,15,43,267,20,Brine 2; Terra 3; Cinder 1
+1,3457586,Defeat,6,11,City,5,3,Won,4,32.9,11,0,0,3,774.1,224,143,18,106,279,20,Terra 5; Brine 2; Cinder 3; Zephyr 1
+1,3457586,Defeat,6,11,City,5,3,Won,5,36.5,13,0,0,3,952.3,246,181,20,133,314,20,Brine 3; Terra 4; Cinder 4; Zephyr 2
+1,3457586,Defeat,6,11,City,5,3,Won,6,53.2,14,0,1,3,1185.6,261,214,23,211,287,20,Zephyr 7; Terra 6; Cinder 1
+1,3457586,Defeat,6,11,City,5,3,Won,7,70.6,17,0,2,6,1817,248,301,26,291,284,20,Brine 2; Terra 7; Cinder 5; Zephyr 3
+1,3457586,Defeat,6,11,City,5,3,Won,8,67.7,18,0,2,6,1976.6,245,322,28,306,289,20,Terra 7; Cinder 9; Zephyr 2
+1,3457586,Defeat,6,11,City,5,3,Won,9,74.5,21,0,3,7,2557.4,229,414,31,371,303,20,Terra 4; Cinder 6; Zephyr 8; Pyre 2; Brine 1
+1,3457586,Defeat,6,11,City,5,3,Won,10,126.4,25,1,8,9,3196.7,216,507,34,540,217,18,Terra 5; Cinder 3; Zephyr 12; Pyre 3; Brine 2
+1,3457586,Defeat,7,14,City,6,2,Lost,1,8.9,3,0,0,0,406.8,330,30,10,65,305,20,Cinder 3
+1,3457586,Defeat,7,14,City,6,2,Lost,2,13.6,5,0,0,0,624.4,275,56,13,36,308,20,Cinder 2; Zephyr 3
+1,3457586,Defeat,7,14,City,6,2,Lost,3,18.8,6,0,0,2,999.8,264,71,16,58,293,20,Cinder 1; Zephyr 5
+1,3457586,Defeat,7,14,City,6,2,Lost,4,34.1,11,0,2,4,1296.1,248,151,18,97,320,20,Cinder 4; Zephyr 7
+1,3457586,Defeat,7,14,City,6,2,Lost,5,48.6,13,0,1,3,1445.2,226,188,21,174,261,20,Cinder 2; Zephyr 3; Skye 8
+1,3457586,Defeat,7,14,City,6,2,Lost,6,60.5,14,0,7,5,1864.8,148,230,24,267,135,20,Cinder 5; Zephyr 2; Skye 5; Rill 2
+1,3457586,Defeat,7,14,City,6,2,Lost,7,90.8,14,3,8,7,2044.2,87,224,27,311,27,14,Cinder 4; Zephyr 1; Skye 1; Rill 2; Pyre 6
+1,3457586,Defeat,7,14,City,6,2,Lost,8,95.8,8,10,7,8,1487.9,0,120,0,120,0,0,Cinder 3; Rill 1; Pyre 4
