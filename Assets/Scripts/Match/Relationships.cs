@@ -24,7 +24,9 @@ public readonly struct ApprovalNotice
 // Added to the match object at runtime by MatchManager, like CameraShake.
 public class Relationships : MonoBehaviour
 {
-    const float TagApproval = 3f;
+    // Likes pay less than dislikes cost, so approval climbs slowly but a neglected captain still sours.
+    const float TagLikeApproval = 1.5f;
+    const float TagDislikeApproval = 3f;
     const float MixApprovalPerSoldier = 2f;
     const float VictoryApproval = 5f;
     // While a captain dislikes more of its soldiers than it likes, approval gains are halved
@@ -158,8 +160,8 @@ public class Relationships : MonoBehaviour
     void JudgeTag(Tower tower, CaptainTag tag, bool happened)
     {
         if (!happened) return;
-        if (Array.IndexOf(tower.Captain.likes, tag) >= 0) Change(tower, TagApproval, $"liked {tag}");
-        if (Array.IndexOf(tower.Captain.dislikes, tag) >= 0) Change(tower, -TagApproval, $"disliked {tag}");
+        if (Array.IndexOf(tower.Captain.likes, tag) >= 0) Change(tower, TagLikeApproval, $"liked {tag}");
+        if (Array.IndexOf(tower.Captain.dislikes, tag) >= 0) Change(tower, -TagDislikeApproval, $"disliked {tag}");
     }
 
     void OnMatchEnded(bool won)
