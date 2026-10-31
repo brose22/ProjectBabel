@@ -214,4 +214,21 @@ public class WorldMapTests
         Assert.That(new MapNode { kind = NodeKind.Shop }.IsMatch, Is.False);
         Assert.That(new MapNode { kind = NodeKind.Event }.IsMatch, Is.False);
     }
+
+    [TestCase(1)]
+    [TestCase(7)]
+    [TestCase(99)]
+    public void Generate_PlaysTheBaseOnOneOfTheBaseLayouts(int seed)
+    {
+        WorldMap map = WorldMap.Generate(seed, 7, 5, 2, 3, 2, default, new[] { 3, 4 });
+        Assert.That(new[] { 3, 4 }, Does.Contain(map.Base.layout));
+    }
+
+    [Test]
+    public void Generate_WithoutBaseLayoutsChangesNothing()
+    {
+        WorldMap plain = WorldMap.Generate(5, 7, 5, 2, 3, 2);
+        WorldMap empty = WorldMap.Generate(5, 7, 5, 2, 3, 2, default, new int[0]);
+        Assert.That(empty.nodes.Select(n => n.layout), Is.EqualTo(plain.nodes.Select(n => n.layout)));
+    }
 }

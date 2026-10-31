@@ -13,7 +13,6 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
     const float PreviewSize = 96f;
 
     List<EnemyData> enemies;
-    List<CaptainData> captains;
 
     [MenuItem("Babel/Data/Enemies", priority = 22)]
     static void ShowWindow() => Open<EnemyEditorWindow>(Title);
@@ -35,7 +34,6 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
     protected override void OnAssetsChanged()
     {
         enemies = null;
-        captains = null;
     }
 
     // Like the game: drawn art shows as painted, art-less enemies are a square in their colour.

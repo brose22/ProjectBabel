@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 // Edits how each element is presented: icon preview, colour checked against the status tint the
-// game draws, the status rules it maps to, and the captains and enemies tied to the element.
+// game draws, the status rules it maps to, and the captains tied to the element.
 public class ElementEditorWindow : DataEditorWindow<ElementData>
 {
     const string Title = "Elements";
@@ -14,7 +14,6 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
 
     List<ElementData> elements;
     List<CaptainData> captains;
-    List<EnemyData> enemies;
 
     [MenuItem("Babel/Data/Elements", priority = 24)]
     static void ShowWindow() => Open<ElementEditorWindow>(Title);
@@ -34,7 +33,6 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
     {
         elements = null;
         captains = null;
-        enemies = null;
     }
 
     protected override void DrawIcon(Rect rect, ElementData element)

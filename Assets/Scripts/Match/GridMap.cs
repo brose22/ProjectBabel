@@ -22,9 +22,15 @@ public class GridMap : MonoBehaviour
     [SerializeField] Transform baseMarker;
 
     readonly HashSet<Vector2Int> pathCells = new();
-    // The road's on-map cells from the gate to the castle.
+    // Each route's on-map cells from its gate to the castle.
+    readonly List<List<Vector2Int>> routeCells = new();
+    // Every on-map road cell once, from furthest from the castle to the castle itself.
     readonly List<Vector2Int> orderedPathCells = new();
+    // Gates added for routes beyond the first, copies of spawnMarker.
+    readonly List<Transform> extraGateMarkers = new();
     readonly Dictionary<Vector2Int, Tower> occupants = new();
+    // The size the scene was built with, which layouts without a size of their own keep.
+    Vector2Int sceneSize;
 
     // Decorative ground painted this many tiles beyond the playable map on every side, so the
     // camera can look past the edge. Nothing can be built or walked there.
@@ -33,40 +39,63 @@ public class GridMap : MonoBehaviour
     public Vector2Int Size => size;
     // The playable map plus its padding, in world units: how far the camera may look.
     public Rect ViewBounds => new(-Padding, -Padding, size.x + 2 * Padding, size.y + 2 * Padding);
-    // The road's on-map cells from the gate to the castle.
+    // Every on-map road cell once, from the furthest from the castle to the castle. With several
+    // routes the cells are ordered by their fewest steps to the castle.
     public IReadOnlyList<Vector2Int> RoadCells => orderedPathCells;
+    public int RouteCount => routeCells.Count;
 
-    void Awake() => Paint();
+    void Awake()
+    {
+        sceneSize = size;
+        Paint();
+    }
 
     public void Paint()
     {
         groundTilemap.ClearAllTiles();
         pathTilemap.ClearAllTiles();
         pathCells.Clear();
+        routeCells.Clear();
         orderedPathCells.Clear();
 
         for (int x = -Padding; x < size.x + Padding; x++)
             for (int y = -Padding; y < size.y + Padding; y++)
                 groundTilemap.SetTile(new Vector3Int(x, y, 0), IsAccentCell(x, y) ? groundAccentTile : groundTile);
 
-        Vector3[] points = path.GetPoints();
-        for (int i = 1; i < points.Length; i++)
-            AddPathSegment(WorldToCell(points[i - 1]), WorldToCell(points[i]));
+        for (int route = 0; route < path.RouteCount; route++)
+        {
+            Vector3[] points = path.GetPoints(route);
+            var cells = new List<Vector2Int>();
+            var seen = new HashSet<Vector2Int>();
+            for (int i = 1; i < points.Length; i++)
+                AddPathSegment(WorldToCell(points[i - 1]), WorldToCell(points[i]), cells, seen);
+            routeCells.Add(cells);
+        }
+
+        var ordering = new List<IReadOnlyList<(int x, int y)>>();
+        foreach (List<Vector2Int> cells in routeCells)
+            ordering.Add(cells.ConvertAll(c => (c.x, c.y)));
+        foreach ((int x, int y) in RouteMath.OrderedRoadCells(ordering))
+            orderedPathCells.Add(new Vector2Int(x, y));
 
         foreach (Vector2Int cell in pathCells)
             if (InBounds(cell))
                 pathTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), pathTile);
     }
 
-    // Swaps in a city layout's road and props, moves the gate and castle to the road's ends and
-    // repaints. Called by the match before play starts.
+    // Swaps in a city layout's roads and props, sizes the map, moves the gates and the castle to
+    // the roads' ends and repaints. Called by the match before play starts.
     public void ApplyLayout(CityLayout layout)
     {
-        if (layout == null || layout.pathCells.Length < 2) return;
-        var points = new Vector3[layout.pathCells.Length];
-        for (int i = 0; i < points.Length; i++)
-            points[i] = CellCenter(layout.pathCells[i]);
-        path.SetPoints(points);
+        if (layout == null) return;
+        List<Vector2Int[]> routes = layout.AllRoutes();
+        if (routes.Count == 0) return;
+        size = layout.Area > 0 ? layout.gridSize : sceneSize;
+
+        var routePoints = new List<Vector3[]>();
+        foreach (Vector2Int[] cells in routes)
+            routePoints.Add(System.Array.ConvertAll(cells, CellCenter));
+        path.SetRoutes(routePoints);
 
         if (propTilemap != null)
         {
@@ -76,26 +105,52 @@ public class GridMap : MonoBehaviour
         }
 
         Paint();
-        if (orderedPathCells.Count == 0) return;
-        if (spawnMarker != null) spawnMarker.position = CellCenter(orderedPathCells[0]);
-        if (baseMarker != null) baseMarker.position = CellCenter(orderedPathCells[^1]);
+        var ends = new List<IReadOnlyList<(int x, int y)>>();
+        foreach (List<Vector2Int> cells in routeCells) ends.Add(cells.ConvertAll(c => (c.x, c.y)));
+        if (!RouteMath.EndAtTheSameCell(ends))
+            Debug.LogWarning($"Layout {layout.displayName}: its routes do not all end on the same cell, so they have no common castle.");
+        PlaceMarkers();
     }
 
-    void AddPathSegment(Vector2Int from, Vector2Int to)
+    // The gate sits at the start of each route (extra gates are copies of the first) and the castle
+    // at the end of the first.
+    void PlaceMarkers()
+    {
+        foreach (Transform extra in extraGateMarkers)
+            if (extra != null) Destroy(extra.gameObject);
+        extraGateMarkers.Clear();
+        if (routeCells.Count == 0 || routeCells[0].Count == 0) return;
+
+        if (spawnMarker != null)
+        {
+            spawnMarker.position = CellCenter(routeCells[0][0]);
+            for (int route = 1; route < routeCells.Count; route++)
+            {
+                if (routeCells[route].Count == 0) continue;
+                Transform gate = Instantiate(spawnMarker, spawnMarker.parent);
+                gate.position = CellCenter(routeCells[route][0]);
+                extraGateMarkers.Add(gate);
+            }
+        }
+        if (baseMarker != null) baseMarker.position = CellCenter(routeCells[0][^1]);
+    }
+
+    void AddPathSegment(Vector2Int from, Vector2Int to, List<Vector2Int> cells, HashSet<Vector2Int> seen)
     {
         Vector2Int cell = from;
-        AddPathCell(cell);
+        AddPathCell(cell, cells, seen);
         while (cell != to)
         {
             if (cell.x != to.x) cell.x += System.Math.Sign(to.x - cell.x);
             else cell.y += System.Math.Sign(to.y - cell.y);
-            AddPathCell(cell);
+            AddPathCell(cell, cells, seen);
         }
     }
 
-    void AddPathCell(Vector2Int cell)
+    void AddPathCell(Vector2Int cell, List<Vector2Int> cells, HashSet<Vector2Int> seen)
     {
-        if (pathCells.Add(cell) && InBounds(cell)) orderedPathCells.Add(cell);
+        pathCells.Add(cell);
+        if (InBounds(cell) && seen.Add(cell)) cells.Add(cell);
     }
 
     // A fixed hash rather than Random, so the ground looks the same every time the map is painted.
