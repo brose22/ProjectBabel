@@ -337,6 +337,21 @@ public class MatchManager : MonoBehaviour
         MainMenu.Open();
     }
 
+    // The captains the setup screen offers: a random subset of the roster, drawn once per run.
+    public IReadOnlyList<CaptainData> SetupOffer
+    {
+        get
+        {
+            List<CaptainData> offer = RunState.Current.SetupOffer;
+            if (offer.Count > 0) return offer;
+            List<CaptainData> roster = data.roster.FindAll(c => c != null);
+            int size = CaptainOffer.Size(GameSettings.CaptainsOffered, data.partySize, roster.Count);
+            foreach (int index in CaptainOffer.Draw(roster.Count, size, Random.Range(int.MinValue, int.MaxValue)))
+                offer.Add(roster[index]);
+            return offer;
+        }
+    }
+
     // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
     public void BeginRun(IEnumerable<CaptainData> party)
     {
