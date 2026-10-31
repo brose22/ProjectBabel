@@ -2,6 +2,21 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+// One approval change, for the HUD to show: who, why ("liked Kills") and by how much.
+public readonly struct ApprovalNotice
+{
+    public readonly CaptainData captain;
+    public readonly string reason;
+    public readonly float amount;
+
+    public ApprovalNotice(CaptainData captain, string reason, float amount)
+    {
+        this.captain = captain;
+        this.reason = reason;
+        this.amount = amount;
+    }
+}
+
 // Judges captains' likes and dislikes and changes their approval (GDD relationship system).
 // Play-style tags are judged at the end of each wave and the soldier mix at the end of the match,
 // along with a bonus for winning. A captain whose approval falls 20 below its best this run walks
@@ -15,8 +30,6 @@ public class Relationships : MonoBehaviour
     // While a captain dislikes more of its soldiers than it likes, approval gains are halved
     // (GDD: soldier-mix disapproval slows bond growth).
     const float DisapprovedMixGainMultiplier = 0.5f;
-    const int MaxMessages = 5;
-    const float MessageSeconds = 6f;
 
     // What happened to one captain during the current wave.
     class WaveRecord
@@ -28,7 +41,7 @@ public class Relationships : MonoBehaviour
     }
 
     readonly Dictionary<CaptainData, WaveRecord> records = new();
-    readonly List<(string text, float until)> messages = new();
+    readonly Queue<ApprovalNotice> notices = new();
     readonly Dictionary<CaptainData, float> approvalThisMatch = new();
     int waveLeaks;
     bool waveSold;
@@ -40,14 +53,8 @@ public class Relationships : MonoBehaviour
     // Captains who walked out at the end of this match.
     public List<CaptainData> Walkouts { get; } = new();
 
-    public IEnumerable<string> RecentMessages
-    {
-        get
-        {
-            foreach (var message in messages)
-                if (Time.unscaledTime < message.until) yield return message.text;
-        }
-    }
+    // Takes the next approval change the HUD hasn't shown yet.
+    public bool TryTakeNotice(out ApprovalNotice notice) => notices.TryDequeue(out notice);
 
     void OnEnable()
     {
@@ -89,13 +96,7 @@ public class Relationships : MonoBehaviour
         float applied = ApprovalStore.Change(tower.Captain, delta);
         if (applied == 0f) return;
         approvalThisMatch[tower.Captain] = ApprovalChangeThisMatch(tower.Captain) + applied;
-        Post($"{tower.Captain.displayName} {reason} {applied:+0.#;-0.#}");
-    }
-
-    void Post(string text)
-    {
-        messages.Add((text, Time.unscaledTime + MessageSeconds));
-        if (messages.Count > MaxMessages) messages.RemoveAt(0);
+        notices.Enqueue(new ApprovalNotice(tower.Captain, reason, applied));
     }
 
     WaveRecord RecordFor(CaptainData captain)
