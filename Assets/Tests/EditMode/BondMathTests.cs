@@ -29,9 +29,9 @@ public class BondMathTests
     }
 
     [TestCase(0, 2)]
-    [TestCase(1, 2)]
+    [TestCase(1, 3)]
     [TestCase(2, 3)]
-    [TestCase(3, 3)]
+    [TestCase(3, 4)]
     [TestCase(4, 4)]
     public void SoldierCount_GrowsWithRank(int rank, int expected) =>
         Assert.That(BondMath.SoldierCount(rank), Is.EqualTo(expected));

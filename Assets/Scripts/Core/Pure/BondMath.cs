@@ -42,8 +42,9 @@ public static class BondMath
 
     public static string RankName(int rank) => RankNames[Mathf.Clamp(rank, 0, MaxRank)];
 
-    // GDD: 2 soldiers at D and C, 3 at B and A, 4 at S.
-    public static int SoldierCount(int rank) => rank >= 4 ? 4 : rank >= 2 ? 3 : 2;
+    // 2 soldiers at D, 3 at C and B, 4 at A and S. Shifted a rank down from the GDD's 2 / 2 / 3 / 3 / 4,
+    // since a captain can only rise one rank in a run and would otherwise wait several runs for a third soldier.
+    public static int SoldierCount(int rank) => rank >= 3 ? 4 : rank >= 1 ? 3 : 2;
 
     // The ability's status chance is a flat value that rises with rank (GDD).
     public static float StatusChanceBonus(int rank) => 0.05f * Mathf.Clamp(rank, 0, MaxRank);
