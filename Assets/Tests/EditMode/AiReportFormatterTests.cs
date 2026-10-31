@@ -61,6 +61,21 @@ public class AiReportFormatterTests
     }
 
     [Test]
+    public void Markdown_ShowsApprovalRequestsAndTowerLosses()
+    {
+        AiRunRecord run = Run(1, "Victory");
+        run.approvalByReason["liked Kills"] = 6f;
+        run.requestAnswers["MoreDraw: Yes"] = 2;
+        run.matches[0].towersDisabled = 1;
+        run.matches[0].waves[0].goldBetween = 15;
+        string md = AiReportFormatter.Markdown(new[] { run }, "now");
+        Assert.That(md, Does.Contain("| liked Kills | +6 |"));
+        Assert.That(md, Does.Contain("| MoreDraw: Yes | 2 |"));
+        Assert.That(md, Does.Contain("Drawn between"));
+        Assert.That(AiReportFormatter.Csv(new[] { run }).Split('\n')[1].Split(',').Length, Is.GreaterThanOrEqualTo(AiReportFormatter.CsvHeader.Split(',').Length));
+    }
+
+    [Test]
     public void Markdown_BatchAddsAnAggregate()
     {
         string md = AiReportFormatter.Markdown(new[] { Run(1, "Victory"), Run(2, "Defeat") }, "now");
