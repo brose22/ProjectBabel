@@ -29,6 +29,8 @@ public static class GameEvents
     public static event Action<Tower> CaptainLeveledUp;
     public static event Action<CaptainData> ApprovalChanged;
     public static event Action<CaptainData> BondRankUp;
+    // An approval change with its reason ("liked Kills") and the amount actually applied.
+    public static event Action<ApprovalNotice> ApprovalNoticed;
     // True for a win, false for a loss.
     public static event Action<bool> MatchEnded;
 
@@ -51,6 +53,7 @@ public static class GameEvents
     public static void RaiseCaptainLeveledUp(Tower tower) => CaptainLeveledUp?.Invoke(tower);
     public static void RaiseApprovalChanged(CaptainData captain) => ApprovalChanged?.Invoke(captain);
     public static void RaiseBondRankUp(CaptainData captain) => BondRankUp?.Invoke(captain);
+    public static void RaiseApprovalNoticed(ApprovalNotice notice) => ApprovalNoticed?.Invoke(notice);
     public static void RaiseMatchEnded(bool won) => MatchEnded?.Invoke(won);
 
     // Statics survive play sessions when domain reload is disabled, so clear them on entry.
@@ -76,6 +79,7 @@ public static class GameEvents
         CaptainLeveledUp = null;
         ApprovalChanged = null;
         BondRankUp = null;
+        ApprovalNoticed = null;
         MatchEnded = null;
     }
 }

@@ -17,6 +17,8 @@ public class AiWaveRow
     public int goldEarned;
     public int goldBonus;
     public int goldSpent;
+    // Drained from the pool between the last wave and this one: reserve top-ups, restores, moves.
+    public int goldBetween;
     public int goldEnd;
     public int healthEnd;
     public float damage;
@@ -43,6 +45,9 @@ public class AiMatchRow
     public int goldStart;
     public int goldEnd;
     public int towersPlaced;
+    public int towersDisabled;
+    public int towersRestored;
+    public int towersSold;
     public List<AiWaveRow> waves = new();
 }
 
@@ -56,7 +61,11 @@ public class AiCaptainRow
     public int abilities;
     public int level;
     public int xp;
+    public float approvalStart;
     public float approvalEnd;
+    public float approvalGained;
+    public float approvalLost;
+    public int bondRank;
     public bool departed;
 }
 
@@ -82,6 +91,10 @@ public class AiRunRecord
     public List<AiCaptainRow> captains = new();
     public Dictionary<string, float> damageByElement = new();
     public List<AiDecisionRow> decisions = new();
+    // Approval changed by each reason ("liked Kills", "enjoyed the victory"), summed over the run.
+    public Dictionary<string, float> approvalByReason = new();
+    // Captains' requests and how the AI answered, counted as "MoreDraw: Yes".
+    public Dictionary<string, int> requestAnswers = new();
     public int finalHealth;
     public int maxHealth;
     public int finalGold;
@@ -107,7 +120,7 @@ public static class AiReportFormatter
         return value.IndexOfAny(new[] { ',', '"', '\n', '\r' }) >= 0 ? "\"" + value.Replace("\"", "\"\"") + "\"" : value;
     }
 
-    public const string CsvHeader = "run,seed,result,match,node,kind,layer,layout,match_result,wave,seconds,kills,leaks,casualties,abilities,damage,gold_start,gold_earned,gold_bonus,gold_spent,gold_end,health_end,kills_by";
+    public const string CsvHeader = "run,seed,result,match,node,kind,layer,layout,match_result,wave,seconds,kills,leaks,casualties,abilities,damage,gold_start,gold_earned,gold_bonus,gold_spent,gold_between,gold_end,health_end,kills_by";
 
     // One row per wave per run.
     public static string Csv(IReadOnlyList<AiRunRecord> runs)
@@ -123,7 +136,7 @@ public static class AiReportFormatter
                         run.index.ToString(), run.seed.ToString(), run.result, match.index.ToString(), match.nodeId.ToString(),
                         match.kind, match.layer.ToString(), match.layout.ToString(), match.result, w.wave.ToString(),
                         F(w.seconds), w.kills.ToString(), w.leaks.ToString(), w.casualties.ToString(), w.abilities.ToString(),
-                        F(w.damage), w.goldStart.ToString(), w.goldEarned.ToString(), w.goldBonus.ToString(), w.goldSpent.ToString(),
+                        F(w.damage), w.goldStart.ToString(), w.goldEarned.ToString(), w.goldBonus.ToString(), w.goldSpent.ToString(), w.goldBetween.ToString(),
                         w.goldEnd.ToString(), w.healthEnd.ToString(), CsvField(kills),
                     })).Append('\n');
                 }
@@ -189,26 +202,41 @@ public static class AiReportFormatter
         md.Append($"- Time: {F(run.gameSeconds)}s game, {F(run.realSeconds)}s real\n");
         md.Append($"- Totals: {run.Kills} kills, {run.Leaks} leaks, {run.Casualties} casualties, {run.WavesCleared} waves cleared\n\n");
 
-        md.Append("### Matches\n\n| # | Node | Kind | Layer | Result | Waves | Kills | Leaks | Casualties | Health | Gold | Towers |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");
+        md.Append("### Matches\n\n| # | Node | Kind | Layer | Result | Waves | Kills | Leaks | Casualties | Health | Gold | Towers | Disabled | Restored | Sold |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
         foreach (AiMatchRow m in run.matches)
-            md.Append($"| {m.index} | {m.nodeId} | {m.kind} | {m.layer} | {m.result} | {m.wavesCleared}/{m.waveCount} | {m.kills} | {m.leaks} | {m.casualties} | {m.healthStart} > {m.healthEnd} | {m.goldStart} > {m.goldEnd} | {m.towersPlaced} |\n");
+            md.Append($"| {m.index} | {m.nodeId} | {m.kind} | {m.layer} | {m.result} | {m.wavesCleared}/{m.waveCount} | {m.kills} | {m.leaks} | {m.casualties} | {m.healthStart} > {m.healthEnd} | {m.goldStart} > {m.goldEnd} | {m.towersPlaced} | {m.towersDisabled} | {m.towersRestored} | {m.towersSold} |\n");
         md.Append('\n');
 
-        md.Append("### Waves\n\n| Match | Wave | Seconds | Kills | Leaks | Casualties | Specials | Damage | Gold in | Gold spent | Health | Kills by |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");
+        md.Append("### Waves\n\n| Match | Wave | Seconds | Kills | Leaks | Casualties | Specials | Damage | Gold in | Gold spent | Drawn between | Health | Kills by |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
         foreach (AiMatchRow m in run.matches)
             foreach (AiWaveRow w in m.waves)
-                md.Append($"| {m.index} | {w.wave} | {F(w.seconds)} | {w.kills} | {w.leaks} | {w.casualties} | {w.abilities} | {F(w.damage)} | {w.goldEarned + w.goldBonus} | {w.goldSpent} | {w.healthEnd} | {string.Join(", ", w.killsByCaptain.Select(p => $"{p.Key} {p.Value}"))} |\n");
+                md.Append($"| {m.index} | {w.wave} | {F(w.seconds)} | {w.kills} | {w.leaks} | {w.casualties} | {w.abilities} | {F(w.damage)} | {w.goldEarned + w.goldBonus} | {w.goldSpent} | {w.goldBetween} | {w.healthEnd} | {string.Join(", ", w.killsByCaptain.Select(p => $"{p.Key} {p.Value}"))} |\n");
         md.Append('\n');
 
-        md.Append("### Captains\n\n| Captain | Element | Role | Level | XP | Kills | Damage | Specials | Approval |\n|---|---|---|---|---|---|---|---|---|\n");
+        md.Append("### Captains\n\n| Captain | Element | Role | Level | XP | Kills | Damage | Specials | Approval | Gained | Lost | Bond rank |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");
         foreach (AiCaptainRow c in run.captains)
-            md.Append($"| {c.name}{(c.departed ? " (walked out)" : "")} | {c.element} | {c.role} | {c.level} | {c.xp} | {c.kills} | {F(c.damage)} | {c.abilities} | {F(c.approvalEnd)} |\n");
+            md.Append($"| {c.name}{(c.departed ? " (walked out)" : "")} | {c.element} | {c.role} | {c.level} | {c.xp} | {c.kills} | {F(c.damage)} | {c.abilities} | {F(c.approvalStart)} > {F(c.approvalEnd)} | +{F(c.approvalGained)} | -{F(c.approvalLost)} | {c.bondRank} |\n");
         md.Append('\n');
 
         if (run.damageByElement.Count > 0)
         {
             md.Append("### Damage by element\n\n| Element | Damage |\n|---|---|\n");
             foreach (var pair in run.damageByElement.OrderByDescending(p => p.Value)) md.Append($"| {pair.Key} | {F(pair.Value)} |\n");
+            md.Append('\n');
+        }
+
+        if (run.approvalByReason.Count > 0)
+        {
+            md.Append("### Approval by reason\n\n| Reason | Change |\n|---|---|\n");
+            foreach (var pair in run.approvalByReason.OrderByDescending(p => Math.Abs(p.Value)))
+                md.Append($"| {pair.Key} | {pair.Value.ToString("+0.#;-0.#;0", CultureInfo.InvariantCulture)} |\n");
+            md.Append('\n');
+        }
+
+        if (run.requestAnswers.Count > 0)
+        {
+            md.Append("### Captain requests\n\n| Request | Count |\n|---|---|\n");
+            foreach (var pair in run.requestAnswers.OrderBy(p => p.Key)) md.Append($"| {pair.Key} | {pair.Value} |\n");
             md.Append('\n');
         }
 

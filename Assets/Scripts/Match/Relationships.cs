@@ -96,7 +96,9 @@ public class Relationships : MonoBehaviour
         float applied = ApprovalStore.Change(tower.Captain, delta);
         if (applied == 0f) return;
         approvalThisMatch[tower.Captain] = ApprovalChangeThisMatch(tower.Captain) + applied;
-        notices.Enqueue(new ApprovalNotice(tower.Captain, reason, applied));
+        var notice = new ApprovalNotice(tower.Captain, reason, applied);
+        notices.Enqueue(notice);
+        GameEvents.RaiseApprovalNoticed(notice);
     }
 
     WaveRecord RecordFor(CaptainData captain)

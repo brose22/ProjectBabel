@@ -11,6 +11,9 @@ public class AiRunRecorder
     readonly Dictionary<string, float> damageByCaptain = new();
     readonly Dictionary<string, int> abilitiesByCaptain = new();
     readonly Dictionary<int, float> damageByWave = new();
+    readonly Dictionary<string, float> approvalStartByCaptain = new();
+    readonly Dictionary<string, float> approvalGainedByCaptain = new();
+    readonly Dictionary<string, float> approvalLostByCaptain = new();
     int currentWave;
     int nextMatchIndex;
     float runStartReal;
@@ -27,6 +30,10 @@ public class AiRunRecorder
         GameEvents.AbilityUsed += OnAbility;
         GameEvents.WaveStarted += OnWaveStarted;
         GameEvents.TowerPlaced += OnTowerPlaced;
+        GameEvents.TowerDisabled += OnTowerDisabled;
+        GameEvents.TowerRestored += OnTowerRestored;
+        GameEvents.TowerSold += OnTowerSold;
+        GameEvents.ApprovalNoticed += OnApprovalNoticed;
     }
 
     public void Unsubscribe()
@@ -37,6 +44,10 @@ public class AiRunRecorder
         GameEvents.AbilityUsed -= OnAbility;
         GameEvents.WaveStarted -= OnWaveStarted;
         GameEvents.TowerPlaced -= OnTowerPlaced;
+        GameEvents.TowerDisabled -= OnTowerDisabled;
+        GameEvents.TowerRestored -= OnTowerRestored;
+        GameEvents.TowerSold -= OnTowerSold;
+        GameEvents.ApprovalNoticed -= OnApprovalNoticed;
     }
 
     void OnDamage(Tower source, float amount, Element? element)
@@ -64,12 +75,51 @@ public class AiRunRecorder
         if (CurrentMatch != null) CurrentMatch.towersPlaced++;
     }
 
+    void OnTowerDisabled(Tower tower)
+    {
+        if (CurrentMatch != null) CurrentMatch.towersDisabled++;
+    }
+
+    void OnTowerRestored(Tower tower)
+    {
+        if (CurrentMatch != null) CurrentMatch.towersRestored++;
+    }
+
+    void OnTowerSold(Tower tower)
+    {
+        if (CurrentMatch != null) CurrentMatch.towersSold++;
+    }
+
+    void OnApprovalNoticed(ApprovalNotice notice)
+    {
+        if (Run == null) return;
+        Run.approvalByReason[notice.reason] = Run.approvalByReason.TryGetValue(notice.reason, out float total) ? total + notice.amount : notice.amount;
+        var bucket = notice.amount > 0f ? approvalGainedByCaptain : approvalLostByCaptain;
+        string name = notice.captain.displayName;
+        bucket[name] = bucket.TryGetValue(name, out float sum) ? sum + Mathf.Abs(notice.amount) : Mathf.Abs(notice.amount);
+    }
+
+    // A captain's request and the answer the AI gave it.
+    public void NoteRequest(RequestKind kind, RequestAnswer answer)
+    {
+        if (Run == null) return;
+        string key = $"{kind}: {answer}";
+        Run.requestAnswers[key] = Run.requestAnswers.TryGetValue(key, out int count) ? count + 1 : 1;
+    }
+
     public void BeginRun(int index, int seed, IEnumerable<CaptainData> party, float realNow, float gameNow)
     {
         Run = new AiRunRecord { index = index, seed = seed };
-        foreach (CaptainData captain in party) Run.startParty.Add(captain.displayName);
         damageByCaptain.Clear();
         abilitiesByCaptain.Clear();
+        approvalStartByCaptain.Clear();
+        approvalGainedByCaptain.Clear();
+        approvalLostByCaptain.Clear();
+        foreach (CaptainData captain in party)
+        {
+            Run.startParty.Add(captain.displayName);
+            approvalStartByCaptain[captain.displayName] = ApprovalStore.ApprovalOf(captain);
+        }
         CurrentMatch = null;
         nextMatchIndex = 1;
         runStartReal = realNow;
@@ -135,6 +185,7 @@ public class AiRunRecorder
                     goldEarned = w.GoldEarned,
                     goldBonus = w.GoldBonus,
                     goldSpent = w.GoldSpent,
+                    goldBetween = w.GoldBetween,
                     goldEnd = w.GoldEnd,
                     healthEnd = w.HealthEnd,
                     damage = damageByWave.TryGetValue(w.Wave, out float damage) ? damage : 0f,
@@ -191,7 +242,11 @@ public class AiRunRecorder
                     abilities = abilitiesByCaptain.TryGetValue(captain.displayName, out int abilities) ? abilities : 0,
                     level = Mathf.Max(captain.level, LevelMath.LevelForXp(xp)),
                     xp = xp,
+                    approvalStart = approvalStartByCaptain.TryGetValue(captain.displayName, out float start) ? start : 0f,
                     approvalEnd = ApprovalStore.ApprovalOf(captain),
+                    approvalGained = approvalGainedByCaptain.TryGetValue(captain.displayName, out float gained) ? gained : 0f,
+                    approvalLost = approvalLostByCaptain.TryGetValue(captain.displayName, out float lost) ? lost : 0f,
+                    bondRank = ApprovalStore.RankOf(captain),
                     departed = run.HasDeparted(captain),
                 });
             }
