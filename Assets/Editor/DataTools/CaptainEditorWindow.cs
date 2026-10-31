@@ -76,7 +76,7 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
         }
 
         DataToolsGUI.Field(so, nameof(CaptainData.power));
-        DataToolsGUI.Field(so, nameof(CaptainData.range));
+        DataToolsGUI.Field(so, nameof(CaptainData.range), "Range Bonus");
         DataToolsGUI.Field(so, nameof(CaptainData.speed));
         DataToolsGUI.Field(so, nameof(CaptainData.health));
         DataToolsGUI.Field(so, nameof(CaptainData.resourceCapacity));

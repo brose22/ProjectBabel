@@ -420,13 +420,13 @@ public class AiPlayer : MonoBehaviour
 
     // ---------- Setup helpers ----------
 
-    static AiCaptainInfo Info(CaptainData captain) => new()
+    AiCaptainInfo Info(CaptainData captain) => new()
     {
         name = captain.displayName,
         role = (AiRole)(int)captain.role,
         element = (int)captain.element,
         strength = captain.power * captain.speed,
-        range = captain.range,
+        range = match.RangeFor(captain),
     };
 
     // How many enemies in the match's waves are weak to each element.
@@ -471,7 +471,7 @@ public class AiPlayer : MonoBehaviour
                 for (int y = 0; y < size.y; y++)
                     if (match.CanPlaceOn(new Vector2Int(x, y))) cells.Add(new Vector2Int(x, y));
             List<(int x, int y)> road = RoadCells();
-            int pick = AiPlacementScorer.PickCell(cells.ConvertAll(c => (c.x, c.y)), captain.range, road, IsSupport(captain), CoveredBy(Tower.All, road), out float score);
+            int pick = AiPlacementScorer.PickCell(cells.ConvertAll(c => (c.x, c.y)), match.RangeFor(captain), road, IsSupport(captain), CoveredBy(Tower.All, road), out float score);
             if (pick < 0) return;
             Tower tower = match.PlaceTower(cells[pick]);
             if (tower == null) return;

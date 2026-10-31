@@ -31,8 +31,8 @@ public class CaptainData : ScriptableObject
     [Header("Stats")]
     [Tooltip("Base damage of each soldier act, before class and level scaling.")]
     public float power = 10f;
-    [Tooltip("Radius in tiles that soldiers will engage enemies within.")]
-    public float range = 2f;
+    [Tooltip("Bonus tiles added to the average reach of the soldier classes in this captain's slots (0 for none).")]
+    public float range = 0f;
     [Tooltip("Soldier acts per second (the wait after a soldier returns is 1 / speed).")]
     public float speed = 1f;
     public int health = 100;

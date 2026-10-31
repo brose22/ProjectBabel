@@ -24,6 +24,8 @@ public class SoldierClassData : ScriptableObject
     public float damageMultiplier = 1f;
     [Tooltip("How close in tiles the soldier must get to hit.")]
     public float attackRange = 0.4f;
+    [Tooltip("How far in tiles this soldier lets its captain reach. A captain's range is the average of its soldier slots' reach, plus the captain's own range bonus.")]
+    public float reach = 2f;
     [Tooltip("Tiles per second.")]
     public float moveSpeed = 4f;
     [Tooltip("The kind of tile around the captain this soldier picks to wait on.")]

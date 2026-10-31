@@ -549,7 +549,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(stats, 0, 8).childAlignment = TextAnchor.UpperCenter;
         UIKit.Size(stats, flexibleWidth: 1f);
         Stat(stats, "POWER", $"{captain.power * LevelMath.StatFactor(level):0}");
-        Stat(stats, "RANGE", $"{captain.range:0.#}");
+        Stat(stats, "RANGE", $"{match.RangeFor(captain):0.#}");
         Stat(stats, "SPEED", $"{captain.speed:0.##}");
         Stat(stats, "HEALTH", $"{captain.health}");
         Stat(stats, "RESERVE", $"{captain.resourceCapacity}");

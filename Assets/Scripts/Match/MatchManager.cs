@@ -220,6 +220,15 @@ public class MatchManager : MonoBehaviour
         return slotClasses;
     }
 
+    // The range a captain would have with the soldier classes it would field now: what a new
+    // tower of theirs reaches, for placement checks before it exists.
+    public float RangeFor(CaptainData captain)
+    {
+        var reaches = new List<float>();
+        foreach (SoldierClassData soldierClass in SlotClassesFor(captain)) reaches.Add(soldierClass.reach);
+        return TowerReach.Range(reaches, captain.range);
+    }
+
     // Captains can't stand on a soldier's tile. A moving captain's own soldiers will pick new
     // tiles anyway, so theirs don't count.
     public bool CanPlaceOn(Vector2Int cell) => CanPlaceTower && grid.IsBuildable(cell) && !Tower.IsSoldierHome(cell);

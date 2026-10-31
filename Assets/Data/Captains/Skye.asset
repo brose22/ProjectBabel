@@ -23,7 +23,7 @@ MonoBehaviour:
   tintSprite: 1
   portrait: {fileID: 21300000, guid: 65eb2545d3a8fe245bb3ecdd59521c39, type: 3}
   power: 9
-  range: 3
+  range: 0
   speed: 1
   health: 100
   resourceCapacity: 20

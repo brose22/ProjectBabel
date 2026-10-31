@@ -62,7 +62,8 @@ public class Tower : MonoBehaviour
     // soldiers until the wave ends, so they live here rather than on each tower.
     static readonly float[] waveBoosts = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
 
-    public float Range => Captain.range;
+    // Average reach of the soldier classes in its slots plus the captain's bonus; set when the slots change.
+    public float Range { get; private set; }
     public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed * (1f + Boost(SupportEffect.ActSpeed)));
     public float SoldierPower => Captain.power * LevelMath.StatFactor(Level) * (1f + Boost(SupportEffect.Damage));
     // Multiplies damage the tower and its soldiers take.
@@ -127,8 +128,6 @@ public class Tower : MonoBehaviour
         ApplyArt(captain);
         bodyRestPosition = body.transform.localPosition;
         bodyRestScale = body.transform.localScale;
-        // The range sprite is a disc two units across, so its scale equals the radius.
-        rangeIndicator.transform.localScale = Vector3.one * captain.range;
         rangeIndicator.enabled = false;
         Health = MaxHealth;
         UpdateHealthBar();
@@ -136,8 +135,19 @@ public class Tower : MonoBehaviour
         slotCells.AddRange(PickHomes(grid, cell, slotClasses));
         for (int i = 0; i < slotClasses.Count; i++)
             soldiers.Add(SpawnSoldier(slotClasses[i], i));
+        UpdateRange();
 
         All.Add(this);
+    }
+
+    // The range follows the soldier slots, so it changes only when a slot is added. The range
+    // sprite is a disc two units across, so its scale equals the radius.
+    void UpdateRange()
+    {
+        var reaches = new List<float>(soldiers.Count);
+        foreach (Soldier soldier in soldiers) reaches.Add(soldier.Class.reach);
+        Range = TowerReach.Range(reaches, Captain.range);
+        rangeIndicator.transform.localScale = Vector3.one * Range;
     }
 
     Soldier SpawnSoldier(SoldierClassData soldierClass, int slot)
@@ -231,6 +241,7 @@ public class Tower : MonoBehaviour
             Soldier soldier = SpawnSoldier(soldierClass, slot);
             soldiers.Add(soldier);
             if (IsDisabled) soldier.Despawn();
+            UpdateRange();
         }
     }
 
