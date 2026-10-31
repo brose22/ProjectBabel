@@ -10,8 +10,13 @@ public static class BondMath
     // A captain whose approval falls this far below its best this run leaves for the rest of the run.
     public const float WalkoutDrop = 20f;
 
-    // GDD: D 0 / C 30 / B 50 / A 70 / S 90. Anything below C, negative included, is D.
-    static readonly float[] RankThresholds = { float.NegativeInfinity, 30f, 50f, 70f, 90f };
+    // Slower than the GDD's 30 / 50 / 70 / 90: C 40 / B 65 / A 85 / S 100. Anything below C,
+    // negative included, is D. S needs the full 100.
+    static readonly float[] RankThresholds = { float.NegativeInfinity, 40f, 65f, 85f, 100f };
+    // Approval gains shrink by this much per rank, so the climb slows as the bond deepens.
+    const float GainFalloffPerRank = 0.15f;
+    // A captain stops this far short of the rank two above the one it started the run with.
+    const float RunRankCapMargin = 1f;
     static readonly string[] RankNames = { "D", "C", "B", "A", "S" };
 
     public static float Clamp(float approval) => Mathf.Clamp(approval, MinApproval, MaxApproval);
@@ -22,6 +27,17 @@ public static class BondMath
         for (int i = 1; i <= MaxRank; i++)
             if (approval >= RankThresholds[i]) rank = i;
         return rank;
+    }
+
+    // Multiplier on approval gains at a rank: 1 at D, falling to 0.4 at S.
+    public static float GainMultiplier(int rank) => 1f - GainFalloffPerRank * Mathf.Clamp(rank, 0, MaxRank);
+
+    // The most approval a captain can reach in one run: a rank can rise by at most 1 per run, so
+    // approval stops just short of the rank after next.
+    public static float RunApprovalCap(int startRank)
+    {
+        int blocked = Mathf.Clamp(startRank, 0, MaxRank) + 2;
+        return blocked > MaxRank ? MaxApproval : RankThresholds[blocked] - RunRankCapMargin;
     }
 
     public static string RankName(int rank) => RankNames[Mathf.Clamp(rank, 0, MaxRank)];

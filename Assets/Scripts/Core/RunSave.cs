@@ -22,6 +22,13 @@ public static class RunSave
         public float approval;
     }
 
+    [Serializable]
+    class CaptainRank
+    {
+        public string captain;
+        public int rank;
+    }
+
     // Class asset names per slot; an empty name keeps that slot's default.
     [Serializable]
     class CaptainLoadout
@@ -49,6 +56,7 @@ public static class RunSave
         public List<string> recruitOffer = new();
         public List<CaptainXp> xp = new();
         public List<CaptainApproval> bestApproval = new();
+        public List<CaptainRank> startRanks = new();
         public List<CaptainLoadout> loadouts = new();
         public List<GiftStack> gifts = new();
         public WorldMap map;
@@ -82,6 +90,8 @@ public static class RunSave
             file.xp.Add(new CaptainXp { captain = entry.Key.name, xp = entry.Value });
         foreach (KeyValuePair<CaptainData, float> entry in run.AllBestApprovals)
             file.bestApproval.Add(new CaptainApproval { captain = entry.Key.name, approval = entry.Value });
+        foreach (KeyValuePair<CaptainData, int> entry in run.AllStartRanks)
+            file.startRanks.Add(new CaptainRank { captain = entry.Key.name, rank = entry.Value });
         foreach (KeyValuePair<CaptainData, SoldierClassData[]> entry in run.AllLoadouts)
         {
             var loadout = new CaptainLoadout { captain = entry.Key.name };
@@ -135,6 +145,8 @@ public static class RunSave
             if (byName.TryGetValue(entry.captain, out CaptainData captain)) run.AddXp(captain, entry.xp);
         foreach (CaptainApproval entry in file.bestApproval)
             if (byName.TryGetValue(entry.captain, out CaptainData captain)) run.SetBestApproval(captain, entry.approval);
+        foreach (CaptainRank entry in file.startRanks)
+            if (byName.TryGetValue(entry.captain, out CaptainData captain)) run.SetStartRank(captain, entry.rank);
 
         var classByName = new Dictionary<string, SoldierClassData>();
         if (classes != null)

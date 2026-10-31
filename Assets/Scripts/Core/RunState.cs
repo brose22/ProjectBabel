@@ -11,6 +11,8 @@ public class RunState
     readonly Dictionary<CaptainData, int> captainXp = new();
     // Each captain's highest approval seen this run, for the walkout rule.
     readonly Dictionary<CaptainData, float> bestApprovalThisRun = new();
+    // Each captain's bond rank when it was first seen this run, which caps how far it can rise.
+    readonly Dictionary<CaptainData, int> startRanks = new();
     // Captains who have walked out; they sit out the rest of this run only (GDD).
     readonly HashSet<CaptainData> departed = new();
     // The soldier class the player picked for each captain's slots, from the party's details
@@ -44,7 +46,19 @@ public class RunState
     public IEnumerable<KeyValuePair<CaptainData, float>> AllBestApprovals => bestApprovalThisRun;
     public IEnumerable<CaptainData> Departed => departed;
 
+    public IEnumerable<KeyValuePair<CaptainData, int>> AllStartRanks => startRanks;
+
     public void SetBestApproval(CaptainData captain, float approval) => bestApprovalThisRun[captain] = approval;
+    public void SetStartRank(CaptainData captain, int rank) => startRanks[captain] = rank;
+
+    // The rank the captain had when this run first touched its approval. Every approval change
+    // asks for this before applying itself, so the first ask sees the rank the run began with.
+    public int StartRankOf(CaptainData captain)
+    {
+        if (!startRanks.TryGetValue(captain, out int rank))
+            startRanks[captain] = rank = ApprovalStore.RankOf(captain);
+        return rank;
+    }
 
     public void AddGold(int amount) => Gold += Mathf.Max(0, amount);
 
