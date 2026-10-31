@@ -34,10 +34,22 @@ public class MatchData : ScriptableObject
     [Range(0f, 1f)] public float restHealFraction = 0.3f;
 
     [Header("Shop")]
-    [Tooltip("Gold for one approval gift at a shop.")]
-    public int giftCost = 75;
-    [Tooltip("Approval a gift adds to the captain it is given to (approval runs -100 to 100).")]
-    public float giftApproval = 10f;
+    [Tooltip("Gifts every shop sells. They go to the run's inventory and are given to captains from the party window.")]
+    public List<GiftData> shopGifts = new();
+    [Tooltip("How many of those gifts a single shop has on its shelves.")]
+    public int shopSize = 6;
+
+    // The least a gift costs, used by the AI to judge whether a shop is worth visiting.
+    public int GiftCost
+    {
+        get
+        {
+            int cheapest = int.MaxValue;
+            foreach (GiftData gift in shopGifts)
+                if (gift != null) cheapest = Mathf.Min(cheapest, gift.cost);
+            return cheapest == int.MaxValue ? 75 : cheapest;
+        }
+    }
 
     [Header("Events")]
     [Tooltip("Events that event nodes on the world map pick from.")]

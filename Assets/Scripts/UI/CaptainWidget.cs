@@ -36,7 +36,8 @@ public class CaptainWidget
 
     public void Update()
     {
-        Tower tower = placement.Selected;
+        // Out of the way while the player picks where to move; right-click or Esc still cancels.
+        Tower tower = placement.IsMoving ? null : placement.Selected;
         string newKey = Key(tower);
         if (newKey != key)
         {

@@ -11,9 +11,12 @@ public static class GameEvents
     public static event Action<Enemy> EnemyArrived;
     public static event Action<Soldier> SoldierDied;
     public static event Action<Tower> TowerPlaced;
-    public static event Action<Tower> TowerMoved;
     public static event Action<Tower> TowerSold;
     public static event Action<Tower> AbilityUsed;
+    // A tower's soldier, ability or burn hurt the boss.
+    public static event Action<Tower> BossDamaged;
+    // Gold or reserve was spent on the army: restoring a tower or retraining a soldier.
+    public static event Action GoldSpent;
     // Damage an enemy took, after weakness: the tower whose soldier, ability or burn dealt it (null
     // when none did), the amount actually taken and the element it came as, if any.
     public static event Action<Tower, float, Element?> DamageDealt;
@@ -26,6 +29,8 @@ public static class GameEvents
     public static event Action<Tower> CaptainLeveledUp;
     public static event Action<CaptainData> ApprovalChanged;
     public static event Action<CaptainData> BondRankUp;
+    // An approval change with its reason ("liked Kills") and the amount actually applied.
+    public static event Action<ApprovalNotice> ApprovalNoticed;
     // True for a win, false for a loss.
     public static event Action<bool> MatchEnded;
 
@@ -34,9 +39,10 @@ public static class GameEvents
     public static void RaiseEnemyArrived(Enemy enemy) => EnemyArrived?.Invoke(enemy);
     public static void RaiseSoldierDied(Soldier soldier) => SoldierDied?.Invoke(soldier);
     public static void RaiseTowerPlaced(Tower tower) => TowerPlaced?.Invoke(tower);
-    public static void RaiseTowerMoved(Tower tower) => TowerMoved?.Invoke(tower);
     public static void RaiseTowerSold(Tower tower) => TowerSold?.Invoke(tower);
     public static void RaiseAbilityUsed(Tower tower) => AbilityUsed?.Invoke(tower);
+    public static void RaiseBossDamaged(Tower tower) => BossDamaged?.Invoke(tower);
+    public static void RaiseGoldSpent() => GoldSpent?.Invoke();
     public static void RaiseDamageDealt(Tower source, float amount, Element? element) => DamageDealt?.Invoke(source, amount, element);
     public static void RaiseDrawRateChanged(Tower tower) => DrawRateChanged?.Invoke(tower);
     public static void RaiseWaveStarted(int waveNumber) => WaveStarted?.Invoke(waveNumber);
@@ -47,6 +53,7 @@ public static class GameEvents
     public static void RaiseCaptainLeveledUp(Tower tower) => CaptainLeveledUp?.Invoke(tower);
     public static void RaiseApprovalChanged(CaptainData captain) => ApprovalChanged?.Invoke(captain);
     public static void RaiseBondRankUp(CaptainData captain) => BondRankUp?.Invoke(captain);
+    public static void RaiseApprovalNoticed(ApprovalNotice notice) => ApprovalNoticed?.Invoke(notice);
     public static void RaiseMatchEnded(bool won) => MatchEnded?.Invoke(won);
 
     // Statics survive play sessions when domain reload is disabled, so clear them on entry.
@@ -58,9 +65,10 @@ public static class GameEvents
         EnemyArrived = null;
         SoldierDied = null;
         TowerPlaced = null;
-        TowerMoved = null;
         TowerSold = null;
         AbilityUsed = null;
+        BossDamaged = null;
+        GoldSpent = null;
         DamageDealt = null;
         DrawRateChanged = null;
         WaveStarted = null;
@@ -71,6 +79,7 @@ public static class GameEvents
         CaptainLeveledUp = null;
         ApprovalChanged = null;
         BondRankUp = null;
+        ApprovalNoticed = null;
         MatchEnded = null;
     }
 }

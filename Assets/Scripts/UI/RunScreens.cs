@@ -34,6 +34,13 @@ public class RunScreens : MonoBehaviour
     // Captain details window.
     const float DetailsWidth = 560f;
     const float DetailsPortraitSize = 96f;
+    // Inventory and gift windows.
+    // Shop shelves: three cards across the 520 px stop panel.
+    const int ShopColumns = 3;
+    static readonly Vector2 ShopCardSize = new(152f, 116f);
+    // The captain window sits on the right edge and the gift window takes the room to its left.
+    const float GiftWindowWidth = UIKit.ReferenceWidth - DetailsWidth - 3f * UIKit.Pad;
+    const float GiftListHeight = 220f;
     // Opaque, so the map never shows through the window.
     static readonly Color WindowColor = new(UIKit.PanelColor.r, UIKit.PanelColor.g, UIKit.PanelColor.b, 1f);
     // Darker than the accent gold, so the meter's white text stays readable on it.
@@ -365,24 +372,60 @@ public class RunScreens : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
         UIKit.Button(buttons, "Abandon run", match.RestartRun, 160f, 24f);
+        if (Debug.isDebugBuild)
+            UIKit.Button(buttons, "DEBUG: add a shop", match.CheatAddShop, 180f, 24f);
 
-        BuildPartyDrawer(root, run);
+        // Two drawers share the left edge, the inventory's tab under the party's. Only one is open
+        // at a time; each is built over the last, so the later one's blocker covers the earlier.
+        openDrawer = null;
+        BuildDrawer(root, "Party", "PARTY", 0f,
+            $"PARTY   <color={UIKit.Hex(UIKit.MutedTextColor)}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>",
+            list =>
+            {
+                foreach (CaptainData captain in run.Party)
+                    PartyCard(list.content, run, captain);
+            });
+        BuildDrawer(root, "Inventory", "INVENTORY", -(DrawerTabSize.y + UIKit.Gap), "INVENTORY",
+            list =>
+            {
+                // Rebuilt when a gift is given from a captain's window.
+                string shown = null;
+                refreshers.Add(() =>
+                {
+                    string now = InventorySignature(run);
+                    if (now == shown) return;
+                    shown = now;
+                    BuildGiftRows(list.content, run, null, null);
+                });
+            });
     }
 
-    // The party in a drawer that slides in from the left. Its tab stays on the screen edge while
-    // it's closed; the tab, the Close button or a click beside the drawer toggles it.
-    void BuildPartyDrawer(RectTransform root, RunState run)
-    {
-        bool open = false;
-        float shown = 0f;
+    // The id of the map drawer that is open, or null when none is.
+    string openDrawer;
 
-        RectTransform blocker = UIKit.Stretch(UIKit.Panel(root, "Drawer Blocker", new Color(0f, 0f, 0f, 0.4f)));
+    string InventorySignature(RunState run)
+    {
+        var parts = new List<string>();
+        foreach (GiftData gift in match.Data.shopGifts)
+            if (gift != null) parts.Add(run.GiftCount(gift).ToString());
+        return string.Join(",", parts);
+    }
+
+    // A drawer that slides in from the left. Its tab stays on the screen edge while it's closed,
+    // tabOffsetY below the middle; the tab, the Close button or a click beside the drawer toggles
+    // it. fill adds the contents to the scrolling list.
+    void BuildDrawer(RectTransform root, string id, string tabText, float tabOffsetY, string headerText, Action<ScrollRect> fill)
+    {
+        float shown = 0f;
+        Action<bool> setOpen = open => openDrawer = open ? id : null;
+
+        RectTransform blocker = UIKit.Stretch(UIKit.Panel(root, id + " Drawer Blocker", new Color(0f, 0f, 0f, 0.4f)));
         var dismiss = blocker.gameObject.AddComponent<Button>();
         dismiss.transition = Selectable.Transition.None;
-        dismiss.onClick.AddListener(() => open = false);
+        dismiss.onClick.AddListener(() => setOpen(false));
         var blockerFade = blocker.gameObject.AddComponent<CanvasGroup>();
 
-        RectTransform drawer = UIKit.Box(root, "Party Drawer");
+        RectTransform drawer = UIKit.Box(root, id + " Drawer");
         drawer.anchorMin = Vector2.zero;
         drawer.anchorMax = new Vector2(0f, 1f);
         drawer.pivot = new Vector2(0f, 0.5f);
@@ -391,22 +434,19 @@ public class RunScreens : MonoBehaviour
 
         Transform title = UIKit.Group(drawer, "Title");
         UIKit.Layout<HorizontalLayoutGroup>(title, 0, 6);
-        string muted = UIKit.Hex(UIKit.MutedTextColor);
-        Text header = UIKit.Label(title, $"PARTY   <color={muted}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>", 10,
-            color: UIKit.AccentColor);
+        Text header = UIKit.Label(title, headerText, 10, color: UIKit.AccentColor);
         header.fontStyle = FontStyle.Bold;
         UIKit.Size(header, flexibleWidth: 1f);
-        UIKit.Button(title, "Close", () => open = false, 60f, 22f);
+        UIKit.Button(title, "Close", () => setOpen(false), 60f, 22f);
 
-        ScrollRect list = UIKit.ScrollList(drawer, "Captains", UIKit.Gap);
+        ScrollRect list = UIKit.ScrollList(drawer, "Contents", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        foreach (CaptainData captain in run.Party)
-            PartyCard(list.content, run, captain);
+        fill(list);
 
         // The tab hangs off the drawer's right edge, so it rides along as the drawer slides.
-        Button tab = UIKit.Button(drawer, "", () => open = !open, DrawerTabSize.x, DrawerTabSize.y);
+        Button tab = UIKit.Button(drawer, "", () => setOpen(openDrawer != id), DrawerTabSize.x, DrawerTabSize.y);
         tab.GetComponent<LayoutElement>().ignoreLayout = true;
-        UIKit.Place((RectTransform)tab.transform, new Vector2(1f, 0.5f), Vector2.zero, DrawerTabSize);
+        UIKit.Place((RectTransform)tab.transform, new Vector2(1f, 0.5f), new Vector2(0f, tabOffsetY), DrawerTabSize);
         ((RectTransform)tab.transform).pivot = new Vector2(0f, 0.5f);
         Text tabLabel = tab.GetComponentInChildren<Text>();
         tabLabel.fontStyle = FontStyle.Bold;
@@ -415,13 +455,16 @@ public class RunScreens : MonoBehaviour
 
         refreshers.Add(() =>
         {
+            bool open = openDrawer == id;
             shown = Mathf.MoveTowards(shown, open ? 1f : 0f, Time.unscaledDeltaTime / DrawerSlideSeconds);
             float eased = shown * shown * (3f - 2f * shown);
             // Whole reference pixels, so the frame's texels stay crisp mid-slide.
             drawer.anchoredPosition = new Vector2(Mathf.Round(Mathf.Lerp(-DrawerWidth, 0f, eased)), 0f);
             blocker.gameObject.SetActive(shown > 0f);
             blockerFade.alpha = eased;
-            tabLabel.text = open ? "CLOSE" : "PARTY";
+            tabLabel.text = open ? "CLOSE" : tabText;
+            // While the other drawer is open its tab would sit on top of this one, so this one waits.
+            drawer.gameObject.SetActive(shown > 0f || openDrawer == null);
         });
     }
 
@@ -434,13 +477,15 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(card, flexibleWidth: 1f);
         UIKit.Clickable(card, () => ShowCaptainDetails(run, captain));
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
-        PartyCardBody(card, captain, departed ? "WALKED OUT" : $"LV {level}", departed ? UIKit.BadColor : UIKit.AccentColor, out _, out _);
+        PartyCardBody(card, captain, departed ? "WALKED OUT" : $"LV {level}", departed ? UIKit.BadColor : UIKit.AccentColor, out _, out _, live: true);
         if (departed) card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
     }
 
     // The party card's face, shared with run setup: portrait on the left; name and tag, element
     // and role icons, bond, and special on the right.
-    void PartyCardBody(RectTransform card, CaptainData captain, string tagText, Color tagColor, out Text name, out Text tag)
+    // With live, the bond follows approval changes; only for cards built with the screen, since
+    // setup rebuilds its cards from inside a refresher, which can't add to the list it is running.
+    void PartyCardBody(RectTransform card, CaptainData captain, string tagText, Color tagColor, out Text name, out Text tag, bool live = false)
     {
         HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(card, 6, 8);
         layout.childAlignment = TextAnchor.UpperLeft;
@@ -472,8 +517,11 @@ public class RunScreens : MonoBehaviour
         UIKit.Label(tags, captain.role.ToString(), 12);
 
         string muted = UIKit.Hex(UIKit.MutedTextColor);
-        UIKit.Label(info, $"<color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))} " +
-                          $"<color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>", 12);
+        string Bond() => $"<color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))} " +
+                         $"<color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>";
+        // Live, so a gift given from the details window shows on the card behind it.
+        if (live) UIKit.LiveLabel(info, Bond, refreshers, 12);
+        else UIKit.Label(info, Bond(), 12);
         Transform special = UIKit.Group(info, "Special");
         UIKit.Layout<HorizontalLayoutGroup>(special, 0, 4);
         UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, IconSize);
@@ -492,11 +540,12 @@ public class RunScreens : MonoBehaviour
         RectTransform window = UIKit.Box(overlay, "Window", WindowColor);
         // Swallows clicks on the window, which would otherwise bubble up to the overlay and close it.
         window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(DetailsWidth, 0f));
+        UIKit.Place(window, new Vector2(1f, 0.5f), new Vector2(-UIKit.Pad, 0f), new Vector2(DetailsWidth, 0f));
         UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
 
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
-        DetailsHeader(window, run, captain, level);
+        var detailRefreshers = new List<Action>();
+        DetailsHeader(window, run, captain, level, detailRefreshers);
 
         UIKit.Size(UIKit.Header(window, "Stats"), flexibleWidth: 1f);
         RectTransform stats = UIKit.Group(window, "Stats");
@@ -525,11 +574,118 @@ public class RunScreens : MonoBehaviour
         BuildLoadout(window, run, captain);
 
         UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
-        UIKit.Size(UIKit.Button(window, "Close", () => Destroy(overlay.gameObject)), height: 26f, flexibleWidth: 1f);
+        Transform buttons = UIKit.Group(window, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 6);
+        UIKit.Size(buttons, flexibleWidth: 1f);
+        if (!run.HasDeparted(captain))
+            UIKit.Size(UIKit.Button(buttons, "Gift", () => ShowGiftWindow(run, captain, () => UIKit.Refresh(detailRefreshers))),
+                height: 26f, flexibleWidth: 1f);
+        UIKit.Size(UIKit.Button(buttons, "Close", () => Destroy(overlay.gameObject)), height: 26f, flexibleWidth: 1f);
+    }
+
+    // ---------- Inventory and gifts ----------
+
+    // A window over the map. A click beside it dismisses it, and so does rebuilding the screen.
+    RectTransform OpenWindow(string name, float width, Vector2 anchor, Vector2 offset, float dim)
+    {
+        RectTransform backdrop = UIKit.Stretch(UIKit.Panel(screen, name, new Color(0f, 0f, 0f, dim)));
+        var dismiss = backdrop.gameObject.AddComponent<Button>();
+        dismiss.transition = Selectable.Transition.None;
+        dismiss.onClick.AddListener(() => Destroy(backdrop.gameObject));
+
+        RectTransform window = UIKit.Box(backdrop, "Window", WindowColor);
+        // Swallows clicks on the window, which would otherwise bubble up to the backdrop and close it.
+        window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
+        UIKit.Place(window, anchor, offset, new Vector2(width, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
+        return window;
+    }
+
+    // The window for giving a captain a gift: their portrait, what they say, and the items you
+    // carry, each marked liked, disliked or neutral. onGiven runs after each gift.
+    void ShowGiftWindow(RunState run, CaptainData captain, Action onGiven)
+    {
+        // Beside the captain window, not over it, and no second dimming layer.
+        RectTransform window = OpenWindow("Gift", GiftWindowWidth, new Vector2(1f, 0.5f),
+            new Vector2(-(DetailsWidth + 2f * UIKit.Pad), 0f), 0f);
+        GameObject backdrop = window.parent.gameObject;
+
+        RectTransform top = UIKit.Group(window, "Top");
+        UIKit.Layout<HorizontalLayoutGroup>(top, 0, 12).childAlignment = TextAnchor.UpperLeft;
+        UIKit.Size(top, flexibleWidth: 1f);
+        RectTransform frame = UIKit.Box(top, "Portrait", UIKit.InsetColor, blocksClicks: false);
+        UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
+        UIKit.Icon(frame, captain.portrait, DetailsPortraitSize);
+
+        RectTransform info = UIKit.Group(top, "Info");
+        UIKit.Layout<VerticalLayoutGroup>(info, 0, 4);
+        UIKit.Size(info, flexibleWidth: 1f);
+        UIKit.Shadowed(UIKit.Label(info, captain.displayName, 20)).fontStyle = FontStyle.Bold;
+        var live = new List<Action>();
+        UIKit.LiveLabel(info, () => $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {ApprovalStore.ApprovalOf(captain):0}",
+            live, 12, color: UIKit.MutedTextColor);
+        Text speech = UIKit.Label(info, $"\"{captain.GiftGreeting}\"", 14);
+        UIKit.Size(speech, flexibleWidth: 1f);
+
+        UIKit.Size(UIKit.Header(window, "Inventory"), flexibleWidth: 1f);
+        ScrollRect list = UIKit.ScrollList(window, "Items", UIKit.Gap);
+        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
+        Action<GiftData> give = null;
+        give = gift =>
+        {
+            GiftReaction? reaction = match.GiveGift(captain, gift);
+            if (reaction == null) return;
+            speech.text = $"\"{captain.GiftLine(reaction.Value)}\"";
+            UIKit.Refresh(live);
+            onGiven?.Invoke();
+            BuildGiftRows(list.content, run, captain, give);
+        };
+        BuildGiftRows(list.content, run, captain, give);
+        UIKit.Refresh(live);
+        UIKit.Size(UIKit.Button(window, "Close", () => Destroy(backdrop)), height: 26f, flexibleWidth: 1f);
+    }
+
+    // One row per item carried. With a captain, each row says how they feel about the item and has
+    // a Give button; without one, the rows are just a list.
+    void BuildGiftRows(Transform list, RunState run, CaptainData captain, Action<GiftData> give)
+    {
+        UIKit.Clear(list);
+        bool any = false;
+        foreach (GiftData gift in match.Data.shopGifts)
+        {
+            int count = run.GiftCount(gift);
+            if (gift == null || count <= 0) continue;
+            any = true;
+            RectTransform row = UIKit.Box(list, gift.displayName, CardColor, blocksClicks: false);
+            UIKit.Size(row, flexibleWidth: 1f);
+            UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
+            UIKit.Icon(row, gift.icon, 32f);
+
+            RectTransform text = UIKit.Group(row, "Text");
+            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
+            UIKit.Size(text, flexibleWidth: 1f);
+            UIKit.Label(text, count > 1 ? $"{gift.displayName}  x{count}" : gift.displayName, 14).fontStyle = FontStyle.Bold;
+            if (captain == null)
+            {
+                if (!string.IsNullOrEmpty(gift.description)) UIKit.Label(text, gift.description, 11, color: UIKit.MutedTextColor);
+                continue;
+            }
+            // With a captain, the second line says how they feel about it instead.
+            GiftReaction reaction = captain.ReactionTo(gift);
+            string change = $"{gift.ApprovalFor(reaction):+0;-0;0}";
+            Color color = reaction == GiftReaction.Liked ? UIKit.GoodColor : reaction == GiftReaction.Disliked ? UIKit.BadColor : UIKit.MutedTextColor;
+            string word = reaction == GiftReaction.Liked ? "Likes it" : reaction == GiftReaction.Disliked ? "Dislikes it" : "Neutral";
+            UIKit.Label(text, $"{word}  {change}", 12, color: color);
+            GiftData chosen = gift;
+            UIKit.Button(row, "Give", () => give(chosen), 60f, 24f);
+        }
+        if (!any)
+            UIKit.Label(list, captain == null ? "Nothing yet. Buy gifts at a shop." : "You have no gifts to give. Buy some at a shop.",
+                13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
     }
 
     // Portrait, then name, level and XP, element (with its status), role and bond.
-    void DetailsHeader(Transform window, RunState run, CaptainData captain, int level)
+    void DetailsHeader(Transform window, RunState run, CaptainData captain, int level, List<Action> detailRefreshers)
     {
         RectTransform top = UIKit.Group(window, "Top");
         UIKit.Layout<HorizontalLayoutGroup>(top, 0, 12).childAlignment = TextAnchor.UpperLeft;
@@ -552,7 +708,8 @@ public class RunScreens : MonoBehaviour
 
         // Nothing here changes while the window is open, so the meters are drawn once rather than
         // joining the screen's refreshers, which would outlive the window.
-        var drawOnce = new List<Action>();
+        // The bond meter is redrawn when a gift is given, through detailRefreshers.
+        var drawOnce = detailRefreshers;
         int xp = run.XpOf(captain);
         bool maxLevel = level >= LevelMath.MaxLevel;
         int from = LevelMath.XpForLevel(level), to = LevelMath.XpForLevel(level + 1);
@@ -570,9 +727,8 @@ public class RunScreens : MonoBehaviour
         UIKit.Icon(elementRow, match.Data.RoleIcon(captain.role), IconSize);
         UIKit.Label(elementRow, captain.role.ToString(), 12);
 
-        float approval = ApprovalStore.ApprovalOf(captain);
-        UIKit.LiveBar(info, () => (approval - BondMath.MinApproval) / (BondMath.MaxApproval - BondMath.MinApproval),
-            () => $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {approval:0}", BondBarColor, drawOnce);
+        UIKit.LiveBar(info, () => (ApprovalStore.ApprovalOf(captain) - BondMath.MinApproval) / (BondMath.MaxApproval - BondMath.MinApproval),
+            () => $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {ApprovalStore.ApprovalOf(captain):0}", BondBarColor, drawOnce);
         UIKit.Refresh(drawOnce);
     }
 
@@ -716,7 +872,7 @@ public class RunScreens : MonoBehaviour
                 return $"A tougher battle: enemies from {match.Data.eliteLayerBonus} layers further on, " +
                     $"{match.Data.eliteGoldMultiplier:0.#}x Gold from kills, and a wider choice of captains to recruit on a win.";
             case NodeKind.Rest: return $"Rest instead of fighting. Heals {match.RestAmount} health.";
-            case NodeKind.Shop: return "No battle. Spend Gold to raise captains' approval.";
+            case NodeKind.Shop: return "No battle. Spend Gold on gifts for your captains.";
             case NodeKind.Event: return "No battle. Something unexpected happens.";
             default: return "A battle. Defend the city against the waves.";
         }
@@ -762,13 +918,28 @@ public class RunScreens : MonoBehaviour
     void BuildShop(RectTransform panel)
     {
         RunState run = RunState.Current;
-        StopHeader(panel, "SHOP", $"Buy a gift for a captain: {match.Data.giftCost} Gold for +{match.Data.giftApproval:0} approval.");
-        foreach (CaptainData captain in run.Party)
+        StopHeader(panel, "SHOP", "Buy gifts to carry with you. Give them to captains from the party window on the map.");
+        // The shelves: a grid of cards, each with the gift's icon, name, price and how many you hold.
+        RectTransform grid = UIKit.Group(panel, "Shelves");
+        var cells = grid.gameObject.AddComponent<GridLayoutGroup>();
+        cells.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        cells.constraintCount = ShopColumns;
+        cells.cellSize = ShopCardSize;
+        cells.spacing = new Vector2(8f, 8f);
+        cells.childAlignment = TextAnchor.UpperCenter;
+        List<GiftData> stock = match.ShopStock;
+        int rows = Mathf.Max(1, Mathf.CeilToInt(stock.Count / (float)ShopColumns));
+        UIKit.Size(grid, height: rows * ShopCardSize.y + (rows - 1) * 8f, flexibleWidth: 1f);
+        foreach (GiftData gift in stock)
         {
-            if (run.HasDeparted(captain)) continue;
-            UIKit.LiveButton(panel,
-                () => $"{captain.displayName}   Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {ApprovalStore.ApprovalOf(captain):0}",
-                () => match.BuyGift(captain), refreshers, () => match.CanBuyGift(captain), width: 400f, height: 26f);
+            RectTransform card = UIKit.Box(grid, gift.displayName, CardColor, blocksClicks: false);
+            UIKit.Layout<VerticalLayoutGroup>(card, 6, 3).childAlignment = TextAnchor.UpperCenter;
+            UIKit.Icon(card, gift.icon, 32f);
+            UIKit.Label(card, gift.displayName, 13, TextAnchor.MiddleCenter).fontStyle = FontStyle.Bold;
+            UIKit.LiveLabel(card, () => $"{gift.cost} Gold   (owned {run.GiftCount(gift)})", refreshers, 11, TextAnchor.MiddleCenter,
+                UIKit.MutedTextColor);
+            UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 25f),
+                flexibleWidth: 1f);
         }
         UIKit.Button(panel, "Leave the shop", match.LeaveStop, 220f, 32f);
     }

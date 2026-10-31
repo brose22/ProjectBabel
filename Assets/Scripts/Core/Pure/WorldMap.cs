@@ -68,7 +68,18 @@ public class WorldMap
     // The city picked for the next match, or -1 while the player is choosing.
     public int target = -1;
 
-    public int BaseId => nodes.Count - 1;
+    // The base is the one city in the last layer. It is usually the last node, but AddStop can
+    // append nodes after it.
+    public int BaseId
+    {
+        get
+        {
+            for (int i = nodes.Count - 1; i >= 0; i--)
+                if (nodes[i].layer == layerCount - 1) return i;
+            return nodes.Count - 1;
+        }
+    }
+
     public MapNode Base => nodes[BaseId];
     public MapNode Current => current >= 0 ? nodes[current] : null;
     public MapNode Target => target >= 0 ? nodes[target] : null;
@@ -97,6 +108,31 @@ public class WorldMap
         foreach (MapNode node in nodes)
             if (node.layer == layer) size++;
         return size;
+    }
+
+    // Adds a stop of the given kind as one more choice for the next step, in the same layer as
+    // the current choices and leading on wherever the first of them does. Null when the next step
+    // is the base or a pick is already made. For testing; generated maps never need it.
+    public MapNode AddStop(NodeKind kind)
+    {
+        if (IsComplete || target >= 0) return null;
+        List<MapNode> choices = Choices();
+        if (choices.Count == 0 || choices[0].layer >= layerCount - 1) return null;
+        MapNode sibling = choices[0];
+        var stop = new MapNode
+        {
+            id = nodes.Count,
+            layer = sibling.layer,
+            lane = LayerSize(sibling.layer),
+            layout = sibling.layout,
+            kind = kind,
+            seed = nodes.Count * 7919 + layerCount,
+            next = new List<int>(sibling.next),
+            revealed = true,
+        };
+        nodes.Add(stop);
+        if (current >= 0) nodes[current].next.Add(stop.id);
+        return stop;
     }
 
     public bool TryChoose(int id)

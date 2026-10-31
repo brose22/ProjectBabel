@@ -94,7 +94,7 @@ public class MatchManager : MonoBehaviour
     void Awake()
     {
         // Pick up a saved run if there is one, otherwise start fresh.
-        if (RunState.Current == null && !RunSave.TryResume(data.roster, data.availableClasses))
+        if (RunState.Current == null && !RunSave.TryResume(data.roster, data.availableClasses, data.shopGifts))
             RunState.StartNewRun(data.startingHealth, data.startingGold);
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
@@ -249,6 +249,7 @@ public class MatchManager : MonoBehaviour
     {
         if (!CanRestore(tower) || !RunState.Current.TrySpendGold(RestoreCost(tower))) return false;
         tower.Restore();
+        GameEvents.RaiseGoldSpent();
         return true;
     }
 
@@ -265,7 +266,6 @@ public class MatchManager : MonoBehaviour
         grid.ClearOccupant(tower.Cell);
         grid.SetOccupant(cell, tower);
         tower.MoveTo(cell, grid.CellCenter(cell));
-        GameEvents.RaiseTowerMoved(tower);
         return true;
     }
 
@@ -393,20 +393,49 @@ public class MatchManager : MonoBehaviour
         LeaveStop();
     }
 
-    // Party members who can take a gift at the shop: everyone who hasn't walked out.
-    public bool CanBuyGift(CaptainData captain) =>
-        State == MatchState.Stop && City.kind == NodeKind.Shop && captain != null && RunState.Current.Party.Contains(captain)
-        && !RunState.Current.HasDeparted(captain) && ApprovalStore.ApprovalOf(captain) < BondMath.MaxApproval
-        && RunState.Current.Gold >= data.giftCost;
-
-    // Buys a gift for a captain at the shop: Gold for approval. Saved straight away, since approval
-    // is saved with the bonds as soon as it changes.
-    public void BuyGift(CaptainData captain)
+    // The gifts on this shop's shelves: shopSize of the full list, picked by the shop's seed.
+    public List<GiftData> ShopStock
     {
-        if (!CanBuyGift(captain) || !RunState.Current.TrySpendGold(data.giftCost)) return;
-        ApprovalStore.Change(captain, data.giftApproval);
+        get
+        {
+            var stock = new List<GiftData>();
+            if (State != MatchState.Stop || City.kind != NodeKind.Shop) return stock;
+            foreach (int index in global::ShopStock.Pick(data.shopGifts.Count, data.shopSize, City.seed))
+                if (data.shopGifts[index] != null) stock.Add(data.shopGifts[index]);
+            return stock;
+        }
+    }
+
+    // A shop item the player can pay for right now.
+    public bool CanBuyGift(GiftData gift) =>
+        State == MatchState.Stop && City.kind == NodeKind.Shop && gift != null && RunState.Current.Gold >= gift.cost
+        && ShopStock.Contains(gift);
+
+    // Buys a gift at the shop for Gold; it goes into the run's inventory. Saved straight away so
+    // quitting at the shop keeps it.
+    public void BuyGift(GiftData gift)
+    {
+        if (!CanBuyGift(gift) || !RunState.Current.TrySpendGold(gift.cost)) return;
+        RunState.Current.AddGift(gift);
+        RunSave.Save(RunState.Current);
+    }
+
+    // Whether a captain can be given an item from the inventory: they're in the party, still here,
+    // and the player has one.
+    public bool CanGiveGift(CaptainData captain, GiftData gift) =>
+        captain != null && gift != null && RunState.Current.Party.Contains(captain)
+        && !RunState.Current.HasDeparted(captain) && RunState.Current.GiftCount(gift) > 0;
+
+    // Gives a captain one item, changing their approval by how they feel about it. Returns the
+    // reaction, or null when the gift couldn't be given.
+    public GiftReaction? GiveGift(CaptainData captain, GiftData gift)
+    {
+        if (!CanGiveGift(captain, gift) || !RunState.Current.TryRemoveGift(gift)) return null;
+        GiftReaction reaction = captain.ReactionTo(gift);
+        ApprovalStore.Change(captain, gift.ApprovalFor(reaction));
         ApprovalStore.Save();
         RunSave.Save(RunState.Current);
+        return reaction;
     }
 
     // The event at this event node, picked from the pool by the node's seed; null with no events.
@@ -518,6 +547,14 @@ public class MatchManager : MonoBehaviour
         if (!CanCheatRevealMap) return;
         foreach (MapNode node in RunState.Current.Map.nodes) node.revealed = true;
         if (State != MatchState.Map) return;
+        RunSave.Save(RunState.Current);
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
+    // Cheat: adds a shop as one more choice for the next step on the map, and redraws it.
+    public void CheatAddShop()
+    {
+        if (State != MatchState.Map || RunState.Current.Map.AddStop(NodeKind.Shop) == null) return;
         RunSave.Save(RunState.Current);
         SceneManager.LoadScene(gameObject.scene.name);
     }

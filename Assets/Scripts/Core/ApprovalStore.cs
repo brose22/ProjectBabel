@@ -49,12 +49,21 @@ public static class ApprovalStore
     }
 
     // Applies a change, clamped to the approval range, and returns the change actually made.
-    // Raises ApprovalChanged, and BondRankUp when the change reaches a new rank.
+    // Gains shrink with the captain's current rank, and during a run approval can't climb past
+    // the rank after the one the captain started with. Raises ApprovalChanged, and BondRankUp
+    // when the change reaches a new rank.
     public static float Change(CaptainData captain, float delta)
     {
         Entry entry = Get(captain);
         float before = entry.approval;
         int rankBefore = RankOf(captain);
+        if (delta > 0f)
+        {
+            delta *= BondMath.GainMultiplier(BondMath.RankFor(before));
+            if (RunState.Current != null)
+                delta = Mathf.Min(delta, Mathf.Max(0f, BondMath.RunApprovalCap(RunState.Current.StartRankOf(captain)) - before));
+        }
+        else if (RunState.Current != null) RunState.Current.StartRankOf(captain);
         entry.approval = BondMath.Clamp(before + delta);
         entry.bestRank = Mathf.Max(entry.bestRank, BondMath.RankFor(entry.approval));
         float applied = entry.approval - before;

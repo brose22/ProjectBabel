@@ -31,5 +31,16 @@ MonoBehaviour:
   specialChargeRate: 1
   level: 1
   refusalTemper: 0.75
-  likes: 010000000900000007000000
-  dislikes: 000000000800000005000000
+  likes: 010000000700000008000000
+  dislikes: 00000000050000000b000000
+  likedGifts:
+  - {fileID: 11400000, guid: b5e40e726839e714fa49ea6b47fe4d63, type: 2}
+  - {fileID: 11400000, guid: c79cb3c70f6766c49adb4c55a5c68e6a, type: 2}
+  - {fileID: 11400000, guid: 271fa504e5929804b9c00a22f12ef60a, type: 2}
+  dislikedGifts:
+  - {fileID: 11400000, guid: 868f156ada900b44884d4e41677c1d33, type: 2}
+  - {fileID: 11400000, guid: c6d96a7a9a1a5054da9b3e1080180468, type: 2}
+  giftGreeting: Ooh, is that for me?
+  giftLikedLine: Oh, I love it! It's perfect!
+  giftNeutralLine: Thanks! That's sweet of you.
+  giftDislikedLine: Um... thanks? I think I'll pass it on.
