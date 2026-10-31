@@ -295,7 +295,7 @@ public class MatchManager : MonoBehaviour
 
     public void SetRequestPause(bool paused)
     {
-        IsRequestPaused = paused;
+        IsRequestPaused = paused && GameSettings.PauseDuringRequests;
         ApplyTimeScale();
     }
 

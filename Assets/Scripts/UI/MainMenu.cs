@@ -227,6 +227,11 @@ public class MainMenu : MonoBehaviour
             step => GameSettings.SetTowerDisabledWaves(Wrap(GameSettings.TowerDisabledWaves + step, GameSettings.MaxTowerDisabledWaves + 1)));
         SettingsNote(column, "Rest of the wave: a disabled tower can be restored for Gold once the current wave ends.");
 
+        UIKit.Label(column, "Requests", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        SettingRow(column, "Pause during requests", () => GameSettings.PauseDuringRequests ? "On" : "Off",
+            _ => GameSettings.SetPauseDuringRequests(!GameSettings.PauseDuringRequests));
+        SettingsNote(column, "Off: the match keeps running while a captain waits for an answer, and the request still times out.");
+
         SettingsNote(column, "Reduce flashing: turn off Hit flash and swell and Leak edge flash. Health bar extras covers the draining ghost segment and hiding full bars.");
     }
 

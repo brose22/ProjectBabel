@@ -242,7 +242,7 @@ public class MatchHUD : MonoBehaviour
         AnswerButton(row, request, "Yes", RequestAnswer.Yes, YesColor, 40f);
 
         UIKit.LiveBar(card, () => Requests.SecondsLeft / CaptainRequests.ResponseSeconds,
-            () => $"Paused - {Mathf.CeilToInt(Requests.SecondsLeft)}s to answer", UIKit.ReserveBarColor, requestRefreshers, 12f);
+            () => $"{(GameSettings.PauseDuringRequests ? "Paused - " : "")}{Mathf.CeilToInt(Requests.SecondsLeft)}s to answer", UIKit.ReserveBarColor, requestRefreshers, 12f);
     }
 
     void AnswerButton(Transform card, CaptainRequests.Request request, string text, RequestAnswer answer, Color color, float width)
