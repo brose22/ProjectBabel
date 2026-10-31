@@ -104,7 +104,7 @@ public class MatchHUD : MonoBehaviour
         var parts = new List<string>();
         foreach ((string keys, string action) in new[]
                  {
-                     ("Click", "place / select"), ("M", "move"), ("X", "sell"), ("Space", "next wave"),
+                     ("Click", "place / select"), ("M", "move"), ("X", "sell"), ("Space", "next wave"), ("Wheel", "zoom"), ("Mid drag", "pan"),
                  })
             parts.Add($"<color={key}>{keys}</color> {action}");
         UIKit.Label(box, string.Join("   ", parts), 11, TextAnchor.MiddleRight, UIKit.TextColor);

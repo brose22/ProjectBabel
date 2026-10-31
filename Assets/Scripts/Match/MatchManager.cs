@@ -112,6 +112,8 @@ public class MatchManager : MonoBehaviour
         {
             cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
             cameraFocus = cam.TryGetComponent(out CameraFocus focus) ? focus : cam.gameObject.AddComponent<CameraFocus>();
+            if (!cam.TryGetComponent(out CameraPan pan)) pan = cam.gameObject.AddComponent<CameraPan>();
+            pan.Setup(grid);
         }
         if (!TryGetComponent(out Relationships _)) gameObject.AddComponent<Relationships>();
         if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
