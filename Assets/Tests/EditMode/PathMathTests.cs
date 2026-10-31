@@ -116,4 +116,31 @@ public class PathMathTests
         }
         return position;
     }
+
+    [Test]
+    public void LeftNormal_PointsLeftOfTheTravelDirection()
+    {
+        Assert.That(PathMath.LeftNormal(new Vector3(0f, 0f), new Vector3(10f, 0f)), Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(PathMath.LeftNormal(new Vector3(10f, 0f), new Vector3(10f, 10f)), Is.EqualTo(new Vector2(-1f, 0f)));
+    }
+
+    [Test]
+    public void LeftNormal_OfAZeroLengthSegmentIsZero() =>
+        Assert.That(PathMath.LeftNormal(Vector3.one, Vector3.one), Is.EqualTo(Vector2.zero));
+
+    [Test]
+    public void EaseNormal_MovesTowardTheTargetStaysUnitLengthAndArrives()
+    {
+        Vector2 current = new(0f, 1f);
+        Vector2 target = new(-1f, 0f);
+        Vector2 half = PathMath.EaseNormal(current, target, 0.5f);
+        Assert.That(half.magnitude, Is.EqualTo(1f).Within(1e-5f));
+        Assert.That(half.x, Is.LessThan(0f));
+        Assert.That(half.y, Is.GreaterThan(0f));
+        Assert.That(PathMath.EaseNormal(current, target, 1f), Is.EqualTo(target));
+    }
+
+    [Test]
+    public void EaseNormal_WithAZeroTargetKeepsTheCurrentDirection() =>
+        Assert.That(PathMath.EaseNormal(new Vector2(0f, 1f), Vector2.zero, 0.5f), Is.EqualTo(new Vector2(0f, 1f)));
 }
