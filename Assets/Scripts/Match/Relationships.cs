@@ -17,6 +17,21 @@ public readonly struct ApprovalNotice
     }
 }
 
+// One captain level-up, for the HUD to show. Levels gained at once make a single notice.
+public readonly struct LevelNotice
+{
+    public readonly CaptainData captain;
+    public readonly int previousLevel;
+    public readonly int level;
+
+    public LevelNotice(CaptainData captain, int previousLevel, int level)
+    {
+        this.captain = captain;
+        this.previousLevel = previousLevel;
+        this.level = level;
+    }
+}
+
 // Judges captains' likes and dislikes and changes their approval (GDD relationship system).
 // Play-style tags are judged at the end of each wave and the soldier mix at the end of the match,
 // along with a bonus for winning. A captain whose approval falls 20 below its best this run walks
@@ -45,6 +60,7 @@ public class Relationships : MonoBehaviour
 
     readonly Dictionary<CaptainData, WaveRecord> records = new();
     readonly Queue<ApprovalNotice> notices = new();
+    readonly Queue<LevelNotice> levelNotices = new();
     readonly Dictionary<CaptainData, float> approvalThisMatch = new();
     int waveLeaks;
     bool waveSold;
@@ -58,6 +74,12 @@ public class Relationships : MonoBehaviour
 
     // Takes the next approval change the HUD hasn't shown yet.
     public bool TryTakeNotice(out ApprovalNotice notice) => notices.TryDequeue(out notice);
+
+    // Takes the next level-up the HUD hasn't shown yet.
+    public bool TryTakeLevelNotice(out LevelNotice notice) => levelNotices.TryDequeue(out notice);
+
+    void OnCaptainLeveledUp(Tower tower, int previousLevel) =>
+        levelNotices.Enqueue(new LevelNotice(tower.Captain, previousLevel, tower.Level));
 
     void OnEnable()
     {
@@ -73,6 +95,7 @@ public class Relationships : MonoBehaviour
         GameEvents.BossDamaged += OnBossDamaged;
         GameEvents.GoldSpent += OnGoldSpent;
         GameEvents.ApprovalChanged += OnApprovalChanged;
+        GameEvents.CaptainLeveledUp += OnCaptainLeveledUp;
     }
 
     void OnDisable()
@@ -89,6 +112,7 @@ public class Relationships : MonoBehaviour
         GameEvents.BossDamaged -= OnBossDamaged;
         GameEvents.GoldSpent -= OnGoldSpent;
         GameEvents.ApprovalChanged -= OnApprovalChanged;
+        GameEvents.CaptainLeveledUp -= OnCaptainLeveledUp;
     }
 
     // Changes a captain's approval, halving gains while its tower's soldier mix is disapproved.
