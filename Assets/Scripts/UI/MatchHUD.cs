@@ -5,15 +5,14 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // The match HUD, built in uGUI at runtime: top bar, party bar, captain widget, move hint, captain
-// requests, approval messages and controls hint (RunScreens shows results). Labels and buttons
+// requests, approval toasts and controls hint (RunScreens shows results). Labels and buttons
 // refresh every frame; the captain widget and request cards rebuild only when their structure changes.
 public class MatchHUD : MonoBehaviour
 {
     const float TopBarHeight = 32f;
     // Left of the request cards, kept clear for the cheat window and captain debug panel.
     const float LeftColumnWidth = 310f;
-    const float MessagesWidth = 240f;
-    const float RequestWidth = UIKit.ReferenceWidth - LeftColumnWidth - MessagesWidth - 4 * UIKit.Pad;
+    const float RequestWidth = UIKit.ReferenceWidth - LeftColumnWidth - ApprovalToasts.Width - 4 * UIKit.Pad;
     static readonly Color NoColor = new(0.5f, 0.2f, 0.2f, 1f);
     static readonly Color YesColor = new(0.22f, 0.44f, 0.25f, 1f);
     static readonly Color HintColor = new(0.06f, 0.07f, 0.1f, 0.85f);
@@ -34,7 +33,7 @@ public class MatchHUD : MonoBehaviour
     RectTransform requestList;
     RectTransform moveHintBox;
     Text moveHint;
-    Text messages;
+    ApprovalToasts toasts;
     string requestKey;
     RectTransform pauseMenu;
 
@@ -58,13 +57,12 @@ public class MatchHUD : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(moveHintBox, 6, 0, fitContent: true);
         moveHint = UIKit.Shadowed(UIKit.Label(moveHintBox, "", 13, TextAnchor.MiddleCenter, UIKit.AccentColor));
 
-        // Between the left column and the approval messages, so none of them overlap.
+        // Between the left column and the approval toasts, so none of them overlap.
         requestList = UIKit.Group(canvas.transform, "Requests");
         UIKit.Place(requestList, new Vector2(0f, 1f), new Vector2(LeftColumnWidth + 2 * UIKit.Pad, -TopBarHeight - 36f), new Vector2(RequestWidth, 0f));
         UIKit.Layout<VerticalLayoutGroup>(requestList, 0, UIKit.Gap, fitContent: true);
 
-        messages = UIKit.Shadowed(UIKit.Label(canvas.transform, "", 12, TextAnchor.UpperRight));
-        UIKit.Place(messages.rectTransform, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -TopBarHeight - 8f), new Vector2(MessagesWidth, 120f));
+        toasts = new ApprovalToasts(canvas.transform, TopBarHeight + 8f);
 
         partyBar = new PartyBar(canvas.transform, match);
         BuildControlsHint();
@@ -87,7 +85,7 @@ public class MatchHUD : MonoBehaviour
         UpdateRequests();
         UpdateMoveHint();
         UpdatePauseMenu();
-        messages.text = Relationships != null ? MessagesText(Relationships.RecentMessages) : "";
+        toasts.Update(Relationships);
     }
 
     void OnDestroy()
@@ -110,24 +108,6 @@ public class MatchHUD : MonoBehaviour
                  })
             parts.Add($"<color={key}>{keys}</color> {action}");
         UIKit.Label(box, string.Join("   ", parts), 11, TextAnchor.MiddleRight, UIKit.TextColor);
-    }
-
-    // Approval changes end in a signed number; colour it so gains and losses read at a glance.
-    static string MessagesText(IEnumerable<string> recent)
-    {
-        var lines = new List<string>();
-        foreach (string message in recent)
-        {
-            int split = message.LastIndexOf(' ');
-            string amount = split >= 0 ? message.Substring(split + 1) : "";
-            if (amount.Length > 1 && (amount[0] == '+' || amount[0] == '-'))
-            {
-                Color color = amount[0] == '+' ? UIKit.GoodColor : UIKit.BadColor;
-                lines.Add($"{message.Substring(0, split)} <color={UIKit.Hex(color)}>{amount}</color>");
-            }
-            else lines.Add(message);
-        }
-        return string.Join("\n", lines);
     }
 
     // ---------- Top bar ----------
