@@ -27,6 +27,10 @@ public class Enemy : MonoBehaviour
 
     Vector3[] path;
     int nextPoint;
+    // Where the enemy is on the road's centre line; transform.position adds the sideways lane offset to it.
+    Vector3 lanePosition;
+    float laneOffset;
+    Vector2 laneNormal;
     float attackTimer;
     float towerAttackTimer;
     // Seconds left on each status, indexed by StatusKind.
@@ -50,6 +54,10 @@ public class Enemy : MonoBehaviour
     static readonly Color StarColor = new(1f, 0.9f, 0.3f);
     const int StarCount = 3;
     const float DizzyWobbleDegrees = 18f;
+    // Most an enemy strays sideways from the road's centre line, in tiles; each picks its own lane.
+    const float LaneSpread = 0.3f;
+    // How fast the lane direction eases round a corner, per second.
+    const float LaneTurnSpeed = 10f;
     float squashUntil;
     // The weakness dot pulses gently, and harder when a hit matches the weakness.
     const float WeaknessLabelGapSeconds = 0.6f;
@@ -80,7 +88,10 @@ public class Enemy : MonoBehaviour
         path = pathPoints;
         nextPoint = 1;
         MaxHealth = Health = data.maxHealth * healthMultiplier;
-        transform.position = path[0];
+        lanePosition = path[0];
+        laneOffset = Random.Range(-LaneSpread, LaneSpread);
+        laneNormal = PathMath.LeftNormal(path[0], path[1]);
+        ApplyLane();
         ApplyArt(data);
         healthBar.UseEnemyStyle(Data.elite ? 1 : 0);
         healthBar.SetFraction(1f);
@@ -184,14 +195,26 @@ public class Enemy : MonoBehaviour
         float step = MoveSpeed * Time.deltaTime;
         if (HasStatus(StatusKind.Dizzy))
         {
-            transform.position = PathMath.MoveBack(path, nextPoint, transform.position, step, out nextPoint);
+            lanePosition = PathMath.MoveBack(path, nextPoint, lanePosition, step, out nextPoint);
+            ApplyLane();
             return;
         }
 
         Vector3 target = path[nextPoint];
-        transform.position = Vector3.MoveTowards(transform.position, target, step);
-        if (transform.position == target && ++nextPoint >= path.Length)
+        lanePosition = Vector3.MoveTowards(lanePosition, target, step);
+        ApplyLane();
+        if (lanePosition == target && ++nextPoint >= path.Length)
             Leak();
+    }
+
+    // Places the enemy beside the centre line: its lane offset along the sideways direction of the
+    // segment it is on, which eases round corners. Everything that reads transform.position (blocking,
+    // soldier reach, targeting) sees the enemy where it is drawn.
+    void ApplyLane()
+    {
+        int next = Mathf.Clamp(nextPoint, 1, path.Length - 1);
+        laneNormal = PathMath.EaseNormal(laneNormal, PathMath.LeftNormal(path[next - 1], path[next]), LaneTurnSpeed * Time.deltaTime);
+        transform.position = lanePosition + (Vector3)(laneNormal * laneOffset);
     }
 
     public bool HasStatus(StatusKind kind) => statusTime[(int)kind] > 0f;
@@ -365,7 +388,8 @@ public class Enemy : MonoBehaviour
     {
         if (!IsTargetable || IsBoss || !(distance > 0f)) return;
         Vector3 from = transform.position;
-        transform.position = PathMath.MoveBack(path, nextPoint, transform.position, distance, out nextPoint);
+        lanePosition = PathMath.MoveBack(path, nextPoint, lanePosition, distance, out nextPoint);
+        ApplyLane();
         ShowKnockback(from);
         if (source != null) source.AddFightCharge(ChargeMath.KnockbackBonus);
     }

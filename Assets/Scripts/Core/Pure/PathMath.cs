@@ -33,4 +33,22 @@ public static class PathMath
         newNextPoint = next;
         return position;
     }
+
+    // The unit vector pointing left of the segment from one waypoint to the next (zero for a
+    // zero-length segment).
+    public static Vector2 LeftNormal(Vector3 from, Vector3 to)
+    {
+        Vector2 direction = to - from;
+        return direction.sqrMagnitude > 1e-8f ? new Vector2(-direction.y, direction.x).normalized : Vector2.zero;
+    }
+
+    // Eases a walker's sideways direction toward the new segment's, so a turn blends over a short
+    // stretch instead of snapping. Keeps unit length; a zero target leaves the current direction.
+    public static Vector2 EaseNormal(Vector2 current, Vector2 target, float blend)
+    {
+        if (target == Vector2.zero) return current;
+        if (current == Vector2.zero) return target;
+        Vector2 eased = Vector2.Lerp(current, target, Mathf.Clamp01(blend));
+        return eased.sqrMagnitude > 1e-8f ? eased.normalized : target;
+    }
 }
