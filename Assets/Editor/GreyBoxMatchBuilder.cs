@@ -257,7 +257,7 @@ public static class GreyBoxMatchBuilder
             Captain("Brine", Element.Water, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back", undertow,
                 new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Boss }, refusalTemper: 1f),
             Captain("Slate", Element.Earth, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
-                new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Boss }, new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Spending }, refusalTemper: 1f),
+                new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Boss }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Spending }, refusalTemper: 1f),
             Captain("Zephyr", Element.Air, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
                 new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1f),
             Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
