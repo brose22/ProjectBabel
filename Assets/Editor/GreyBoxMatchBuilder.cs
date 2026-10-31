@@ -261,7 +261,7 @@ public static class GreyBoxMatchBuilder
             Captain("Zephyr", Element.Air, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
                 new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1f),
             Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
-                new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Leaks, CaptainTag.Flawless }, refusalTemper: 1.5f),
+                new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Leaks, CaptainTag.Selling }, refusalTemper: 1.5f),
             Captain("Skye", Element.Air, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Dizzy", crosswind,
                 new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Kills }, new[] { CaptainTag.Rogues, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1.25f),
             Captain("Marin", Element.Water, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", tidalMend.description, tidalMend,
