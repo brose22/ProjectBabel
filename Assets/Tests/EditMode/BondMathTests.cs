@@ -84,6 +84,13 @@ public class BondMathTests
     public void RunApprovalCap_StopsShortOfTheRankAfterNext(int startRank, float expected) =>
         Assert.That(BondMath.RunApprovalCap(startRank), Is.EqualTo(expected));
 
+    [TestCase(3, 0, 0, true)]
+    [TestCase(0, 0, 0, false)]
+    [TestCase(3, 1, 0, false)]
+    [TestCase(3, 0, 1, false)]
+    public void IsFlawlessWave_NeedsKillsAndAWholePartyWithNoLeaks(int kills, int casualties, int leaks, bool expected) =>
+        Assert.That(BondMath.IsFlawlessWave(kills, casualties, leaks), Is.EqualTo(expected));
+
     [Test]
     public void RunApprovalCap_KeepsTheRankWithinOneOfTheStart()
     {
