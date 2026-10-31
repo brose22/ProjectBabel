@@ -139,8 +139,13 @@ public class Relationships : MonoBehaviour
     void OnWaveEnded(int wave)
     {
         int topKills = 0;
+        int partyCasualties = 0;
         foreach (Tower tower in Tower.All)
-            topKills = Mathf.Max(topKills, RecordFor(tower.Captain).kills);
+        {
+            WaveRecord counted = RecordFor(tower.Captain);
+            topKills = Mathf.Max(topKills, counted.kills);
+            partyCasualties += counted.casualties;
+        }
 
         foreach (Tower tower in Tower.All)
         {
@@ -149,7 +154,7 @@ public class Relationships : MonoBehaviour
             JudgeTag(tower, CaptainTag.Casualties, record.casualties > 0);
             JudgeTag(tower, CaptainTag.Selling, waveSold);
             JudgeTag(tower, CaptainTag.Ability, record.usedAbility);
-            JudgeTag(tower, CaptainTag.Flawless, waveLeaks == 0 && record.casualties == 0);
+            JudgeTag(tower, CaptainTag.Flawless, BondMath.IsFlawlessWave(record.kills, partyCasualties, waveLeaks));
             JudgeTag(tower, CaptainTag.Spending, waveSpent);
             // Kills goes to whoever took the most kills this wave; ties share it.
             JudgeTag(tower, CaptainTag.Kills, topKills > 0 && record.kills == topKills);

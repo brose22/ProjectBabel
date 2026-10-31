@@ -54,5 +54,9 @@ public static class BondMath
     public static float ReserveEfficiencyBonus(float approval) => Mathf.Clamp(approval, 0f, MaxApproval) / 250f;
     public static float ChargeRateMultiplier(float approval) => 1f + Mathf.Clamp(approval, 0f, MaxApproval) / 200f;
 
+    // A flawless wave: the captain got kills, and nobody in the party lost a soldier or let an enemy through.
+    public static bool IsFlawlessWave(int captainKills, int partyCasualties, int leaks) =>
+        captainKills > 0 && partyCasualties == 0 && leaks == 0;
+
     public static bool HasWalkedOut(float bestThisRun, float current) => current <= bestThisRun - WalkoutDrop;
 }
