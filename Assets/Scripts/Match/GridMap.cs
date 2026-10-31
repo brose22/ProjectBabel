@@ -26,7 +26,13 @@ public class GridMap : MonoBehaviour
     readonly List<Vector2Int> orderedPathCells = new();
     readonly Dictionary<Vector2Int, Tower> occupants = new();
 
+    // Decorative ground painted this many tiles beyond the playable map on every side, so the
+    // camera can look past the edge. Nothing can be built or walked there.
+    public const int Padding = 6;
+
     public Vector2Int Size => size;
+    // The playable map plus its padding, in world units: how far the camera may look.
+    public Rect ViewBounds => new(-Padding, -Padding, size.x + 2 * Padding, size.y + 2 * Padding);
     // The road's on-map cells from the gate to the castle.
     public IReadOnlyList<Vector2Int> RoadCells => orderedPathCells;
 
@@ -39,8 +45,8 @@ public class GridMap : MonoBehaviour
         pathCells.Clear();
         orderedPathCells.Clear();
 
-        for (int x = 0; x < size.x; x++)
-            for (int y = 0; y < size.y; y++)
+        for (int x = -Padding; x < size.x + Padding; x++)
+            for (int y = -Padding; y < size.y + Padding; y++)
                 groundTilemap.SetTile(new Vector3Int(x, y, 0), IsAccentCell(x, y) ? groundAccentTile : groundTile);
 
         Vector3[] points = path.GetPoints();

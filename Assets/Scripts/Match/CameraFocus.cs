@@ -18,6 +18,10 @@ public class CameraFocus : MonoBehaviour
     CameraShake shake;
     PixelPerfectCamera pixelPerfect;
     Vector3 homePosition;
+    // Where the camera may look; set by the match from the grid.
+    public Rect Bounds { get; set; } = new(-1000f, -1000f, 2000f, 2000f);
+    // True while zoomed in on a target or zooming back out, when the player cannot move the camera.
+    public bool IsFocused => target != null || blend > 0f;
     float homeSize;
     Transform target;
     // 0 = home, 1 = fully zoomed on the target.
@@ -41,7 +45,8 @@ public class CameraFocus : MonoBehaviour
     {
         if (newTarget != null && blend <= 0f && !heldPixelPerfect)
         {
-            // The pixel-perfect size is the one to return to.
+            // The view the player has now (CameraPan may have moved it) is the one to return to.
+            homePosition = shake.RestPosition;
             homeSize = cam.orthographicSize;
             heldPixelPerfect = pixelPerfect != null && pixelPerfect.enabled;
             if (heldPixelPerfect) pixelPerfect.enabled = false;
@@ -63,8 +68,7 @@ public class CameraFocus : MonoBehaviour
         blend = Mathf.MoveTowards(blend, goal, Time.unscaledDeltaTime / TransitionSeconds);
         float t = Mathf.SmoothStep(0f, 1f, blend);
         float size = Mathf.Lerp(homeSize, homeSize / Zoom, t);
-        Vector2 centre = CameraFocusMath.ClampCentre(focusPoint, homePosition,
-            new Vector2(homeSize * cam.aspect, homeSize), new Vector2(size * cam.aspect, size));
+        Vector2 centre = CameraFocusMath.ClampCentre(focusPoint, Bounds, new Vector2(size * cam.aspect, size));
         Vector2 position = Vector2.Lerp(homePosition, centre, t);
         cam.orthographicSize = size;
         shake.RestPosition = new Vector3(position.x, position.y, homePosition.z);
