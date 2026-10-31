@@ -222,10 +222,10 @@ public class AiPlayer : MonoBehaviour
         // Seeded before the offer is drawn and the map is generated, which draw from Random.
         UnityEngine.Random.InitState(runSeed);
         List<CaptainData> roster = match.SetupOffer.ToList();
-        List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), match.Data.partySize, WeaknessCounts());
+        List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), match.Data.partySize);
         var party = picks.ConvertAll(i => roster[i]);
         recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds);
-        Decide("Setup", $"party {string.Join(", ", party.Select(c => c.displayName))}: strongest mix with a support and the enemies' weaknesses covered");
+        Decide("Setup", $"party {string.Join(", ", party.Select(c => c.displayName))}: strongest mix with a support");
         match.BeginRun(party);
     }
 
@@ -236,7 +236,7 @@ public class AiPlayer : MonoBehaviour
         {
             List<CaptainData> offer = run.RecruitOffer.ToList();
             var party = run.Party.FindAll(c => !run.HasDeparted(c)).ConvertAll(Info);
-            int pick = AiPartyPicker.PickRecruit(offer.ConvertAll(Info), party, WeaknessCounts());
+            int pick = AiPartyPicker.PickRecruit(offer.ConvertAll(Info), party);
             CaptainData recruit = pick >= 0 ? offer[pick] : null;
             Decide("Recruit", recruit != null ? $"took {recruit.displayName} to fill a gap in roles and elements" : "nobody on offer improved the party");
             match.Recruit(recruit);
@@ -429,15 +429,6 @@ public class AiPlayer : MonoBehaviour
         range = match.RangeFor(captain),
     };
 
-    // How many enemies in the match's waves are weak to each element.
-    int[] WeaknessCounts()
-    {
-        var enemies = new List<(int element, int count)>();
-        foreach (WaveDefinition wave in match.Data.waves)
-            foreach (SpawnGroup group in wave.groups)
-                if (group.enemy != null && group.enemy.hasWeakness) enemies.Add(((int)group.enemy.weakness, group.count));
-        return AiPartyPicker.CountWeaknesses(enemies);
-    }
 
     // ---------- Match helpers ----------
 

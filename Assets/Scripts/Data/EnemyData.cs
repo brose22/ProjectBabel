@@ -42,8 +42,7 @@ public class EnemyData : ScriptableObject
     [Tooltip("Shoots deployed soldiers within this many tiles as it walks, using the soldier attack damage and interval. 0 means melee only.")]
     public float rangedAttackRange;
 
-    [Header("Weakness")]
-    [Tooltip("Takes extra damage from captains of the weakness element, and their statuses land more often.")]
-    public bool hasWeakness;
-    public Element weakness;
+    [Header("Armor")]
+    [Tooltip("Counters some soldier classes: Armored resists Knights and Mages, Swift resists Archers and Rogues. See ArmorRules.")]
+    public ArmorType armor;
 }

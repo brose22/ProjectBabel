@@ -137,7 +137,7 @@ public class Soldier : MonoBehaviour
             case SoldierClassData.AttackStyle.Ranged:
                 // Fire and forget: the soldier heads home while the shot is in flight.
                 bool hasOwnSprite = projectileSprite != null;
-                Projectile.Launch(transform.position, enemy, damage, Tower, Class.projectileSpeed,
+                Projectile.Launch(transform.position, enemy, damage, Tower, Class, Class.projectileSpeed,
                     hasOwnSprite ? projectileSprite : body.sprite, Class.color,
                     hasOwnSprite ? 1f : body.transform.lossyScale.x * FallbackProjectileScale,
                     body.sortingOrder + 1);
@@ -146,7 +146,7 @@ public class Soldier : MonoBehaviour
                 SplashDamage(enemy, damage);
                 break;
             default:
-                enemy.TakeDamage(damage, Tower);
+                enemy.TakeDamage(damage, Tower, soldierClass: Class);
                 enemy.Knockback(Class.knockbackDistance, Tower);
                 break;
         }
@@ -156,7 +156,7 @@ public class Soldier : MonoBehaviour
     {
         if (Class.splashRadius <= 0f)
         {
-            enemy.TakeDamage(damage, Tower);
+            enemy.TakeDamage(damage, Tower, soldierClass: Class);
             return;
         }
 
@@ -167,7 +167,7 @@ public class Soldier : MonoBehaviour
         {
             if (victim != null && victim.IsTargetable &&
                 Vector2.Distance(center, victim.transform.position) <= Class.splashRadius)
-                victim.TakeDamage(damage, Tower);
+                victim.TakeDamage(damage, Tower, soldierClass: Class);
         }
     }
 

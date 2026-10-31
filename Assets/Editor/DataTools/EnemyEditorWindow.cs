@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 // Edits enemies: a sprite preview drawn to scale against the largest enemy, stats with derived damage
-// rates, and the weakness with the captains that exploit it.
+// rates, and the armor type and which soldier classes it counters.
 public class EnemyEditorWindow : DataEditorWindow<EnemyData>
 {
     const string Title = "Enemies";
@@ -27,11 +27,10 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
         nameof(EnemyData.size), nameof(EnemyData.maxHealth), nameof(EnemyData.moveSpeed), nameof(EnemyData.goldReward),
         nameof(EnemyData.xpReward), nameof(EnemyData.leakDamage), nameof(EnemyData.attackDamage),
         nameof(EnemyData.attackRange), nameof(EnemyData.attackInterval), nameof(EnemyData.towerDamage),
-        nameof(EnemyData.towerAttackRange), nameof(EnemyData.rangedAttackRange), nameof(EnemyData.hasWeakness),
-        nameof(EnemyData.weakness),
+        nameof(EnemyData.towerAttackRange), nameof(EnemyData.rangedAttackRange), nameof(EnemyData.armor),
     };
 
-    protected override string SearchText(EnemyData enemy) => enemy.hasWeakness ? $"weak {enemy.weakness}" : "";
+    protected override string SearchText(EnemyData enemy) => enemy.armor == ArmorType.Unarmored ? "" : enemy.armor.ToString();
 
     protected override void OnAssetsChanged()
     {
@@ -91,7 +90,7 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
         }
         DataToolsGUI.Note(enemy.towerDamage > 0f ? $"{PerSecond(enemy.towerDamage, enemy.towerAttackInterval)} damage per second to towers" : "Never hits towers");
 
-        DrawWeakness(so, enemy);
+        DrawArmor(so, enemy);
     }
 
     static string PerSecond(float damage, float interval) => interval > 0f ? $"{damage / interval:0.#}" : "∞";
@@ -102,19 +101,22 @@ public class EnemyEditorWindow : DataEditorWindow<EnemyData>
         return enemies.Where(e => e != null).OrderByDescending(e => e.size).FirstOrDefault();
     }
 
-    void DrawWeakness(SerializedObject so, EnemyData enemy)
+    void DrawArmor(SerializedObject so, EnemyData enemy)
     {
-        DataToolsGUI.Field(so, nameof(EnemyData.hasWeakness));
-        if (!enemy.hasWeakness) return;
-
-        using (new EditorGUILayout.HorizontalScope())
+        DataToolsGUI.Field(so, nameof(EnemyData.armor));
+        if (enemy.armor == ArmorType.Unarmored)
         {
-            DataToolsGUI.Field(so, nameof(EnemyData.weakness));
-            DataToolsGUI.ChipLayout(enemy.weakness.ToString(), DataToolsGUI.ElementColor(enemy.weakness));
+            DataToolsGUI.Note("No counters: every soldier class deals full damage");
+            return;
         }
-        DataToolsGUI.Note($"Takes {StatusRules.WeaknessDamageMultiplier:0.##}× damage and {StatusRules.WeaknessStatusChanceMultiplier:0.##}× status chance from {enemy.weakness} captains");
 
-        captains = DataToolsGUI.LoadAll(captains);
-        DataToolsGUI.AssetButtons("Strong Captains", captains.Where(c => c != null && c.element == enemy.weakness), CaptainEditorWindow.OpenFor, "None yet");
+        string[] classes = { "Knight", "Archer", "Mage", "Rogue" };
+        var notes = new System.Collections.Generic.List<string>();
+        for (int c = 0; c < ArmorRules.ClassCount; c++)
+        {
+            float multiplier = ArmorRules.DamageMultiplier(enemy.armor, c);
+            if (!Mathf.Approximately(multiplier, 1f)) notes.Add($"{classes[c]} {multiplier:0.##}×");
+        }
+        DataToolsGUI.Note($"{ArmorRules.NameOf(enemy.armor)}: {string.Join(", ", notes)} damage");
     }
 }
