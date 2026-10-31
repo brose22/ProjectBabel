@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum RequestKind { MoreDraw, Relocate, NewMix, UseSpecial }
+// New kinds go at the end: AiAbilityRules mirrors this order.
+public enum RequestKind { MoreDraw, Relocate, NewMix, UseSpecial, Reinforce, LowerDraw }
 
 public enum RequestAnswer { No, Some, Yes }
 
@@ -11,8 +12,11 @@ public enum RequestAnswer { No, Some, Yes }
 //   Relocate   - nothing has come within the captain's range for a while. Yes only: the captain
 //                moves themselves, free, 10% closer to the enemy gate along the road.
 //   NewMix     - the captain levelled up and a class they like isn't in every slot.
-//   UseSpecial - an elite or the boss walked on, or the special just finished charging. Yes only:
-//                the captain fires it by themselves, as soon as it can be used.
+//   UseSpecial - an elite or the boss walked on, an enemy leaked, or the special just finished
+//                charging. Yes only: the captain fires it by themselves, as soon as it can be used.
+//   Reinforce  - another captain fell. Yes only: the captain walks to the free spot nearest the
+//                fallen tower that still covers road, free.
+//   LowerDraw  - the reserve has sat full for a while. Yes sets the draw to Low, Some one step down.
 // The player answers No (0%), Some (50%) or Yes (100%): the answer grants that share of the request
 // and of the approval reward. Refusing always costs approval, scaled by request and captain.
 // Requests are shown one at a time and the match pauses while one waits; one left unanswered when
@@ -25,6 +29,8 @@ public class CaptainRequests : MonoBehaviour
         public RequestKind Kind;
         // The soldier class asked for, for NewMix.
         public SoldierClassData WantedClass;
+        // The tower that fell, for Reinforce.
+        public Tower Fallen;
         // What the captain says; names the reason they are asking.
         public string Text;
         // Real time the request goes unanswered, set once it is shown.
@@ -43,6 +49,8 @@ public class CaptainRequests : MonoBehaviour
     const int CooldownWaves = 2;
     // Game seconds with nothing in range, while enemies are elsewhere on the field, before a captain asks to move.
     const float IdleSeconds = 20f;
+    // Game seconds a full reserve sits before the captain offers to draw less.
+    const float FullReserveSeconds = 15f;
     // A Relocate moves the captain this share closer to the gate, measured along the road.
     const float MoveCloserFraction = 0.1f;
     // Game seconds between checks of the conditions that have no event of their own.
@@ -52,6 +60,8 @@ public class CaptainRequests : MonoBehaviour
     {
         public float LastEnemyInRange;
         public bool SpecialWasReady;
+        // Game time the reserve filled, or below zero while it isn't full.
+        public float ReserveFullSince = -1f;
     }
 
     // In arrival order; the first is the one shown.
@@ -83,6 +93,8 @@ public class CaptainRequests : MonoBehaviour
         GameEvents.SoldierDied += OnSoldierDied;
         GameEvents.CaptainLeveledUp += OnCaptainLeveledUp;
         GameEvents.EnemyArrived += OnEnemyArrived;
+        GameEvents.EnemyLeaked += OnEnemyLeaked;
+        GameEvents.TowerDisabled += OnTowerDisabled;
     }
 
     void OnDisable()
@@ -93,6 +105,8 @@ public class CaptainRequests : MonoBehaviour
         GameEvents.SoldierDied -= OnSoldierDied;
         GameEvents.CaptainLeveledUp -= OnCaptainLeveledUp;
         GameEvents.EnemyArrived -= OnEnemyArrived;
+        GameEvents.EnemyLeaked -= OnEnemyLeaked;
+        GameEvents.TowerDisabled -= OnTowerDisabled;
     }
 
     void OnWaveStarted(int waveNumber)
@@ -135,21 +149,44 @@ public class CaptainRequests : MonoBehaviour
     }
 
     // The ready captain closest to an elite or the boss asks to unleash their special on it.
-    void OnEnemyArrived(Enemy enemy)
+    void OnEnemyArrived(Enemy enemy) =>
+        AskClosestReadyCaptain(enemy.transform.position, enemy.IsBoss ? "The boss is here" : "An elite is here");
+
+    // An enemy got through, so the ready captain closest to where it escaped asks to cut loose.
+    void OnEnemyLeaked(Enemy enemy) =>
+        AskClosestReadyCaptain(enemy.transform.position, "One got past us");
+
+    void AskClosestReadyCaptain(Vector3 position, string reason)
     {
         Tower closest = null;
         float closestDistance = float.MaxValue;
         foreach (Tower tower in Tower.All)
         {
             if (tower.IsDisabled || !tower.IsSpecialReady) continue;
-            float distance = Vector2.Distance(tower.transform.position, enemy.transform.position);
+            float distance = Vector2.Distance(tower.transform.position, position);
             if (distance >= closestDistance) continue;
             closest = tower;
             closestDistance = distance;
         }
         if (closest == null) return;
-        string who = enemy.IsBoss ? "The boss is here" : "An elite is here";
-        TryAsk(closest, RequestKind.UseSpecial, $"{who}. Let me use {closest.Captain.ability.displayName} now?");
+        TryAsk(closest, RequestKind.UseSpecial, $"{reason}. Let me use {closest.Captain.ability.displayName} now?");
+    }
+
+    // The working captain nearest a fallen tower that has a spot to cover it from asks to move in.
+    void OnTowerDisabled(Tower fallen)
+    {
+        Tower helper = null;
+        float helperDistance = float.MaxValue;
+        foreach (Tower tower in Tower.All)
+        {
+            if (tower == fallen || tower.IsDisabled) continue;
+            float distance = Vector2.Distance(tower.transform.position, fallen.transform.position);
+            if (distance >= helperDistance || FindCellNear(tower, fallen.transform.position) == null) continue;
+            helper = tower;
+            helperDistance = distance;
+        }
+        if (helper == null) return;
+        TryAsk(helper, RequestKind.Reinforce, $"{fallen.Captain.displayName} has fallen. Let me move in to cover?", fallen: fallen);
     }
 
     // The conditions with no event of their own are checked a couple of times a second, in game
@@ -180,6 +217,12 @@ public class CaptainRequests : MonoBehaviour
                 TryAsk(tower, RequestKind.UseSpecial, $"{tower.Captain.ability.displayName} is charged. Use it now?");
             watch.SpecialWasReady = ready;
 
+            // A reserve that stays full is Gold doing nothing.
+            if (tower.Reserve < tower.Captain.resourceCapacity) watch.ReserveFullSince = -1f;
+            else if (watch.ReserveFullSince < 0f) watch.ReserveFullSince = Time.time;
+            else if (Time.time - watch.ReserveFullSince >= FullReserveSeconds && tower.DrawRate != DrawRate.Low)
+                TryAsk(tower, RequestKind.LowerDraw, "My reserve is overflowing. Ease off my draw?");
+
             if (!enemiesOnField || tower.FindClosestEnemy(tower.transform.position) != null)
                 watch.LastEnemyInRange = Time.time;
             else if (Time.time - watch.LastEnemyInRange >= IdleSeconds && FindCellNearerSpawner(tower) != null)
@@ -199,7 +242,7 @@ public class CaptainRequests : MonoBehaviour
 
     // Queues the request unless the wave is out of requests, the captain already has one waiting
     // or asked for the same thing too recently.
-    void TryAsk(Tower tower, RequestKind kind, string text, SoldierClassData wanted = null)
+    void TryAsk(Tower tower, RequestKind kind, string text, SoldierClassData wanted = null, Tower fallen = null)
     {
         if (match.State != MatchState.WaveActive || match.IsOver || tower.IsDisabled) return;
         if (askedThisWave >= MaxRequestsPerWave || pending.Exists(r => r.Tower == tower)) return;
@@ -207,7 +250,7 @@ public class CaptainRequests : MonoBehaviour
 
         lastAsked[(tower, kind)] = wave;
         askedThisWave++;
-        pending.Add(new Request { Tower = tower, Kind = kind, Text = text, WantedClass = wanted });
+        pending.Add(new Request { Tower = tower, Kind = kind, Text = text, WantedClass = wanted, Fallen = fallen });
         ShowNext();
     }
 
@@ -263,10 +306,34 @@ public class CaptainRequests : MonoBehaviour
         return false;
     }
 
-    // The move costs the captain's player nothing.
-    void MoveTowardSpawner(Tower tower)
+    // The free cell closest to a point that is nearer to it than the captain is now and still has
+    // road in the captain's range, or null when there is none.
+    Vector2Int? FindCellNear(Tower tower, Vector3 point)
     {
-        Vector2Int? cell = FindCellNearerSpawner(tower);
+        GridMap grid = match.Grid;
+        float best = Vector2.Distance(tower.transform.position, point);
+        Vector2Int? pick = null;
+        for (int x = 0; x < grid.Size.x; x++)
+        {
+            for (int y = 0; y < grid.Size.y; y++)
+            {
+                var cell = new Vector2Int(x, y);
+                if (!match.CanMoveTo(tower, cell)) continue;
+                Vector3 center = grid.CellCenter(cell);
+                float distance = Vector2.Distance(center, point);
+                if (distance >= best || !HasRoadInRange(center, tower.Range)) continue;
+                best = distance;
+                pick = cell;
+            }
+        }
+        return pick;
+    }
+
+    void MoveTowardSpawner(Tower tower) => MoveFreeTo(tower, FindCellNearerSpawner(tower));
+
+    // The move costs the captain's player nothing.
+    void MoveFreeTo(Tower tower, Vector2Int? cell)
+    {
         if (cell == null) return;
         tower.GrantMoveDiscount(0f);
         if (!match.MoveTower(tower, cell.Value)) tower.ClearMoveDiscount();
@@ -306,7 +373,7 @@ public class CaptainRequests : MonoBehaviour
     }
 
     // Requests that can only be answered Yes or No.
-    public static bool IsYesNo(RequestKind kind) => kind is RequestKind.Relocate or RequestKind.UseSpecial;
+    public static bool IsYesNo(RequestKind kind) => kind is RequestKind.Relocate or RequestKind.UseSpecial or RequestKind.Reinforce;
 
     // How much a refusal stings, by request.
     static float RefusalWeight(RequestKind kind) => kind switch
@@ -337,6 +404,12 @@ public class CaptainRequests : MonoBehaviour
             case RequestKind.UseSpecial:
                 // Fires now, or the moment it can if nothing is in reach yet.
                 if (!tower.TryUseAbility()) tower.FireAbilityWhenAble(AutoFireTimeoutSeconds);
+                break;
+            case RequestKind.Reinforce:
+                if (request.Fallen != null) MoveFreeTo(tower, FindCellNear(tower, request.Fallen.transform.position));
+                break;
+            case RequestKind.LowerDraw:
+                tower.SetDrawRate(full ? DrawRate.Low : (DrawRate)Mathf.Max((int)tower.DrawRate - 1, (int)DrawRate.Low));
                 break;
         }
     }
