@@ -48,6 +48,15 @@ public static class GameSettings
         Save();
     }
 
+    // Whether a captain's request holds the match while it waits. On by default.
+    public static bool PauseDuringRequests => PlayerPrefs.GetInt("settings.pauseDuringRequests", 1) == 1;
+
+    public static void SetPauseDuringRequests(bool on)
+    {
+        PlayerPrefs.SetInt("settings.pauseDuringRequests", on ? 1 : 0);
+        Save();
+    }
+
     public const int MaxTowerDisabledWaves = 3;
     // Waves a disabled tower sits out. 0 lets it be restored for Gold as soon as the current wave concludes.
     public static int TowerDisabledWaves => Mathf.Clamp(PlayerPrefs.GetInt("settings.towerDisabledWaves", 1), 0, MaxTowerDisabledWaves);
