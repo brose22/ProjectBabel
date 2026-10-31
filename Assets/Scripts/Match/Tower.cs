@@ -172,6 +172,7 @@ public class Tower : MonoBehaviour
         slotCells[slot] = PickHomeInsteadOf(slot, newClass);
         soldiers[slot] = SpawnSoldier(newClass, slot);
         GameEvents.RaiseSoldierMixChanged(this);
+        if (!free) GameEvents.RaiseGoldSpent();
         return true;
     }
 

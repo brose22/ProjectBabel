@@ -31,8 +31,8 @@ MonoBehaviour:
   specialChargeRate: 1
   level: 1
   refusalTemper: 1
-  likes: 030000000100000009000000
-  dislikes: 000000000800000006000000
+  likes: 03000000010000000a000000
+  dislikes: 000000000600000009000000
   likedGifts:
   - {fileID: 11400000, guid: b5e40e726839e714fa49ea6b47fe4d63, type: 2}
   - {fileID: 11400000, guid: c79cb3c70f6766c49adb4c55a5c68e6a, type: 2}
