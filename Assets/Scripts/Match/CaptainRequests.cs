@@ -37,7 +37,7 @@ public class CaptainRequests : MonoBehaviour
         public float Deadline = -1f;
     }
 
-    const float ApprovalReward = 4f;
+    const float ApprovalReward = 2f;
     const float RefusalPenalty = 3f;
     // A Yes on a special that can't fire yet waits this long for it to be able to.
     const float AutoFireTimeoutSeconds = 20f;
