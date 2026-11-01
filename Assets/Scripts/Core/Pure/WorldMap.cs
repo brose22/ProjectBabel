@@ -175,9 +175,10 @@ public class WorldMap
     // (past the first layer) and a road out (before the base), so every branch reaches the base.
     // The first layer, intel from the starting position and the base are revealed. Cities get
     // special kinds by odds, except in the first layer, the layer before the base and the base,
-    // which stay plain cities.
+    // which stay plain cities. lateLayouts, when given, are layouts kept out of the layers before
+    // lateLayoutsFromLayer, unless they are the only layouts there are.
     public static WorldMap Generate(int seed, int matchCount, int layoutCount, int minLanes, int maxLanes, int intelDepth,
-        NodeOdds odds = default)
+        NodeOdds odds = default, IReadOnlyList<int> lateLayouts = null, int lateLayoutsFromLayer = 0)
     {
         var random = new Random(seed);
         matchCount = Math.Max(2, matchCount);
@@ -210,6 +211,8 @@ public class WorldMap
                     if (map.nodes[id].layout == node.layout && map.nodes[id].layer < matchCount - 1)
                         map.nodes[id].layout = (node.layout + 1 + random.Next(layoutCount - 1)) % layoutCount;
 
+        if (lateLayouts != null && lateLayouts.Count > 0) HoldBackLayouts(map, layoutCount, new HashSet<int>(lateLayouts), lateLayoutsFromLayer, random);
+
         foreach (MapNode node in map.nodes)
         {
             node.seed = random.Next();
@@ -219,6 +222,17 @@ public class WorldMap
         foreach (MapNode node in layers[0]) map.RevealFrom(node.id, Math.Max(0, intelDepth - 1));
         map.Base.revealed = true;
         return map;
+    }
+
+    // Moves cities before fromLayer off the held-back layouts, onto any of the others.
+    static void HoldBackLayouts(WorldMap map, int layoutCount, HashSet<int> held, int fromLayer, Random random)
+    {
+        var open = new List<int>();
+        for (int layout = 0; layout < layoutCount; layout++)
+            if (!held.Contains(layout)) open.Add(layout);
+        if (open.Count == 0) return;
+        foreach (MapNode node in map.nodes)
+            if (node.layer < fromLayer && held.Contains(node.layout)) node.layout = open[random.Next(open.Count)];
     }
 
     // Walks both layers top to bottom, linking the current pair and then stepping one or both

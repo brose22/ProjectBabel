@@ -206,6 +206,36 @@ public class WorldMapTests
     }
 
     [Test]
+    public void Generate_HoldsLateLayoutsBackFromEarlyLayers([Values(1, 7, 99, 1234)] int seed)
+    {
+        WorldMap map = WorldMap.Generate(seed, 7, 5, 2, 3, 2, default, new[] { 4 }, 2);
+        Assert.That(map.nodes.Where(n => n.layer < 2).Select(n => n.layout), Has.None.EqualTo(4));
+    }
+
+    [Test]
+    public void Generate_CanUseLateLayoutsFromTheirLayer()
+    {
+        bool seen = Enumerable.Range(0, 50).Any(seed =>
+            WorldMap.Generate(seed, 7, 5, 2, 3, 2, default, new[] { 4 }, 2).nodes.Any(n => n.layout == 4));
+        Assert.That(seen, Is.True);
+    }
+
+    [Test]
+    public void Generate_WithoutLateLayoutsChangesNothing()
+    {
+        WorldMap plain = WorldMap.Generate(5, 7, 5, 2, 3, 2);
+        WorldMap empty = WorldMap.Generate(5, 7, 5, 2, 3, 2, default, new int[0], 2);
+        Assert.That(empty.nodes.Select(n => n.layout), Is.EqualTo(plain.nodes.Select(n => n.layout)));
+    }
+
+    [Test]
+    public void Generate_KeepsLateLayoutsWhenThereIsNothingElse()
+    {
+        WorldMap map = WorldMap.Generate(3, 7, 1, 2, 3, 2, default, new[] { 0 }, 2);
+        Assert.That(map.nodes.Select(n => n.layout), Is.All.EqualTo(0));
+    }
+
+    [Test]
     public void MapNode_OnlyCitiesAndElitesAreMatches()
     {
         Assert.That(new MapNode { kind = NodeKind.City }.IsMatch);

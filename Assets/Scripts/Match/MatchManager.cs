@@ -363,13 +363,23 @@ public class MatchManager : MonoBehaviour
         }
     }
 
+    // The indices of the layouts with more than one gate.
+    List<int> MultiGateLayouts()
+    {
+        var indices = new List<int>();
+        for (int i = 0; i < data.layouts.Count; i++)
+            if (data.layouts[i] != null && data.layouts[i].AllRoutes().Count > 1) indices.Add(i);
+        return indices;
+    }
+
     // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
     public void BeginRun(IEnumerable<CaptainData> party)
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
         RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
-            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds));
+            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds,
+            MultiGateLayouts(), data.multiGateFirstLayer));
         nextCaptainIndex = 0;
         State = MatchState.Map;
         RunSave.Save(RunState.Current);
