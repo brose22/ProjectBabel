@@ -23,8 +23,6 @@ public static class AiRoutePicker
         {
             case NodeKind.Rest:
                 return healthFraction < HurtFraction ? 6f : healthFraction < 0.9f ? 1.5f : -1f;
-            case NodeKind.Shop:
-                return gold >= giftCost * 2 ? 3f : gold >= giftCost ? 1f : -1f;
             case NodeKind.Event:
                 return healthFraction < HurtFraction ? -1f : 1f;
             case NodeKind.Elite:
@@ -51,7 +49,6 @@ public static class AiRoutePicker
         AiRouteOption chosen = options[best];
         reason = !chosen.revealed ? "unknown city, nothing better known"
             : chosen.kind == NodeKind.Rest ? $"{healthFraction:P0} health, resting"
-            : chosen.kind == NodeKind.Shop ? $"{gold} Gold to spend at a shop"
             : chosen.kind == NodeKind.Elite ? $"{healthFraction:P0} health, taking the elite for the reward"
             : chosen.kind == NodeKind.Event ? "event looks safe"
             : "plain city";

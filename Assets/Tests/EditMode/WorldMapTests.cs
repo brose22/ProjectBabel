@@ -74,13 +74,13 @@ public class WorldMapTests
     {
         WorldMap map = Map();
         int before = map.Choices().Count;
-        MapNode shop = map.AddStop(NodeKind.Shop);
-        Assert.That(shop, Is.Not.Null);
-        Assert.That(shop.kind, Is.EqualTo(NodeKind.Shop));
+        MapNode stop = map.AddStop(NodeKind.Rest);
+        Assert.That(stop, Is.Not.Null);
+        Assert.That(stop.kind, Is.EqualTo(NodeKind.Rest));
         Assert.That(map.Choices().Count, Is.EqualTo(before + 1));
-        Assert.That(map.Choices().Contains(shop));
-        Assert.That(shop.next, Is.Not.Empty);
-        Assert.That(map.TryChoose(shop.id), Is.True);
+        Assert.That(map.Choices().Contains(stop));
+        Assert.That(stop.next, Is.Not.Empty);
+        Assert.That(map.TryChoose(stop.id), Is.True);
     }
 
     [Test]
@@ -89,10 +89,10 @@ public class WorldMapTests
         WorldMap map = Map();
         map.TryChoose(0);
         map.ClearTarget(2);
-        MapNode shop = map.AddStop(NodeKind.Shop);
-        Assert.That(map.nodes[map.current].next, Does.Contain(shop.id));
-        Assert.That(shop.layer, Is.EqualTo(map.nodes[map.current].layer + 1));
-        Assert.That(map.BaseId, Is.Not.EqualTo(shop.id));
+        MapNode stop = map.AddStop(NodeKind.Rest);
+        Assert.That(map.nodes[map.current].next, Does.Contain(stop.id));
+        Assert.That(stop.layer, Is.EqualTo(map.nodes[map.current].layer + 1));
+        Assert.That(map.BaseId, Is.Not.EqualTo(stop.id));
         Assert.That(map.Base.layer, Is.EqualTo(map.layerCount - 1));
     }
 
@@ -102,7 +102,7 @@ public class WorldMapTests
         WorldMap map = Map(matches: 2);
         map.TryChoose(map.Choices()[0].id);
         map.ClearTarget(2);
-        Assert.That(map.AddStop(NodeKind.Shop), Is.Null);
+        Assert.That(map.AddStop(NodeKind.Rest), Is.Null);
     }
 
     [Test]
@@ -179,7 +179,7 @@ public class WorldMapTests
     [TestCase(21)]
     public void Generate_KeepsTheFirstLastAndPreBaseLayersPlain(int seed)
     {
-        WorldMap map = WorldMap.Generate(seed, 9, 4, 2, 3, 2, new NodeOdds(0.25f, 0.25f, 0.25f, 0.25f));
+        WorldMap map = WorldMap.Generate(seed, 9, 4, 2, 3, 2, new NodeOdds(0.4f, 0.3f, 0.3f));
         foreach (MapNode node in map.nodes)
             if (node.layer == 0 || node.layer >= map.layerCount - 2)
                 Assert.That(node.kind, Is.EqualTo(NodeKind.City), $"city {node.id} on layer {node.layer}");
@@ -189,7 +189,7 @@ public class WorldMapTests
     [Test]
     public void Generate_KindsAreTheSameForTheSameSeed()
     {
-        var odds = new NodeOdds(0.2f, 0.2f, 0.2f, 0.2f);
+        var odds = new NodeOdds(0.3f, 0.3f, 0.3f);
         WorldMap a = WorldMap.Generate(4, 9, 4, 2, 3, 2, odds), b = WorldMap.Generate(4, 9, 4, 2, 3, 2, odds);
         Assert.That(a.nodes.Select(n => (n.kind, n.seed)), Is.EqualTo(b.nodes.Select(n => (n.kind, n.seed))));
     }
@@ -197,12 +197,11 @@ public class WorldMapTests
     [Test]
     public void NodeOdds_PickFollowsTheThresholds()
     {
-        var odds = new NodeOdds(0.1f, 0.2f, 0.3f, 0.1f);
+        var odds = new NodeOdds(0.1f, 0.2f, 0.1f);
         Assert.That(odds.Pick(0.05), Is.EqualTo(NodeKind.Elite));
         Assert.That(odds.Pick(0.15), Is.EqualTo(NodeKind.Rest));
-        Assert.That(odds.Pick(0.45), Is.EqualTo(NodeKind.Shop));
-        Assert.That(odds.Pick(0.65), Is.EqualTo(NodeKind.Event));
-        Assert.That(odds.Pick(0.75), Is.EqualTo(NodeKind.City));
+        Assert.That(odds.Pick(0.35), Is.EqualTo(NodeKind.Event));
+        Assert.That(odds.Pick(0.45), Is.EqualTo(NodeKind.City));
     }
 
     // Layouts 0-1 have one gate, 2-3 two, 4 three.
@@ -270,7 +269,6 @@ public class WorldMapTests
         Assert.That(new MapNode { kind = NodeKind.City }.IsMatch);
         Assert.That(new MapNode { kind = NodeKind.Elite }.IsMatch);
         Assert.That(new MapNode { kind = NodeKind.Rest }.IsMatch, Is.False);
-        Assert.That(new MapNode { kind = NodeKind.Shop }.IsMatch, Is.False);
         Assert.That(new MapNode { kind = NodeKind.Event }.IsMatch, Is.False);
     }
 }
