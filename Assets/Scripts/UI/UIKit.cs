@@ -337,7 +337,11 @@ public static class UIKit
         colors.disabledColor = new Color(0.55f, 0.55f, 0.6f, 1f);
         colors.fadeDuration = 0.05f;
         button.colors = colors;
-        button.onClick.AddListener(() => onClick());
+        button.onClick.AddListener(() =>
+        {
+            AudioManager.Play(AudioKeys.UiClick);
+            onClick();
+        });
         Text label = Label(rect, text, 13, TextAnchor.MiddleCenter);
         // The bottom lip is part of the button, so the label sits on the face above it.
         Stretch(label.rectTransform).offsetMin = new Vector2(Gap, TexelSize * 2f);
@@ -377,7 +381,11 @@ public static class UIKit
         colors.pressedColor = new Color(0.78f, 0.78f, 0.78f, 1f);
         colors.fadeDuration = 0.05f;
         button.colors = colors;
-        button.onClick.AddListener(() => onClick());
+        button.onClick.AddListener(() =>
+        {
+            AudioManager.Play(AudioKeys.UiClick);
+            onClick();
+        });
         return button;
     }
 

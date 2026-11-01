@@ -86,6 +86,7 @@ public class AudioManager : MonoBehaviour
         musicIn = NewSource();
         musicOut = NewSource();
         musicIn.loop = musicOut.loop = true;
+        AudioEvents.Subscribe();
     }
 
     // The mixer ignores SetFloat during Awake, so the saved volumes wait until here.
