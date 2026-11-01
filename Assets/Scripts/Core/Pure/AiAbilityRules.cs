@@ -7,8 +7,7 @@ public static class AiAbilityRules
 
     // Answers, in RequestAnswer's order.
     public const int AnswerNo = 0;
-    public const int AnswerSome = 1;
-    public const int AnswerYes = 2;
+    public const int AnswerYes = 1;
 
     // Request kinds, in RequestKind's order.
     public const int RequestMoreDraw = 0;
@@ -35,16 +34,6 @@ public static class AiAbilityRules
     }
 
     // Grants what costs the run nothing; draws only when Gold is plentiful.
-    public static int AnswerRequest(int request, int gold, int towersOnField, bool wouldFireNow)
-    {
-        switch (request)
-        {
-            case RequestMoreDraw:
-                return gold / Math.Max(1, towersOnField) >= 100 ? AnswerYes : AnswerSome;
-            case RequestUseSpecial:
-                return wouldFireNow ? AnswerYes : AnswerSome;
-            default:
-                return AnswerYes;
-        }
-    }
+    public static int AnswerRequest(int request, int gold, int towersOnField) =>
+        request != RequestMoreDraw || gold / Math.Max(1, towersOnField) >= 100 ? AnswerYes : AnswerNo;
 }

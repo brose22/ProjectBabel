@@ -34,11 +34,10 @@ public class AiAbilityRulesTests
     [Test]
     public void Requests_AreGrantedUnlessTheyCostGold()
     {
-        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestRelocate, 0, 3, false), Is.EqualTo(AiAbilityRules.AnswerYes));
-        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestNewMix, 0, 3, false), Is.EqualTo(AiAbilityRules.AnswerYes));
-        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestMoreDraw, 500, 3, false), Is.EqualTo(AiAbilityRules.AnswerYes));
-        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestMoreDraw, 50, 3, false), Is.EqualTo(AiAbilityRules.AnswerSome));
-        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestUseSpecial, 50, 3, true), Is.EqualTo(AiAbilityRules.AnswerYes));
-        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestUseSpecial, 50, 3, false), Is.EqualTo(AiAbilityRules.AnswerSome));
+        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestRelocate, 0, 3), Is.EqualTo(AiAbilityRules.AnswerYes));
+        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestNewMix, 0, 3), Is.EqualTo(AiAbilityRules.AnswerYes));
+        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestMoreDraw, 500, 3), Is.EqualTo(AiAbilityRules.AnswerYes));
+        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestMoreDraw, 50, 3), Is.EqualTo(AiAbilityRules.AnswerNo));
+        Assert.That(AiAbilityRules.AnswerRequest(AiAbilityRules.RequestUseSpecial, 50, 3), Is.EqualTo(AiAbilityRules.AnswerYes));
     }
 }
