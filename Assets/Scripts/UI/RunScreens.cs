@@ -22,13 +22,14 @@ public class RunScreens : MonoBehaviour
     // Party slots and roster cards: a party card's height, portrait and all.
     const float SlotHeight = 84f;
     const int RosterColumns = 2;
-    static readonly Vector2 MapArea = new(860f, 330f);
-    static readonly Vector2 CitySize = new(118f, 40f);
-    static readonly Vector2 BaseSize = new(136f, 52f);
-    const float BadgeSize = 28f;
+    static readonly Vector2 MapArea = new(900f, 330f);
+    static readonly Vector2 CitySize = new(100f, 40f);
+    static readonly Vector2 BaseSize = new(124f, 52f);
+    const float BadgeSize = 24f;
     // Keeps jittered cities inside the map area.
     const float MapMargin = 14f;
     const float CityJitter = 12f;
+    const float CityJitterX = 4f;
     // World map party drawer.
     const float DrawerWidth = 300f;
     const float DrawerSlideSeconds = 0.2f;
@@ -58,7 +59,7 @@ public class RunScreens : MonoBehaviour
     // Roads: ahead of the player, the trail already walked, the rest, and the dashed hint of hidden ones.
     static readonly Color AheadRoadColor = new(0.96f, 0.76f, 0.36f, 1f);
     static readonly Color TrailRoadColor = new(0.4f, 0.7f, 0.45f, 1f);
-    static readonly Color DimRoadColor = new(0.55f, 0.45f, 0.3f, 0.5f);
+    static readonly Color DimRoadColor = new(0.6f, 0.5f, 0.34f, 0.75f);
     static readonly Color FogRoadColor = new(0.66f, 0.68f, 0.73f, 0.45f);
     static readonly Color RestColor = new(0.22f, 0.5f, 0.3f, 1f);
     static readonly Color ShopColor = new(0.6f, 0.46f, 0.14f, 1f);
@@ -391,7 +392,7 @@ public class RunScreens : MonoBehaviour
                     bool ahead = node.id == map.current;
                     bool trail = node.cleared && to.cleared;
                     BuildRoad(area, CityPosition(map, node), CityPosition(map, to), node.id * 7 + next * 13,
-                        ahead ? AheadRoadColor : trail ? TrailRoadColor : DimRoadColor, ahead ? 5f : trail ? 4f : 2f);
+                        ahead ? AheadRoadColor : trail ? TrailRoadColor : DimRoadColor, ahead ? 5f : trail ? 4f : 3f);
                 }
         foreach (MapNode node in map.nodes)
             if (node.revealed) BuildCity(area, map, node, choices.Exists(c => c.id == node.id));
@@ -885,7 +886,7 @@ public class RunScreens : MonoBehaviour
         Vector2 position = new((x - 0.5f) * usableWidth, (0.5f - y) * usableHeight);
         if (isBase) return position;
         var jitter = new System.Random(node.seed);
-        position.x += ((float)jitter.NextDouble() * 2f - 1f) * CityJitter;
+        position.x += ((float)jitter.NextDouble() * 2f - 1f) * CityJitterX;
         position.y += ((float)jitter.NextDouble() * 2f - 1f) * CityJitter * (count > 1 ? 1f : 0.3f);
         return position;
     }
@@ -974,7 +975,7 @@ public class RunScreens : MonoBehaviour
         string cityName = match.Data.layouts.Count > 0 ? match.Data.layouts[node.layout % match.Data.layouts.Count].displayName : "City";
         string name = isBase ? "Enemy base" : node.kind switch
         {
-            NodeKind.Elite => $"Elite: {cityName}",
+            NodeKind.Elite => cityName,
             NodeKind.Rest => "Rest",
             NodeKind.Shop => "Shop",
             NodeKind.Event => "Event ?",
@@ -990,11 +991,11 @@ public class RunScreens : MonoBehaviour
         {
             NodeKind.Elite => $"{match.Data.eliteGoldMultiplier:0.#}x Gold" + GateCount(node, " | "),
             NodeKind.Rest => $"Heals {match.RestAmount}",
-            NodeKind.Shop => "Gifts for captains",
+            NodeKind.Shop => "Gifts",
             NodeKind.Event => "Unknown",
             _ => GateCount(node, "").TrimStart(),
         };
-        string text = name + (info.Length > 0 ? $"\n<size=9><color={UIKit.Hex(UIKit.MutedTextColor)}>{info}</color></size>" : "");
+        string text = name + (info.Length > 0 ? $"\n<size=9><color={UIKit.Hex(choosable ? new Color(0.16f, 0.1f, 0.03f, 1f) : UIKit.MutedTextColor)}>{info}</color></size>" : "");
 
         Button city = UIKit.Button(area, text, () => match.ChooseCity(node.id));
         Text cityLabel = city.GetComponentInChildren<Text>();
