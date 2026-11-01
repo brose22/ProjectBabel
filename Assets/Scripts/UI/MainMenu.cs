@@ -79,6 +79,8 @@ public class MainMenu : MonoBehaviour
     static int aiLayer;
     // How many captains the AI fields; 0 until first shown, then the game's party size.
     static int aiCaptains;
+    // The bond rank the AI's captains start at, 0 (D) to 4 (S).
+    static int aiBond;
 
     // The AI plays by itself with its own saves, then writes a report to Reports/.
     void BuildAiRun()
@@ -97,6 +99,8 @@ public class MainMenu : MonoBehaviour
         if (aiMap >= 0) BuildAiMatchRows(column);
         SettingRow(column, "Captains", () => aiCaptains.ToString(),
             step => aiCaptains = Mathf.Clamp(aiCaptains + step, 1, data.maxTowers));
+        SettingRow(column, "Bond", () => BondMath.RankName(aiBond),
+            step => aiBond = Mathf.Clamp(aiBond + step, 0, BondMath.MaxRank));
         SettingRow(column, "Runs", () => aiRuns.ToString(), step => aiRuns = Mathf.Clamp(aiRuns + step, 1, 50));
         SettingRow(column, "Speed", () => $"{aiSpeed:0}x",
             step => aiSpeed = AiSpeeds[Wrap(Array.IndexOf(AiSpeeds, aiSpeed) + step, AiSpeeds.Length)]);
@@ -133,14 +137,19 @@ public class MainMenu : MonoBehaviour
     void StartAiRun()
     {
         int captains = aiCaptains > 0 ? aiCaptains : data.partySize;
-        var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer, captains = captains };
+        var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer, captains = captains, bondRank = aiBond };
         if (aiMap >= 0)
         {
             // The picked role captains first, then more attackers to fill a bigger party; a smaller one drops the last.
             foreach (CaptainRole role in AiPartyRoles)
                 if (AiCaptain(role) != null) options.party.Add(AiCaptain(role));
-            foreach (CaptainData extra in data.roster)
-                if (options.party.Count < captains && extra != null && !options.party.Contains(extra)) options.party.Add(extra);
+            // Extras come by role, cycling attacker, healer, buffer; a role with none left is skipped.
+            for (int turn = 0; options.party.Count < captains && turn < data.roster.Count * AiPartyRoles.Length; turn++)
+            {
+                CaptainRole role = AiPartyRoles[turn % AiPartyRoles.Length];
+                CaptainData extra = AiCaptains(role).Find(c => !options.party.Contains(c));
+                if (extra != null) options.party.Add(extra);
+            }
             if (options.party.Count > captains) options.party.RemoveRange(captains, options.party.Count - captains);
         }
         AiPlayer.Begin(options);

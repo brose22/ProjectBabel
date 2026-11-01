@@ -92,6 +92,10 @@ public class BondMathTests
         Assert.That(BondMath.IsFlawlessWave(kills, casualties, leaks), Is.EqualTo(expected));
 
     [Test]
+    public void ApprovalForRank_LandsOnThatRank([Values(0, 1, 2, 3, 4)] int rank) =>
+        Assert.That(BondMath.RankFor(BondMath.ApprovalForRank(rank)), Is.EqualTo(rank));
+
+    [Test]
     public void RunApprovalCap_KeepsTheRankWithinOneOfTheStart()
     {
         for (int start = 0; start <= BondMath.MaxRank; start++)
