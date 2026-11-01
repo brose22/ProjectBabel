@@ -26,7 +26,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
     {
         nameof(SoldierClassData.attackStyle), nameof(SoldierClassData.actCost), nameof(SoldierClassData.respawnCost),
         nameof(SoldierClassData.maxHealth), nameof(SoldierClassData.damageMultiplier), nameof(SoldierClassData.attackRange), nameof(SoldierClassData.reach),
-        nameof(SoldierClassData.moveSpeed), nameof(SoldierClassData.homeTile), nameof(SoldierClassData.knockbackDistance),
+        nameof(SoldierClassData.moveSpeed), nameof(SoldierClassData.homeTile), nameof(SoldierClassData.knockbackDistance), nameof(SoldierClassData.knockbackChance),
         nameof(SoldierClassData.projectileSpeed), nameof(SoldierClassData.splashRadius), nameof(SoldierClassData.color),
     };
 
@@ -76,11 +76,12 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
         DrawDamagePreview(soldierClass);
 
         SerializedProperty style = DataToolsGUI.Field(so, nameof(SoldierClassData.attackStyle));
-        // Each style reads one field of its own; the others keep their values.
+        // Each style reads fields of its own; the others keep their values.
         switch ((SoldierClassData.AttackStyle)style.enumValueIndex)
         {
             case SoldierClassData.AttackStyle.Melee:
                 DataToolsGUI.Field(so, nameof(SoldierClassData.knockbackDistance));
+                DataToolsGUI.Field(so, nameof(SoldierClassData.knockbackChance));
                 break;
             case SoldierClassData.AttackStyle.Ranged:
                 DataToolsGUI.Field(so, nameof(SoldierClassData.projectileSpeed));

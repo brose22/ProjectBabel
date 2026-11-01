@@ -36,8 +36,10 @@ public class SoldierClassData : ScriptableObject
     [Header("Style")]
     [Tooltip("Melee hits in person, Ranged fires a homing projectile, Magic damages every enemy in the splash radius.")]
     public AttackStyle attackStyle = AttackStyle.Melee;
-    [Tooltip("Tiles each melee hit pushes the enemy back along its path. 0 = no knockback.")]
+    [Tooltip("Tiles a melee hit pushes the enemy back along its path. 0 = no knockback.")]
     public float knockbackDistance = 0f;
+    [Tooltip("Chance that a melee hit pushes the enemy back.")]
+    [Range(0f, 1f)] public float knockbackChance = 0.25f;
     [Tooltip("Ranged projectile speed in tiles per second. 0 = hits instantly.")]
     public float projectileSpeed = 10f;
     [Tooltip("Radius in tiles around the target that a Magic hit also damages. 0 = single target.")]
