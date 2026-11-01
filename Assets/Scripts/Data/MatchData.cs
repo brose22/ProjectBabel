@@ -9,8 +9,6 @@ public class SpawnGroup
     public int count = 5;
     public float spawnInterval = 1f;
     public float delayBefore;
-    [Tooltip("Which route this group walks onto, counting from 0 in the city layout. -1 spreads the group over all routes. Maps with one route ignore it.")]
-    public int route = -1;
 }
 
 [Serializable]
