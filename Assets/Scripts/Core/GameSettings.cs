@@ -17,7 +17,7 @@ public static class GameSettings
     const string VSyncKey = "settings.vsync";
     const string FrameRateKey = "settings.frameRate";
     const string QualityKey = "settings.quality";
-    const string VolumeKey = "settings.volume";
+    const string VolumeKey = "settings.volume.";
 
     // Match feedback switches, all on by default. Read per enemy per frame, so each is cached.
     static readonly Dictionary<string, bool> flags = new();
@@ -86,7 +86,7 @@ public static class GameSettings
     public static int FrameRateCap => PlayerPrefs.GetInt(FrameRateKey, 0);
     public static int Quality => Mathf.Clamp(PlayerPrefs.GetInt(QualityKey, QualitySettings.GetQualityLevel()), 0, QualitySettings.names.Length - 1);
     // 0 to 1.
-    public static float Volume => PlayerPrefs.GetFloat(VolumeKey, 1f);
+    public static float ChannelVolume(AudioChannel channel) => PlayerPrefs.GetFloat(VolumeKey + channel, 1f);
 
     // The monitor's resolutions, largest last, without duplicates for each refresh rate.
     public static List<Vector2Int> Resolutions
@@ -115,7 +115,7 @@ public static class GameSettings
         if (QualitySettings.GetQualityLevel() != Quality) QualitySettings.SetQualityLevel(Quality, true);
         QualitySettings.vSyncCount = VSync ? 1 : 0;
         Application.targetFrameRate = FrameRateCap > 0 ? FrameRateCap : -1;
-        AudioListener.volume = Volume;
+        AudioManager.ApplyVolumes();
         // The editor's Game view ignores these; only a player window resizes.
         if (screen && !Application.isEditor && (PlayerPrefs.HasKey(WidthKey) || PlayerPrefs.HasKey(WindowModeKey)))
             Screen.SetResolution(Resolution.x, Resolution.y, WindowMode);
@@ -152,9 +152,9 @@ public static class GameSettings
         Save();
     }
 
-    public static void SetVolume(float volume)
+    public static void SetChannelVolume(AudioChannel channel, float volume)
     {
-        PlayerPrefs.SetFloat(VolumeKey, Mathf.Clamp01(volume));
+        PlayerPrefs.SetFloat(VolumeKey + channel, Mathf.Clamp01(volume));
         Save();
     }
 
