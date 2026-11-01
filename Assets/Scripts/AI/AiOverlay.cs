@@ -45,6 +45,7 @@ public class AiOverlay
     {
         if (doneScreen != null) UnityEngine.Object.Destroy(doneScreen.gameObject);
         doneScreen = UIKit.Stretch(UIKit.Panel(canvas.transform, "AI Run Done", new Color(0.02f, 0.02f, 0.04f, 0.94f)));
+        UIKit.Focus(doneScreen);
         RectTransform column = UIKit.Group(doneScreen, "Column");
         UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(640f, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 10, fitContent: true);

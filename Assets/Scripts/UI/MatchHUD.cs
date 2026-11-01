@@ -319,6 +319,7 @@ public class MatchHUD : MonoBehaviour
     void BuildPauseMenu()
     {
         pauseMenu = UIKit.Stretch(UIKit.Panel(canvas.transform, "Pause Menu", new Color(0f, 0f, 0f, 0.55f)));
+        UIKit.Focus(pauseMenu);
         RectTransform window = UIKit.Box(pauseMenu, "Window");
         UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 0f));
         UIKit.Layout<VerticalLayoutGroup>(window, 14, 8, fitContent: true);

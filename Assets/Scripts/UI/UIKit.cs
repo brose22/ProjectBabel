@@ -174,7 +174,22 @@ public static class UIKit
         var eventSystem = new GameObject("EventSystem");
         eventSystem.AddComponent<EventSystem>();
         eventSystem.AddComponent<InputSystemUIInputModule>();
+        eventSystem.AddComponent<UIFocus>();
     }
+
+    // Makes a screen, window or drawer a layer of gamepad focus (see UIFocusScope). Focus stays under
+    // root, or under host when there is none; onCancel runs on the gamepad's cancel button.
+    public static UIFocusScope Focus(Component host, Action onCancel = null, Transform root = null, float delay = 0f)
+    {
+        var scope = host.gameObject.AddComponent<UIFocusScope>();
+        scope.Root = root != null ? root : host.transform;
+        scope.OnCancel = onCancel;
+        scope.Delay = delay;
+        return scope;
+    }
+
+    // UIFocus moves focus itself, so Unity's automatic navigation stays out of its way.
+    static void NoNavigation(Selectable selectable) => selectable.navigation = new Navigation { mode = Navigation.Mode.None };
 
     public static bool IsPointerOverUI() => EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 
@@ -349,6 +364,7 @@ public static class UIKit
         RectTransform rect = Panel(parent, "Button", ButtonColor);
         UseSprite(rect.GetComponent<Image>(), ButtonSprite);
         var button = rect.gameObject.AddComponent<Button>();
+        NoNavigation(button);
         var colors = button.colors;
         colors.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f);
         colors.selectedColor = Color.white;
@@ -394,6 +410,7 @@ public static class UIKit
         var image = panel.GetComponent<Image>();
         image.raycastTarget = true;
         var button = panel.gameObject.AddComponent<Button>();
+        NoNavigation(button);
         button.targetGraphic = image;
         var colors = button.colors;
         colors.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f);
@@ -410,7 +427,8 @@ public static class UIKit
     }
 
     // A box above target with a bold title and a muted description, shown while the pointer is on
-    // it. It has its own sorting override, so it draws over every other widget on the screen.
+    // it, or while the gamepad focuses it. It has its own sorting override, so it draws over every
+    // other widget on the screen.
     public static void HoverTip(RectTransform target, string title, string description, float width = 220f)
     {
         RectTransform tip = Box(target, "Hover Tip", blocksClicks: false);
@@ -428,12 +446,15 @@ public static class UIKit
         tip.gameObject.SetActive(false);
 
         var trigger = target.gameObject.AddComponent<EventTrigger>();
-        AddHover(EventTriggerType.PointerEnter, true);
-        AddHover(EventTriggerType.PointerExit, false);
-        void AddHover(EventTriggerType type, bool show)
+        AddHover(EventTriggerType.PointerEnter, () => true);
+        AddHover(EventTriggerType.PointerExit, () => false);
+        // A mouse click selects too, and that shouldn't leave the tip up after the pointer goes.
+        AddHover(EventTriggerType.Select, () => GameInput.UsingGamepad);
+        AddHover(EventTriggerType.Deselect, () => false);
+        void AddHover(EventTriggerType type, Func<bool> show)
         {
             var entry = new EventTrigger.Entry { eventID = type };
-            entry.callback.AddListener(_ => tip.gameObject.SetActive(show));
+            entry.callback.AddListener(_ => tip.gameObject.SetActive(show()));
             trigger.triggers.Add(entry);
         }
     }
