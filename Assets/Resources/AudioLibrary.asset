@@ -16,25 +16,29 @@ MonoBehaviour:
   entries:
   - key: music.menu
     channel: 2
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 9ec679684c5dc874a93dd8048c726a93, type: 3}
     volume: 0.7
     pitchVariance: 0
     cooldown: 0
   - key: music.match
     channel: 2
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 95d67aef145c0d14da0050a3131a4d74, type: 3}
     volume: 0.7
     pitchVariance: 0
     cooldown: 0
   - key: ui.click
     channel: 1
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: e63e886fae32de04d89ea4dac76e594e, type: 3}
     volume: 1
     pitchVariance: 0
     cooldown: 0.03
   - key: enemy.killed
     channel: 0
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 7193543f3fd5a404bbad6ff0f84e8e2a, type: 3}
     volume: 0.6
     pitchVariance: 0.1
     cooldown: 0.06
@@ -58,7 +62,8 @@ MonoBehaviour:
     cooldown: 0.1
   - key: tower.placed
     channel: 0
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: c9ce97442de02ac46912ee2abe651abe, type: 3}
     volume: 1
     pitchVariance: 0.05
     cooldown: 0
@@ -82,7 +87,8 @@ MonoBehaviour:
     cooldown: 0
   - key: ability.used
     channel: 0
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 3e2d17b3bd657c24a91dface3afe53e8, type: 3}
     volume: 1
     pitchVariance: 0.05
     cooldown: 0.1
