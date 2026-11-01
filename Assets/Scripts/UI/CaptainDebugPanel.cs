@@ -35,8 +35,7 @@ public class CaptainDebugPanel
 
     public void Update()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.f2Key.wasPressedThisFrame) IsOpen = !IsOpen;
+        if (GameInput.KeyDown(Key.F2)) IsOpen = !IsOpen;
 
         Tower tower = IsOpen ? placement.Selected : null;
         string key = TowerPanelKey(tower);

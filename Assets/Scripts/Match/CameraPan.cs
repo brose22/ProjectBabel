@@ -55,7 +55,6 @@ public class CameraPan : MonoBehaviour
     {
         if (grid == null || focus.IsFocused) return;
         Mouse mouse = Mouse.current;
-        Keyboard keyboard = Keyboard.current;
         Vector2 mouseNow = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
         bool overUi = mouse != null && UIKit.IsPointerOverUI();
 
@@ -63,7 +62,7 @@ public class CameraPan : MonoBehaviour
         bool dragging = mouse != null && mouse.middleButton.isPressed && !overUi;
         Vector2 drag = dragging && mouse.middleButton.wasPressedThisFrame == false ? mouseNow - lastMouse : Vector2.zero;
         lastMouse = mouseNow;
-        Vector2 keys = ReadArrows(keyboard);
+        Vector2 keys = GameInput.PanKeys;
 
         if (scroll == 0f && drag == Vector2.zero && keys == Vector2.zero) return;
         if (!moved) Begin();
@@ -86,13 +85,6 @@ public class CameraPan : MonoBehaviour
         cam.orthographicSize = size;
         shake.RestPosition = new Vector3(centre.x, centre.y, homePosition.z);
         if (Mathf.Abs(size - homeSize) < HomeTolerance && Vector2.Distance(centre, homePosition) < HomeTolerance) End();
-    }
-
-    static Vector2 ReadArrows(Keyboard keyboard)
-    {
-        if (keyboard == null) return Vector2.zero;
-        return new Vector2((keyboard.rightArrowKey.isPressed ? 1f : 0f) - (keyboard.leftArrowKey.isPressed ? 1f : 0f),
-            (keyboard.upArrowKey.isPressed ? 1f : 0f) - (keyboard.downArrowKey.isPressed ? 1f : 0f));
     }
 
     // Remembers the default view and takes the camera from the pixel-perfect component.

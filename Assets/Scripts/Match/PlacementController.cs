@@ -106,20 +106,17 @@ public class PlacementController : MonoBehaviour
 
     void HandleKeys()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-
-        // The pause menu owns the keyboard while it's up; its own Esc handling resumes.
+        // The pause menu owns the input while it's up; its own Resume handling closes it.
         if (match.IsPaused) return;
-        if (keyboard.spaceKey.wasPressedThisFrame) match.StartNextWave();
-        if (keyboard.escapeKey.wasPressedThisFrame)
+        if (GameInput.StartWave) match.StartNextWave();
+        if (GameInput.Cancel)
         {
             if (IsMoving) CancelMove();
             else Select(null);
         }
         if (Selected == null) return;
 
-        if (keyboard.mKey.wasPressedThisFrame)
+        if (GameInput.MoveTower)
         {
             if (IsMoving) CancelMove();
             else BeginMove();
@@ -127,11 +124,11 @@ public class PlacementController : MonoBehaviour
         // Gold draw follows captain requests; the keys only set it while the F2 debug panel is open.
         if (hud.IsDebugPanelOpen)
         {
-            if (keyboard.digit1Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.Low);
-            if (keyboard.digit2Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.Normal);
-            if (keyboard.digit3Key.wasPressedThisFrame) Selected.SetDrawRate(DrawRate.High);
+            if (GameInput.KeyDown(Key.Digit1)) Selected.SetDrawRate(DrawRate.Low);
+            if (GameInput.KeyDown(Key.Digit2)) Selected.SetDrawRate(DrawRate.Normal);
+            if (GameInput.KeyDown(Key.Digit3)) Selected.SetDrawRate(DrawRate.High);
         }
-        if (keyboard.xKey.wasPressedThisFrame) SellSelected();
+        if (GameInput.SellTower) SellSelected();
     }
 
     public void Select(Tower tower)

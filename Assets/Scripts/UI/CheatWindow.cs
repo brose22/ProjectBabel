@@ -41,8 +41,7 @@ public class CheatWindow : MonoBehaviour
     void Update()
     {
         if (panel == null) return;
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.f1Key.wasPressedThisFrame) panel.gameObject.SetActive(!panel.gameObject.activeSelf);
+        if (GameInput.KeyDown(Key.F1)) panel.gameObject.SetActive(!panel.gameObject.activeSelf);
         if (panel.gameObject.activeSelf) UIKit.Refresh(refreshers);
     }
 
