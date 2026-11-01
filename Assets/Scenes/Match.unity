@@ -339,6 +339,7 @@ MonoBehaviour:
   pathTile: {fileID: 11400000, guid: 65d45aa827734bb4c98b50e2e12cbdb4, type: 2}
   groundAccentTile: {fileID: 11400000, guid: 13fe99c38690e2e44bf6d0a0fb388c83, type: 2}
   groundAccentChance: 0.12
+  borderTreeTile: {fileID: 11400000, guid: bf780444073fbae42a52217ad8a18c77, type: 2}
   path: {fileID: 125411914}
   size: {x: 24, y: 12}
   spawnMarker: {fileID: 322185171}
