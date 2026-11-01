@@ -815,7 +815,7 @@ public static class GreyBoxMatchBuilder
 
         GridMap gridMap = gridObject.AddComponent<GridMap>();
         Wire(gridMap, ("groundTilemap", ground), ("pathTilemap", pathTilemap), ("propTilemap", propTilemap), ("groundTile", groundTile),
-            ("pathTile", pathTile), ("groundAccentTile", groundAccentTile), ("path", path), ("spawnMarker", spawnMarker), ("baseMarker", baseMarker));
+            ("pathTile", pathTile), ("groundAccentTile", groundAccentTile), ("borderTreeTile", PropTile("prop_tree")), ("path", path), ("spawnMarker", spawnMarker), ("baseMarker", baseMarker));
         var gridSo = new SerializedObject(gridMap);
         gridSo.FindProperty("size").vector2IntValue = MapSize;
         gridSo.ApplyModifiedPropertiesWithoutUndo();

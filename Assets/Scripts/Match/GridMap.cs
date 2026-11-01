@@ -15,6 +15,8 @@ public class GridMap : MonoBehaviour
     [Tooltip("Optional variety tile scattered over the ground (flowers and the like).")]
     [SerializeField] TileBase groundAccentTile;
     [SerializeField, Range(0f, 1f)] float groundAccentChance = 0.12f;
+    [Tooltip("Optional: fills the padding around the playable map, where nothing can be placed.")]
+    [SerializeField] TileBase borderTreeTile;
     [SerializeField] EnemyPath path;
     [SerializeField] Vector2Int size = new(24, 12);
     [Tooltip("Optional: the gate and castle, moved to the ends of the road when a city layout is applied.")]
@@ -78,6 +80,17 @@ public class GridMap : MonoBehaviour
         foreach (Vector2Int cell in pathCells)
             if (InBounds(cell))
                 pathTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), pathTile);
+
+        PaintBorderTrees();
+    }
+
+    void PaintBorderTrees()
+    {
+        if (propTilemap == null || borderTreeTile == null) return;
+        for (int x = -Padding; x < size.x + Padding; x++)
+            for (int y = -Padding; y < size.y + Padding; y++)
+                if (!InBounds(new Vector2Int(x, y)) && !pathCells.Contains(new Vector2Int(x, y)))
+                    propTilemap.SetTile(new Vector3Int(x, y, 0), borderTreeTile);
     }
 
     // Swaps in a city layout's roads and props, moves the gates and the castle to
