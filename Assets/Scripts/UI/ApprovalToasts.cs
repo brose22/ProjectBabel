@@ -8,7 +8,11 @@ using UnityEngine.UI;
 // Level-ups share the stack as taller, gold-outlined cards showing the captain's new stats.
 public class ApprovalToasts
 {
-    public const float Width = 240f;
+    // Cards are built at full size and the stack scales them down, keeping them in proportion.
+    const float Scale = 2f / 3f;
+    const float CardWidth = 240f;
+    // The space the stack takes on screen.
+    public const float Width = CardWidth * Scale;
     const float Height = 44f;
     const float LevelHeight = 74f;
     const int MaxVisible = 5;
@@ -38,7 +42,8 @@ public class ApprovalToasts
     public ApprovalToasts(Transform parent, float top)
     {
         stack = UIKit.Group(parent, "Approval Toasts");
-        UIKit.Place(stack, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -top), new Vector2(Width, 0f));
+        UIKit.Place(stack, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -top), new Vector2(CardWidth, 0f));
+        stack.localScale = Vector3.one * Scale;
     }
 
     // relationships is null until the match adds it, so it is passed each frame.
@@ -77,7 +82,7 @@ public class ApprovalToasts
     // after it slides out.
     static float OffsetX(float age)
     {
-        float away = Width + UIKit.Pad;
+        float away = CardWidth + UIKit.Pad / Scale;
         if (age < SlideInSeconds)
         {
             float t = 1f - age / SlideInSeconds;
@@ -93,7 +98,7 @@ public class ApprovalToasts
     {
         bool gain = notice.amount > 0f;
         RectTransform card = UIKit.Box(stack, notice.captain.displayName, UIKit.PanelColor, blocksClicks: false);
-        UIKit.Place(card, new Vector2(1f, 1f), Vector2.zero, new Vector2(Width, Height));
+        UIKit.Place(card, new Vector2(1f, 1f), Vector2.zero, new Vector2(CardWidth, Height));
         UIKit.Layout<HorizontalLayoutGroup>(card, 5, 6);
         UIKit.Outline(card, gain ? GainTint : LossTint);
 
@@ -143,7 +148,7 @@ public class ApprovalToasts
     {
         CaptainData captain = notice.captain;
         RectTransform card = UIKit.Box(stack, captain.displayName + " level up", UIKit.PanelColor, blocksClicks: false);
-        UIKit.Place(card, new Vector2(1f, 1f), Vector2.zero, new Vector2(Width, LevelHeight));
+        UIKit.Place(card, new Vector2(1f, 1f), Vector2.zero, new Vector2(CardWidth, LevelHeight));
         UIKit.Layout<HorizontalLayoutGroup>(card, 5, 6);
         UIKit.Outline(card, LevelTint);
 
