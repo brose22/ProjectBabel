@@ -369,8 +369,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
         UIKit.Button(buttons, "Abandon run", match.RestartRun, 160f, 24f);
-        if (Debug.isDebugBuild)
-            UIKit.Button(buttons, "DEBUG: add a shop", match.CheatAddShop, 180f, 24f);
+        UIKit.Button(buttons, "Shop", () => SetShopOpen(true), 160f, 24f);
 
         // Two drawers share the left edge, the inventory's tab under the party's. Only one is open
         // at a time; each is built over the last, so the later one's blocker covers the earlier.
@@ -395,10 +394,30 @@ public class RunScreens : MonoBehaviour
                     BuildGiftRows(list.content, run, null, null);
                 });
             });
+        if (shopOpen) BuildMapShop(root);
     }
 
     // The id of the map drawer that is open, or null when none is.
     string openDrawer;
+
+    // Whether the shop window is showing over the world map.
+    bool shopOpen;
+
+    // Opens or closes the shop over the map by rebuilding the map screen.
+    void SetShopOpen(bool open)
+    {
+        shopOpen = open;
+        shownFor = (MatchState)(-1);
+    }
+
+    void BuildMapShop(RectTransform root)
+    {
+        RectTransform overlay = UIKit.Stretch(UIKit.Panel(root, "Shop", DimColor));
+        RectTransform panel = UIKit.Box(overlay, "Panel");
+        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(panel, 16, 8, fitContent: true).childAlignment = TextAnchor.UpperCenter;
+        BuildShop(panel, () => SetShopOpen(false));
+    }
 
     string InventorySignature(RunState run)
     {
@@ -896,7 +915,7 @@ public class RunScreens : MonoBehaviour
         switch (match.City.kind)
         {
             case NodeKind.Rest: BuildRest(panel); break;
-            case NodeKind.Shop: BuildShop(panel); break;
+            case NodeKind.Shop: BuildShop(panel, match.LeaveStop); break;
             case NodeKind.Event when match.StopEvent != null: BuildEvent(panel, match.StopEvent); break;
             default: UIKit.Button(panel, "Move on", match.LeaveStop, 220f, 32f); break;
         }
@@ -920,7 +939,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Button(panel, amount > 0 ? $"Rest (+{amount} health)" : "Rest (already at full health)", match.Rest, 260f, 32f);
     }
 
-    void BuildShop(RectTransform panel)
+    void BuildShop(RectTransform panel, Action leave)
     {
         RunState run = RunState.Current;
         StopHeader(panel, "SHOP", "Buy gifts to carry with you. Give them to captains from the party window on the map.");
@@ -946,7 +965,7 @@ public class RunScreens : MonoBehaviour
             UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 25f),
                 flexibleWidth: 1f);
         }
-        UIKit.Button(panel, "Leave the shop", match.LeaveStop, 220f, 32f);
+        UIKit.Button(panel, "Leave the shop", leave, 220f, 32f);
     }
 
     void BuildEvent(RectTransform panel, EventData data)
