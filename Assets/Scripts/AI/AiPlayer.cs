@@ -10,6 +10,13 @@ public class AiOptions
     public int runs = 1;
     public float speed = 4f;
     public int seed;
+    // With a layout index, each run is one match on that map at this layer with this party.
+    // Otherwise (-1) each run is a whole run with a party the AI picks.
+    public int layout = -1;
+    public int layer;
+    public List<CaptainData> party = new();
+
+    public bool IsSingleMatch => layout >= 0;
 }
 
 // Plays whole runs by itself and writes a report. It survives the Match scene reloading at every
@@ -221,6 +228,16 @@ public class AiPlayer : MonoBehaviour
     {
         // Seeded before the offer is drawn and the map is generated, which draw from Random.
         UnityEngine.Random.InitState(runSeed);
+        if (options.IsSingleMatch)
+        {
+            string map = match.Data.layouts[options.layout].displayName;
+            recorder.BeginRun(runIndex, runSeed, options.party, Time.realtimeSinceStartup, gameSeconds);
+            recorder.Run.note = $"One match on {map} at layer {options.layer + 1} of {match.Data.matchesPerRun - 1}, as picked on the AI Run screen.";
+            Decide("Setup", $"chosen party {string.Join(", ", options.party.Select(c => c.displayName))} on {map}");
+            match.BeginSingleMatch(options.party, options.layout, options.layer);
+            pendingLoad = true;
+            return;
+        }
         List<CaptainData> roster = match.SetupOffer.ToList();
         List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), match.Data.partySize);
         var party = picks.ConvertAll(i => roster[i]);
@@ -389,6 +406,7 @@ public class AiPlayer : MonoBehaviour
             Decide("Match", $"{(won ? "won" : "lost")} at {match.WavesCleared}/{match.WaveCount} waves, {match.Kills} kills, {match.Leaks} leaks");
         }
         if (match.State == MatchState.Lost) NextRunOrFinish("Defeat");
+        else if (options.IsSingleMatch) NextRunOrFinish("Victory");
         else if (RunState.Current.Map.IsComplete)
         {
             recorder.Run.note = $"The enemy base fell after {match.WavesCleared} of {match.WaveCount} waves.";

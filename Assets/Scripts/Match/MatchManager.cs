@@ -385,6 +385,18 @@ public class MatchManager : MonoBehaviour
         RunSave.Save(RunState.Current);
     }
 
+    // Starts a run that is one match on the given layout, with no world map to cross. Layer sets
+    // the difficulty; called by the AI run, which ends the run when the match does.
+    public void BeginSingleMatch(IEnumerable<CaptainData> party, int layout, int layer)
+    {
+        if (State != MatchState.Setup) return;
+        RunState.Current.SetParty(party);
+        RunState.Current.SetMap(WorldMap.SingleMatch(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun, layout, layer));
+        nextCaptainIndex = 0;
+        RunSave.Save(RunState.Current);
+        SceneManager.LoadScene(gameObject.scene.name);
+    }
+
     // Takes an offered captain into the party (or none, for null) and saves the choice.
     public void Recruit(CaptainData captain)
     {

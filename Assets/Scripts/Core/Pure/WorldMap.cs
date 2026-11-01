@@ -224,6 +224,17 @@ public class WorldMap
         return map;
     }
 
+    // A map holding one match: a plain city at the given layer, already picked, ahead of a base
+    // that is never played. For AI runs that test one map.
+    public static WorldMap SingleMatch(int seed, int layerCount, int layout, int layer)
+    {
+        layerCount = Math.Max(2, layerCount);
+        var map = new WorldMap { layerCount = layerCount, target = 0 };
+        map.nodes.Add(new MapNode { id = 0, layer = Math.Clamp(layer, 0, layerCount - 2), layout = layout, seed = seed, next = { 1 }, revealed = true });
+        map.nodes.Add(new MapNode { id = 1, layer = layerCount - 1, layout = layout, revealed = true });
+        return map;
+    }
+
     // Moves cities before fromLayer off the held-back layouts, onto any of the others.
     static void HoldBackLayouts(WorldMap map, int layoutCount, HashSet<int> held, int fromLayer, Random random)
     {

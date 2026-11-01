@@ -29,7 +29,9 @@ public static class MainMenuBuilder
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = new Color(0.05f, 0.06f, 0.09f);
 
-        new GameObject("Main Menu").AddComponent<MainMenu>();
+        var menu = new SerializedObject(new GameObject("Main Menu").AddComponent<MainMenu>());
+        menu.FindProperty("data").objectReferenceValue = AssetDatabase.LoadAssetAtPath<MatchData>("Assets/Data/GreyBoxMatch.asset");
+        menu.ApplyModifiedPropertiesWithoutUndo();
 
         EditorSceneManager.SaveScene(scene, ScenePath);
         PutMenuFirst();
