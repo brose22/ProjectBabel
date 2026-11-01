@@ -62,7 +62,6 @@ public class RunScreens : MonoBehaviour
     static readonly Color DimRoadColor = new(0.6f, 0.5f, 0.34f, 0.75f);
     static readonly Color FogRoadColor = new(0.66f, 0.68f, 0.73f, 0.45f);
     static readonly Color RestColor = new(0.22f, 0.5f, 0.3f, 1f);
-    static readonly Color ShopColor = new(0.6f, 0.46f, 0.14f, 1f);
     static readonly Color EventColor = new(0.3f, 0.34f, 0.6f, 1f);
 
     MatchManager match;
@@ -937,7 +936,6 @@ public class RunScreens : MonoBehaviour
         {
             NodeKind.Elite => ("E", EliteColor, "Elite battle"),
             NodeKind.Rest => ("R", RestColor, "Rest"),
-            NodeKind.Shop => ("$", ShopColor, "Shop"),
             NodeKind.Event => ("?", EventColor, "Event"),
             _ => ("B", UIKit.ButtonColor, "Battle"),
         };
@@ -977,7 +975,6 @@ public class RunScreens : MonoBehaviour
         {
             NodeKind.Elite => cityName,
             NodeKind.Rest => "Rest",
-            NodeKind.Shop => "Shop",
             NodeKind.Event => "Event ?",
             _ => cityName,
         };
@@ -991,7 +988,6 @@ public class RunScreens : MonoBehaviour
         {
             NodeKind.Elite => $"{match.Data.eliteGoldMultiplier:0.#}x Gold" + GateCount(node, " | "),
             NodeKind.Rest => $"Heals {match.RestAmount}",
-            NodeKind.Shop => "Gifts",
             NodeKind.Event => "Unknown",
             _ => GateCount(node, "").TrimStart(),
         };
@@ -1072,7 +1068,6 @@ public class RunScreens : MonoBehaviour
                 return $"A tougher battle: enemies from {match.Data.eliteLayerBonus} layers further on, " +
                     $"{match.Data.eliteGoldMultiplier:0.#}x Gold from kills, and a wider choice of captains to recruit on a win.";
             case NodeKind.Rest: return $"Rest instead of fighting. Heals {match.RestAmount} health.";
-            case NodeKind.Shop: return "No battle. Spend Gold on gifts for your captains.";
             case NodeKind.Event: return "No battle. Something unexpected happens.";
             default: return "A battle. Defend the city against the waves.";
         }
@@ -1091,7 +1086,6 @@ public class RunScreens : MonoBehaviour
         switch (match.City.kind)
         {
             case NodeKind.Rest: BuildRest(panel); break;
-            case NodeKind.Shop: BuildShop(panel, match.LeaveStop); break;
             case NodeKind.Event when match.StopEvent != null: BuildEvent(panel, match.StopEvent); break;
             default: UIKit.Button(panel, "Move on", match.LeaveStop, 220f, 32f); break;
         }

@@ -37,8 +37,6 @@ public class AiPlayer : MonoBehaviour
     // Real seconds with no progress before a run is given up as stalled.
     const float StallSeconds = 120f;
     const int MaxConsecutiveErrors = 3;
-    // Gold kept back at a shop for the matches ahead.
-    const int ShopGoldReserve = 100;
     // Think ticks to let towers draw their first Gold before the first wave starts.
     const int PrepTicks = 3;
 
@@ -312,7 +310,6 @@ public class AiPlayer : MonoBehaviour
     void ThinkStop()
     {
         RunState run = RunState.Current;
-        MatchData data = match.Data;
         switch (match.City.kind)
         {
             case NodeKind.Rest:
@@ -322,20 +319,6 @@ public class AiPlayer : MonoBehaviour
                     match.Rest();
                 }
                 else Leave("rest skipped at full health");
-                break;
-            case NodeKind.Shop:
-                var party = run.Party.FindAll(c => !run.HasDeparted(c));
-                var approvals = party.ConvertAll(ApprovalStore.ApprovalOf);
-                var canTake = approvals.ConvertAll(a => a < BondMath.MaxApproval);
-                int target = AiStopChoice.PickGiftTarget(approvals, canTake, run.Gold, data.GiftCost, ShopGoldReserve);
-                GiftData gift = target >= 0 ? BestGiftFor(party[target], run.Gold - ShopGoldReserve) : null;
-                if (gift != null)
-                {
-                    Decide("Shop", $"{gift.displayName} for {party[target].displayName} (approval {approvals[target]:0}), the lowest in the party");
-                    match.BuyGift(gift);
-                    match.GiveGift(party[target], gift);
-                }
-                else Leave("shop done: no gift worth the Gold");
                 break;
             default:
                 EventData stopEvent = match.StopEvent;
@@ -356,24 +339,6 @@ public class AiPlayer : MonoBehaviour
         stopHandled = true;
         recorder.RecordStop(match);
         Decide("Stop", text);
-    }
-
-    // The shop gift that raises this captain's approval most within the Gold budget; null when none helps.
-    GiftData BestGiftFor(CaptainData captain, int budget)
-    {
-        GiftData best = null;
-        float bestGain = 0f;
-        foreach (GiftData gift in match.ShopStock)
-        {
-            if (gift.cost > budget || !match.CanBuyGift(gift)) continue;
-            float gain = gift.ApprovalFor(captain.ReactionTo(gift));
-            if (gain > bestGain || (gain == bestGain && best != null && gift.cost < best.cost))
-            {
-                best = gift;
-                bestGain = gain;
-            }
-        }
-        return best;
     }
 
     void Leave(string text)

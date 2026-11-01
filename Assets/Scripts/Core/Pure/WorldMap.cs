@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 
-// What a world map node holds. Cities and elite cities are matches; rests, shops and events are
+// What a world map node holds. Cities and elite cities are matches; rests and events are
 // stops that take the place of a match in their layer.
-public enum NodeKind { City, Elite, Rest, Shop, Event }
+// Event keeps the number it had when shops were a kind, so older saves still load.
+public enum NodeKind { City, Elite, Rest, Event = 4 }
 
 // The chance of each special node kind on layers that allow them; the rest are plain cities.
 [Serializable]
@@ -11,14 +12,12 @@ public struct NodeOdds
 {
     public float elite;
     public float rest;
-    public float shop;
     public float @event;
 
-    public NodeOdds(float elite, float rest, float shop, float @event)
+    public NodeOdds(float elite, float rest, float @event)
     {
         this.elite = elite;
         this.rest = rest;
-        this.shop = shop;
         this.@event = @event;
     }
 
@@ -28,7 +27,6 @@ public struct NodeOdds
         float threshold = 0f;
         if (roll < (threshold += Math.Max(0f, elite))) return NodeKind.Elite;
         if (roll < (threshold += Math.Max(0f, rest))) return NodeKind.Rest;
-        if (roll < (threshold += Math.Max(0f, shop))) return NodeKind.Shop;
         if (roll < (threshold += Math.Max(0f, @event))) return NodeKind.Event;
         return NodeKind.City;
     }

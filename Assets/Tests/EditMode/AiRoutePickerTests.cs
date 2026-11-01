@@ -26,14 +26,6 @@ public class AiRoutePickerTests
     }
 
     [Test]
-    public void RichRun_PrefersShopOverCity()
-    {
-        var options = new[] { Option(0, NodeKind.City), Option(1, NodeKind.Shop) };
-        Assert.That(AiRoutePicker.Pick(options, 0.7f, 300, 75, out _), Is.EqualTo(1));
-        Assert.That(AiRoutePicker.Pick(options, 0.7f, 10, 75, out _), Is.EqualTo(0));
-    }
-
-    [Test]
     public void HiddenCities_AreTreatedAsPlain()
     {
         var options = new[] { Option(0, NodeKind.Elite, revealed: false), Option(1, NodeKind.City) };

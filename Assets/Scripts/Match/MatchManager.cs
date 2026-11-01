@@ -455,8 +455,8 @@ public class MatchManager : MonoBehaviour
         LeaveStop();
     }
 
-    // Whether the shop can be shopped at now: from the world map, or at a shop node in an older save.
-    public bool ShopOpen => State == MatchState.Map || (State == MatchState.Stop && City.kind == NodeKind.Shop);
+    // Whether the shop can be shopped at now: from the world map.
+    public bool ShopOpen => State == MatchState.Map;
 
     // The gifts on the shelves: shopSize of the full list, picked by the shop node's seed, or by
     // the run's first node when shopping from the map.
