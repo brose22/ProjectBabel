@@ -207,15 +207,15 @@ public static class GreyBoxMatchBuilder
         // GDD cost tiers. Act: Rogue very low, Knight/Archer low, Mage high.
         // Respawn: Rogue/Archer low, Knight medium, Mage high.
         SoldierClassData knight = SoldierClass("Knight", new Color(0.4f, 0.55f, 1f), SoldierClassData.AttackStyle.Melee,
-            actCost: 2, respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, reach: 2f, knockback: 0.5f);
+            actCost: 2, respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, reach: 1f, knockback: 0.5f);
         // Archers shoot from further than they reach, so they step out a little for far targets.
         SoldierClassData archer = SoldierClass("Archer", new Color(0.45f, 0.85f, 0.35f), SoldierClassData.AttackStyle.Ranged,
-            actCost: 2, respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad, reach: 3f);
+            actCost: 2, respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad, reach: 2f);
         SoldierClassData rogue = SoldierClass("Rogue", new Color(0.9f, 0.9f, 0.75f), SoldierClassData.AttackStyle.Melee,
-            actCost: 1, respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road, reach: 2f);
+            actCost: 1, respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road, reach: 1f);
         // Weak against lone enemies, strong against the bunched-up late waves.
         SoldierClassData mage = SoldierClass("Mage", new Color(1f, 0.45f, 0.75f), SoldierClassData.AttackStyle.Magic,
-            actCost: 5, respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, reach: 2.5f, splash: 1f);
+            actCost: 5, respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, reach: 1.5f, splash: 1f);
         var classes = new List<SoldierClassData> { knight, archer, rogue, mage };
         var defaultMix = new List<SoldierClassData> { knight, archer };
 
