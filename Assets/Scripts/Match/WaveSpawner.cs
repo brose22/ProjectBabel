@@ -13,10 +13,10 @@ public class WaveSpawner : MonoBehaviour
 
     public void SpawnWave(WaveDefinition wave) => StartCoroutine(Run(wave));
 
-    // One enemy straight onto the first road, outside any wave (the enemy base's boss).
+    // One enemy straight onto a random road, outside any wave (the enemy base's boss).
     public Enemy SpawnOne(EnemyData data, float healthMultiplier, float goldMultiplier = 1f)
     {
-        Vector3[] points = path.GetPoints();
+        Vector3[] points = path.GetPoints(Random.Range(0, path.RouteCount));
         Enemy enemy = Instantiate(enemyPrefab, points[0], Quaternion.identity);
         enemy.Init(data, points, healthMultiplier, goldMultiplier);
         return enemy;

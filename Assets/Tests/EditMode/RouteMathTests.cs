@@ -54,4 +54,36 @@ public class RouteMathTests
         Assert.That(RouteMath.EndAtTheSameCell(new[] { a, b }), Is.True);
         Assert.That(RouteMath.EndAtTheSameCell(new[] { a, c }), Is.False);
     }
+
+    [Test]
+    public void Nearest_FindsTheRouteAndHowFarAlongIt()
+    {
+        var a = Line((0, 0), (1, 0), (2, 0));
+        var b = Line((0, 9), (1, 9), (2, 9));
+        Assert.That(RouteMath.Nearest(new[] { a, b }, 2.5f, 7.5f), Is.EqualTo((1, 2)));
+        Assert.That(RouteMath.Nearest(new[] { a, b }, 0.5f, 1.5f), Is.EqualTo((0, 0)));
+    }
+
+    [Test]
+    public void Nearest_OnASharedCellKeepsTheFirstRoute()
+    {
+        var a = Line((0, 0), (5, 5));
+        var b = Line((0, 9), (5, 5));
+        Assert.That(RouteMath.Nearest(new[] { a, b }, 5.5f, 5.5f), Is.EqualTo((0, 1)));
+    }
+
+    [Test]
+    public void GateDirection_ComparesAGateWithTheOthers()
+    {
+        var leftEdge = new[] { (0, 10), (0, 2) };
+        Assert.That(RouteMath.GateDirection(leftEdge, 0), Is.EqualTo("north"));
+        Assert.That(RouteMath.GateDirection(leftEdge, 1), Is.EqualTo("south"));
+        var topEdge = new[] { (2, 11), (20, 11) };
+        Assert.That(RouteMath.GateDirection(topEdge, 0), Is.EqualTo("west"));
+        Assert.That(RouteMath.GateDirection(topEdge, 1), Is.EqualTo("east"));
+    }
+
+    [Test]
+    public void GateDirection_IsEmptyForALoneGate() =>
+        Assert.That(RouteMath.GateDirection(new[] { (0, 5) }, 0), Is.Empty);
 }

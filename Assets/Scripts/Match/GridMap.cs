@@ -24,6 +24,8 @@ public class GridMap : MonoBehaviour
     readonly HashSet<Vector2Int> pathCells = new();
     // Each route's on-map cells from its gate to the castle.
     readonly List<List<Vector2Int>> routeCells = new();
+    // The same cells as plain coordinates, for the route maths.
+    readonly List<IReadOnlyList<(int x, int y)>> plainRoutes = new();
     // Every on-map road cell once, from furthest from the castle to the castle itself.
     readonly List<Vector2Int> orderedPathCells = new();
     // Gates added for routes beyond the first, copies of spawnMarker.
@@ -41,6 +43,8 @@ public class GridMap : MonoBehaviour
     // routes the cells are ordered by their fewest steps to the castle.
     public IReadOnlyList<Vector2Int> RoadCells => orderedPathCells;
     public int RouteCount => routeCells.Count;
+    // Each route's on-map cells from its gate to the castle.
+    public IReadOnlyList<IReadOnlyList<(int x, int y)>> Routes => plainRoutes;
 
     void Awake() => Paint();
 
@@ -50,6 +54,7 @@ public class GridMap : MonoBehaviour
         pathTilemap.ClearAllTiles();
         pathCells.Clear();
         routeCells.Clear();
+        plainRoutes.Clear();
         orderedPathCells.Clear();
 
         for (int x = -Padding; x < size.x + Padding; x++)
@@ -64,12 +69,10 @@ public class GridMap : MonoBehaviour
             for (int i = 1; i < points.Length; i++)
                 AddPathSegment(WorldToCell(points[i - 1]), WorldToCell(points[i]), cells, seen);
             routeCells.Add(cells);
+            plainRoutes.Add(cells.ConvertAll(c => (c.x, c.y)));
         }
 
-        var ordering = new List<IReadOnlyList<(int x, int y)>>();
-        foreach (List<Vector2Int> cells in routeCells)
-            ordering.Add(cells.ConvertAll(c => (c.x, c.y)));
-        foreach ((int x, int y) in RouteMath.OrderedRoadCells(ordering))
+        foreach ((int x, int y) in RouteMath.OrderedRoadCells(plainRoutes))
             orderedPathCells.Add(new Vector2Int(x, y));
 
         foreach (Vector2Int cell in pathCells)
@@ -98,9 +101,7 @@ public class GridMap : MonoBehaviour
         }
 
         Paint();
-        var ends = new List<IReadOnlyList<(int x, int y)>>();
-        foreach (List<Vector2Int> cells in routeCells) ends.Add(cells.ConvertAll(c => (c.x, c.y)));
-        if (!RouteMath.EndAtTheSameCell(ends))
+        if (!RouteMath.EndAtTheSameCell(plainRoutes))
             Debug.LogWarning($"Layout {layout.displayName}: its routes do not all end on the same cell, so they have no common castle.");
         PlaceMarkers();
     }
@@ -126,6 +127,17 @@ public class GridMap : MonoBehaviour
             }
         }
         if (baseMarker != null) baseMarker.position = CellCenter(routeCells[0][^1]);
+    }
+
+    // The side of the map this spawn point's gate is on, such as "north", or empty with one gate.
+    public string GateName(Vector3 spawnPoint)
+    {
+        var gates = new List<(int x, int y)>();
+        foreach (IReadOnlyList<(int x, int y)> route in plainRoutes)
+            if (route.Count > 0) gates.Add(route[0]);
+        if (gates.Count == 0) return "";
+        (int gate, _) = RouteMath.Nearest(gates.ConvertAll(g => (IReadOnlyList<(int x, int y)>)new[] { g }), spawnPoint.x, spawnPoint.y);
+        return RouteMath.GateDirection(gates, gate);
     }
 
     void AddPathSegment(Vector2Int from, Vector2Int to, List<Vector2Int> cells, HashSet<Vector2Int> seen)
