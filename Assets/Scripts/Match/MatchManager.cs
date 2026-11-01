@@ -359,6 +359,9 @@ public class MatchManager : MonoBehaviour
         MainMenu.Open();
     }
 
+    // At least this many captains are offered, for an AI run that fields a bigger party than usual.
+    public int SetupOfferMinimum { get; set; }
+
     // The captains the setup screen offers: a random subset of the roster, drawn once per run.
     public IReadOnlyList<CaptainData> SetupOffer
     {
@@ -367,7 +370,7 @@ public class MatchManager : MonoBehaviour
             List<CaptainData> offer = RunState.Current.SetupOffer;
             if (offer.Count > 0) return offer;
             List<CaptainData> roster = data.roster.FindAll(c => c != null);
-            int size = CaptainOffer.Size(GameSettings.CaptainsOffered, data.partySize, roster.Count);
+            int size = CaptainOffer.Size(Mathf.Max(GameSettings.CaptainsOffered, SetupOfferMinimum), data.partySize, roster.Count);
             foreach (int index in CaptainOffer.Draw(roster.Count, size, Random.Range(int.MinValue, int.MaxValue)))
                 offer.Add(roster[index]);
             return offer;

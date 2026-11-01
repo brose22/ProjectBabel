@@ -14,6 +14,8 @@ public class AiOptions
     // Otherwise (-1) each run is a whole run with a party the AI picks.
     public int layout = -1;
     public int layer;
+    // How many captains the party fields; 0 keeps the game's party size.
+    public int captains;
     public List<CaptainData> party = new();
 
     public bool IsSingleMatch => layout >= 0;
@@ -241,8 +243,15 @@ public class AiPlayer : MonoBehaviour
             pendingLoad = true;
             return;
         }
+        int partySize = options.captains > 0 ? options.captains : match.Data.partySize;
+        // The setup screen has drawn its usual offer; draw a wider one when the party is bigger than it.
+        if (RunState.Current.SetupOffer.Count < partySize)
+        {
+            RunState.Current.SetupOffer.Clear();
+            match.SetupOfferMinimum = partySize;
+        }
         List<CaptainData> roster = match.SetupOffer.ToList();
-        List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), match.Data.partySize);
+        List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), partySize);
         var party = picks.ConvertAll(i => roster[i]);
         recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds);
         Decide("Setup", $"party {string.Join(", ", party.Select(c => c.displayName))}: strongest mix with a support");
