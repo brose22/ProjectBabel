@@ -28,6 +28,15 @@ public class CameraPan : MonoBehaviour
     bool moved;
     Vector2 lastMouse;
 
+    // True while the view is panned or zoomed away from the default one.
+    public bool IsMoved => moved;
+
+    // Snaps back to the default view.
+    public void Recenter()
+    {
+        if (moved && !focus.IsFocused) End();
+    }
+
     public void Setup(GridMap gridMap)
     {
         grid = gridMap;

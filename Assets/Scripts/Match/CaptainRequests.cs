@@ -19,7 +19,8 @@ public enum RequestAnswer { No, Yes }
 //   LowerDraw  - the reserve has sat full for a while. Sets the draw to Low.
 // The player answers Yes, which grants the request and the approval reward, or No, which always
 // costs approval, scaled by request and captain.
-// Requests are shown one at a time and the match pauses while one waits; one left unanswered when
+// Only one request is up at a time and the match pauses while it waits; a new one that would come
+// in meanwhile is not asked at all. One left unanswered when
 // its countdown runs out counts as a refusal, while one still open when the wave ends is dropped
 // without costing approval. Added to the match at runtime.
 public class CaptainRequests : MonoBehaviour
@@ -47,7 +48,7 @@ public class CaptainRequests : MonoBehaviour
     // At most this many requests come in a wave.
     const int MaxRequestsPerWave = 2;
     // A captain doesn't ask for the same thing again until this many waves have passed.
-    const int CooldownWaves = 2;
+    const int CooldownWaves = 4;
     // Game seconds with nothing in range, while enemies are elsewhere on the field, before a captain asks to move.
     const float IdleSeconds = 20f;
     // Game seconds a full reserve sits before the captain offers to draw less.
@@ -248,12 +249,12 @@ public class CaptainRequests : MonoBehaviour
         match.FocusCamera(active?.Tower);
     }
 
-    // Queues the request unless the wave is out of requests, the captain already has one waiting
-    // or asked for the same thing too recently.
+    // Shows the request unless one is already up (nothing is queued behind it), the wave is out of
+    // requests, or the captain asked for the same thing too recently.
     void TryAsk(Tower tower, RequestKind kind, string text, SoldierClassData wanted = null, Tower fallen = null)
     {
         if (match.State != MatchState.WaveActive || match.IsOver || tower.IsDisabled) return;
-        if (askedThisWave >= MaxRequestsPerWave || pending.Exists(r => r.Tower == tower)) return;
+        if (askedThisWave >= MaxRequestsPerWave || pending.Count > 0) return;
         if (lastAsked.TryGetValue((tower, kind), out int last) && wave - last < CooldownWaves) return;
 
         lastAsked[(tower, kind)] = wave;

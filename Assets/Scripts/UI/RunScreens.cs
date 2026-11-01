@@ -568,7 +568,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(stats, 0, 8).childAlignment = TextAnchor.UpperCenter;
         UIKit.Size(stats, flexibleWidth: 1f);
         Stat(stats, "POWER", $"{captain.power * LevelMath.StatFactor(level):0}");
-        Stat(stats, "RANGE", $"{match.RangeFor(captain):0.#}");
+        Text rangeStat = Stat(stats, "RANGE", $"{match.RangeFor(captain):0.#}");
         Stat(stats, "SPEED", $"{captain.speed:0.##}");
         Stat(stats, "HEALTH", $"{captain.health}");
         Stat(stats, "RESERVE", $"{captain.resourceCapacity}");
@@ -587,7 +587,8 @@ public class RunScreens : MonoBehaviour
         TagLine(window, "Likes", captain.likes, UIKit.GoodColor);
         TagLine(window, "Dislikes", captain.dislikes, UIKit.BadColor);
 
-        BuildLoadout(window, run, captain);
+        // Range follows the soldier classes, so it is redrawn whenever one is changed.
+        BuildLoadout(window, run, captain, () => rangeStat.text = $"{match.RangeFor(captain):0.#}");
 
         UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
         Transform buttons = UIKit.Group(window, "Buttons");
@@ -761,7 +762,7 @@ public class RunScreens : MonoBehaviour
     // The soldier class for each slot, saved with the run and used when the captain's tower is
     // placed. Slots the captain's bond hasn't opened yet say when they open. Class names are
     // green or red when the captain likes or dislikes that class.
-    void BuildLoadout(Transform window, RunState run, CaptainData captain)
+    void BuildLoadout(Transform window, RunState run, CaptainData captain, Action onChanged = null)
     {
         UIKit.Size(UIKit.Header(window, "Soldiers"), flexibleWidth: 1f);
         var classes = match.Data.ChoosableClasses;
@@ -801,6 +802,7 @@ public class RunScreens : MonoBehaviour
                     run.SetLoadoutClass(captain, slot, option);
                     RunSave.Save(run);
                     Restyle();
+                    onChanged?.Invoke();
                 }, height: 22f);
                 UIKit.Size(button, height: 22f, flexibleWidth: 1f);
                 button.GetComponentInChildren<Text>().fontSize = 12;

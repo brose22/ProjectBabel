@@ -139,6 +139,8 @@ public class MatchHUD : MonoBehaviour
             interactable: () => match.State == MatchState.Preparing, width: 130f), barRefreshers);
         UIKit.LiveButton(bar, () => match.GameSpeed > 1f ? "Speed x2" : "Speed x1", match.ToggleGameSpeed, barRefreshers,
             selected: () => match.GameSpeed > 1f, width: 72f);
+        UIKit.LiveButton(bar, () => "Recenter", match.RecenterCamera, barRefreshers,
+            interactable: () => match.CameraMoved, width: 72f);
         UIKit.LiveButton(bar, () => "Pause", () => match.SetPaused(true), barRefreshers,
             interactable: () => !match.IsOver && !match.IsBetweenMatches, width: 60f);
     }
