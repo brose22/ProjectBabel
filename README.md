@@ -7,10 +7,10 @@ You claim cities on a world map, defend them in wave-based matches, and use the 
 ## The game at a glance
 
 - **Runs:** about 30 matches on a tactics-style overworld. Global health lasts the whole run; enemies that leak through reduce it, and at zero the run is lost.
-- **Matches:** 10 waves, 5–10 minutes. Place up to 5 towers, answer captains' requests (they pause the match while they wait), and relocate towers mid-match for Gold. The final match has double the waves and a very slow boss.
+- **Matches:** 10 waves, 5–10 minutes. Place up to 5 towers, answer captains' requests yes or no (they pause the match while they wait), and relocate towers mid-match for Gold; moves are free until the first wave starts. The final match has double the waves and a very slow boss.
 - **Captains:** 12 unique captains (8 per run), each with an element (Water, Fire, Earth, Air), a role (Attacker, Buffer, Healer), one special ability, and 3 likes and 3 dislikes. The role decides what the special does: an Attacker's hits enemies, a Healer's restores a share of health to every tower and soldier, and a Buffer's boosts every tower and soldier for the rest of the wave. The special's meter fills mainly from the captain's soldiers fighting (damage dealt, weakness hits, hits on afflicted enemies, knockbacks and kills, capped per wave), plus a slow trickle over time.
 - **Relationships:** captains judge your play style (leaks, casualties, selling, ability use, stable or moving placement) and soldier mix. Their approval and bond rank (D → S) carry over between runs and boost their tower.
-- **Soldiers:** Knights, Archers, Mages and Rogues leave their tower to attack the closest enemy, then return. Every act and respawn costs Gold. Each class picks its own home tile near the tower, previewed while you place or move it.
+- **Soldiers:** Knights, Archers, Mages and Rogues leave their tower to attack the closest enemy, then return. A Knight's hit has a 25% chance to knock the enemy back along the road. Every act and respawn costs Gold. Each class picks its own home tile near the tower, previewed while you place or move it.
 - **Economy:** one shared Gold pool, earned from kills, wave clears and a win bonus, and carried between matches. Kills and wins pay more further into the run. Towers draw from the pool into their own reserve at Low, Normal or High rates, set through captain requests, and unspent reserves return to the pool when a match is won.
 
 ## Status
@@ -27,7 +27,7 @@ Early development. One developer at 20 hours a week, with a vertical slice targe
 | M6: world map and run | Branching world map to the enemy base, intel reveals roads, 4 city layouts, scaling difficulty, pick 3 and recruit up to 8, run saved between matches (short 7-match test run) | Done (merged) |
 | M7: map stops and the boss | Elite cities, rests, shops (approval gifts) and events on the world map, health back after wins and at rests, the enemy base's very slow boss | Done (merged) |
 
-Since M7: main menu and settings, party bar and captain widget, enemy combat feedback, Excel data tuning, the AI Run mode, Gold economy tuning and an Android build for Fire tablets.
+Since M7: main menu and settings, party bar and captain widget, enemy combat feedback, Excel data tuning, the AI Run mode, Gold economy tuning, an Android build for Fire tablets, multi-gate layouts, enemy walk cycles, and the audio system (music and sound, with most sound effects still to come).
 
 Next up: the remaining content (toward the ~30-match run), polish, and release prep.
 
@@ -59,11 +59,20 @@ The run is saved to `run.json` in the persistent data path whenever you're on th
 
 ### Tuning data in Excel
 
-**Export** and **Import** on the toolbar of each **Babel → Data** window, or **Babel → Data → Export to Excel...** and **Import from Excel...**, move all the gameplay data through one `.xlsx` workbook. Every button covers every data type, whichever window it is in.
+**Export** and **Import** on the toolbar of each **Babel → Data** window, or **Babel → Data → Export to Excel...** and **Import from Excel...**, move all the gameplay data through one `.xlsx` workbook. Every button covers every data type, whichever window it is in, except the Audio Library, which stays out of the workbook.
 
 - **Sheets:** Captains, Abilities, Enemies, Soldiers, Elements, Events, Matches and Layouts have one row per asset, keyed by the file name in the **Asset** column. Lists of records get their own sheets (Events Choices, Matches Waves, Matches Waves Groups, Layouts Props) with one row per record, tied to the asset by **Asset** and the **#** columns. Positions must run 1, 2, 3 within a list.
 - **Cell formats:** enums are written by name, colours as `r, g, b, a`, cells as `x, y`, and lists of plain values in one cell separated by `; `. A data asset reference is its name; a sprite or tile reference is its path, with `#Name` for a sprite inside a file. `None` or an empty cell clears a reference.
 - **Import** updates existing assets and never creates, renames or deletes them. Adding or removing rows on a list sheet grows or shrinks that list. A bad value, unknown row or unknown column is skipped and left as it was, with a Console warning naming the sheet and row; each changed asset is logged, and **Undo** reverts the whole import. Rename an asset in Unity, not in the workbook: a changed name reads as an unknown row.
+
+### Audio
+
+`AudioManager` plays every sound and music track by key, such as `AudioManager.Play(AudioKeys.EnemyKilled)`. It creates itself before the first scene, survives scene loads and owns the game's only `AudioListener`, so don't add one to a camera.
+
+- **Library:** **Babel → Data → Audio Library** edits `Assets/Resources/AudioLibrary.asset`. Each key has a channel (Music, Sfx or Ui), one or more clips (picked at random), a volume, a pitch variance and a cooldown, with a **Preview** button. After adding or renaming keys, press **Generate AudioKeys** to rewrite `Assets/Scripts/Core/AudioKeys.cs`.
+- **Clips:** source files are in `Assets/Audio`. 6 of the 18 keys have clips so far: both music tracks, `ui.click`, `enemy.killed`, `tower.placed` and `ability.used`. The rest stay silent and log one Console warning per session.
+- **Events:** `AudioEvents` turns `GameEvents` into sounds and picks the music for each scene, so gameplay code makes no audio calls. Music crossfades between the menu and match tracks.
+- **Mixer:** `Assets/Data/Audio/GameAudio.mixer` has a group for each channel, driven by the volumes in Settings.
 
 ### Main menu
 
@@ -72,7 +81,7 @@ The run is saved to `run.json` in the persistent data path whenever you're on th
 - **AI Run:** the AI plays 1–50 whole runs at 1x–8x speed, then writes a report (see [AI Run](#ai-run)).
 - **Settings:** three tabs. Changes apply at once, are kept in PlayerPrefs and are applied again at every launch.
   - **Graphics:** resolution, window mode (fullscreen, borderless, windowed), VSync, frame-rate cap (used while VSync is off) and quality level. The editor's Game view ignores resolution and window mode.
-  - **Audio:** master volume.
+  - **Audio:** separate Music, Sound effects and Interface volumes.
   - **Gameplay:** on/off toggles for each piece of enemy combat feedback: damage numbers, Weak! / Resist labels, hit flash, stun stars, dizzy wobble, knockback effects, death burst, status icons, health bar extras, the leak edge flash and the elite / boss banner.
 - **Exit:** quits the game (stops Play mode in the editor).
 
@@ -90,7 +99,7 @@ The AI picks a party and route, then places towers, answers requests and fires s
 |---|---|
 | Left-click a free tile | Place the next captain's tower |
 | Click a captain in the party bar (bottom) | On the field: fire their special when its meter is full. Not yet placed: make them the next to place |
-| `M` | Move the selected tower (then click a free tile) |
+| `M` | Move the selected tower (then click a free tile); free until the first wave starts |
 | Left-click a tower | Select it and open its captain widget |
 | `X` | Sell the selected tower (returns its reserve) |
 | `Space` | Start the next wave |
@@ -107,15 +116,17 @@ The AI picks a party and route, then places towers, answers requests and fires s
 Assets/
   Scripts/
     AI/       AI Run driver, recorder and overlay
-    Core/     Run-wide state (health, Gold), saves, settings and the GameEvents event bus
-      Pure/   Rules with no scene dependencies (Gold, charge, bonds, world map, AI decisions), unit tested
-    Data/     ScriptableObject definitions: captains, soldier classes, enemies, matches, city layouts
+    Core/     Run-wide state (health, Gold), saves, settings, audio and the GameEvents event bus
+      Pure/   Rules with no scene dependencies (Gold, charge, bonds, world map, AI decisions, audio), unit tested
+    Data/     ScriptableObject definitions: captains, soldier classes, enemies, matches, city layouts, audio library
     Match/    Match simulation: grid, path, enemies, towers, soldiers, waves, placement
     UI/       uGUI built at runtime: menu, HUD, party bar, captain widget, run screens, cheats
   Editor/     Scene builders, Windows and Android builds, bond tools, and the Babel > Data windows and Excel workbook
-  Data/       Tunable data assets (captains, enemies, soldier classes, match setup)
+  Data/       Tunable data assets (captains, enemies, soldier classes, match setup) and the audio mixer
+  Resources/  The audio library, loaded at runtime
   Prefabs/    Enemy, tower and soldier prefabs
   Art/        Placeholder sprites and tiles
+  Audio/      Music and sound effect clips
   Scenes/     MainMenu (title, settings) and Match (setup, world map, matches and results all run in it)
   Tests/      EditMode tests
 ```
@@ -143,5 +154,6 @@ EditMode tests live in `Assets/Tests/EditMode` and run from Unity's Test Runner.
 ### Art and stats
 
 - `py -I Tools/pixel_art.py [preview.png]` regenerates the placeholder pixel art in `Assets/Art/Sprites` from the character grids in the script (optionally writing an enlarged preview sheet). The scene builder assigns art by name to any captain, soldier class or enemy without a sprite.
+- Enemy walk frames (`enemy_*_walk1.png`, `enemy_*_walk2.png`) are hand-made in Aseprite and `pixel_art.py` doesn't write them, so redo them if an enemy's palette or body changes.
 - Every match logs per-wave stats to the Console and writes a CSV to `stats/` under Unity's persistent data path (`%USERPROFILE%/AppData/LocalLow/DefaultCompany/ProjectBabel` on Windows). AI Run batches report to `Reports/` instead.
 - **Babel → Reset Captain Bonds** clears saved approval and bonds, and **Babel → Reveal Bonds Save File** opens its folder.
