@@ -77,6 +77,8 @@ public class MainMenu : MonoBehaviour
     // The picked layout, or -1 for a full run.
     static int aiMap = -1;
     static int aiLayer;
+    // How many captains the AI fields; 0 until first shown, then the game's party size.
+    static int aiCaptains;
 
     // The AI plays by itself with its own saves, then writes a report to Reports/.
     void BuildAiRun()
@@ -91,7 +93,10 @@ public class MainMenu : MonoBehaviour
             aiMap = Wrap(aiMap + 1 + step, data.layouts.Count + 1) - 1;
             BuildAiRun();
         });
+        if (aiCaptains <= 0) aiCaptains = data.partySize;
         if (aiMap >= 0) BuildAiMatchRows(column);
+        SettingRow(column, "Captains", () => aiCaptains.ToString(),
+            step => aiCaptains = Mathf.Clamp(aiCaptains + step, 1, data.maxTowers));
         SettingRow(column, "Runs", () => aiRuns.ToString(), step => aiRuns = Mathf.Clamp(aiRuns + step, 1, 50));
         SettingRow(column, "Speed", () => $"{aiSpeed:0}x",
             step => aiSpeed = AiSpeeds[Wrap(Array.IndexOf(AiSpeeds, aiSpeed) + step, AiSpeeds.Length)]);
@@ -127,10 +132,17 @@ public class MainMenu : MonoBehaviour
 
     void StartAiRun()
     {
-        var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer };
+        int captains = aiCaptains > 0 ? aiCaptains : data.partySize;
+        var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer, captains = captains };
         if (aiMap >= 0)
+        {
+            // The picked role captains first, then more attackers to fill a bigger party; a smaller one drops the last.
             foreach (CaptainRole role in AiPartyRoles)
                 if (AiCaptain(role) != null) options.party.Add(AiCaptain(role));
+            foreach (CaptainData extra in data.roster)
+                if (options.party.Count < captains && extra != null && !options.party.Contains(extra)) options.party.Add(extra);
+            if (options.party.Count > captains) options.party.RemoveRange(captains, options.party.Count - captains);
+        }
         AiPlayer.Begin(options);
     }
 
