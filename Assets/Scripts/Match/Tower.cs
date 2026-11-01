@@ -85,6 +85,17 @@ public class Tower : MonoBehaviour
     // XP per point of health a Healer restores, and per working tower a Buffer's special boosts.
     const float SupportXpPerHealthHealed = 0.5f;
     const float SupportXpPerTowerBoosted = 6f;
+    const float LevelUpFlashRadius = 0.9f;
+    const float LevelUpFlashSeconds = 0.6f;
+    const float LevelUpFlashPopSeconds = 0.2f;
+    const int LevelUpSparks = 14;
+    const float LevelUpSparkSpeed = 2.4f;
+    const float LevelUpSparkSize = 0.12f;
+    const float LevelUpSparkSeconds = 0.7f;
+    const float LevelUpTextHeight = 1.15f;
+    const float LevelUpTextSize = 3f;
+    const float LevelUpTextSeconds = 1.4f;
+    static readonly Color LevelUpFlashColor = new(1f, 0.85f, 0.3f, 0.55f);
     float supportXpBank;
     int supportXpThisWave;
     float supportXpWaveStart = -1f;
@@ -330,7 +341,22 @@ public class Tower : MonoBehaviour
         if (amount <= 0 || RunState.Current == null) return;
         int before = Level;
         RunState.Current.AddXp(Captain, amount);
-        if (Level > before) GameEvents.RaiseCaptainLeveledUp(this, before);
+        if (Level <= before) return;
+        PlayLevelUpEffect();
+        GameEvents.RaiseCaptainLeveledUp(this, before);
+    }
+
+    // A gold flash and spray with the new level above the captain. Real time, because a level-up
+    // can raise a request that pauses the match.
+    void PlayLevelUpEffect()
+    {
+        if (!GameSettings.LevelUpEffects) return;
+        Vector3 at = transform.position;
+        AbilityZone.Spawn(at, 0f, Vector3.one * LevelUpFlashRadius, rangeIndicator.sprite, LevelUpFlashColor,
+            LevelUpFlashSeconds, LevelUpFlashPopSeconds, realTime: true);
+        Burst.Spawn(at, UIKit.AccentColor, LevelUpSparks, LevelUpSparkSpeed, LevelUpSparkSize, LevelUpSparkSeconds);
+        FloatingText.Spawn(at + Vector3.up * LevelUpTextHeight, "Level " + Level + "!", UIKit.AccentColor,
+            LevelUpTextSize, LevelUpTextSeconds);
     }
 
     // XP from healing and buffing, banked in fractions and capped per wave (GDD).

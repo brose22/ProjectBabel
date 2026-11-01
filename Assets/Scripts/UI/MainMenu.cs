@@ -260,6 +260,9 @@ public class MainMenu : MonoBehaviour
         UIKit.Label(column, "Soldiers", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Spawn / despawn effects", "soldierSpawnEffects");
 
+        UIKit.Label(column, "Captains", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        FlagRow(column, "Level up effects", "levelUpEffects");
+
         UIKit.Label(column, "Indicators", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Status icons", "statusIcons");
         FlagRow(column, "Health bar extras", "healthBarExtras");

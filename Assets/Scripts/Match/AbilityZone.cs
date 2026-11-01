@@ -18,13 +18,15 @@ public class AbilityZone : MonoBehaviour
     float popAge;
     float lifetime;
     float age;
+    // Fades in real time too, so it does not hang on screen while the match is paused.
+    bool realTime;
     float radius;
     float damagePerSecond;
     // Credited with kills the zone lands.
     Tower source;
 
     public static AbilityZone Spawn(Vector3 position, float rotationDegrees, Vector3 scale, Sprite sprite, Color color,
-        float lifetime, float popSeconds, float radius = 0f, float damagePerSecond = 0f, Tower source = null)
+        float lifetime, float popSeconds, float radius = 0f, float damagePerSecond = 0f, Tower source = null, bool realTime = false)
     {
         var zoneObject = new GameObject("Ability Effect");
         zoneObject.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, rotationDegrees));
@@ -43,6 +45,7 @@ public class AbilityZone : MonoBehaviour
         zone.radius = radius;
         zone.damagePerSecond = damagePerSecond;
         zone.source = source;
+        zone.realTime = realTime;
         return zone;
     }
 
@@ -57,7 +60,7 @@ public class AbilityZone : MonoBehaviour
             transform.localScale = fullScale * Mathf.Lerp(PopStartScale, 1f, eased);
         }
 
-        age += Time.deltaTime;
+        age += realTime ? Time.unscaledDeltaTime : Time.deltaTime;
         Color faded = color;
         faded.a *= 1f - Mathf.Clamp01(age / lifetime);
         spriteRenderer.color = faded;
