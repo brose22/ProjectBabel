@@ -23,7 +23,12 @@ public class RunScreens : MonoBehaviour
     const float SlotHeight = 84f;
     const int RosterColumns = 2;
     static readonly Vector2 MapArea = new(860f, 330f);
-    static readonly Vector2 CitySize = new(104f, 34f);
+    static readonly Vector2 CitySize = new(118f, 40f);
+    static readonly Vector2 BaseSize = new(136f, 52f);
+    const float BadgeSize = 28f;
+    // Keeps jittered cities inside the map area.
+    const float MapMargin = 14f;
+    const float CityJitter = 12f;
     // World map party drawer.
     const float DrawerWidth = 300f;
     const float DrawerSlideSeconds = 0.2f;
@@ -50,6 +55,14 @@ public class RunScreens : MonoBehaviour
     static readonly Color BaseColor = new(0.55f, 0.12f, 0.16f, 1f);
     static readonly Color EliteColor = new(0.45f, 0.2f, 0.38f, 1f);
     static readonly Color StopColor = new(0.18f, 0.3f, 0.42f, 1f);
+    // Roads: ahead of the player, the trail already walked, the rest, and the dashed hint of hidden ones.
+    static readonly Color AheadRoadColor = new(0.96f, 0.76f, 0.36f, 1f);
+    static readonly Color TrailRoadColor = new(0.4f, 0.7f, 0.45f, 1f);
+    static readonly Color DimRoadColor = new(0.55f, 0.45f, 0.3f, 0.5f);
+    static readonly Color FogRoadColor = new(0.66f, 0.68f, 0.73f, 0.45f);
+    static readonly Color RestColor = new(0.22f, 0.5f, 0.3f, 1f);
+    static readonly Color ShopColor = new(0.6f, 0.46f, 0.14f, 1f);
+    static readonly Color EventColor = new(0.3f, 0.34f, 0.6f, 1f);
 
     MatchManager match;
     Relationships relationships;
@@ -348,8 +361,13 @@ public class RunScreens : MonoBehaviour
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 8, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
 
+        bool abandonArmed = this.abandonArmed;
+        this.abandonArmed = false;
+
+        int nextLayer = map.current < 0 ? 0 : map.nodes[map.current].layer + 1;
+        string progress = nextLayer >= map.layerCount - 1 ? "The enemy base lies ahead" : $"Stop {nextLayer + 1} of {map.layerCount}";
         UIKit.Label(column, "WORLD MAP", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, "Pick the next stop. Every road leads to the enemy base; each stop reveals the roads beyond it.",
+        UIKit.Label(column, $"{progress}. Choose one of the glowing stops; each stop you reach reveals the roads beyond it.",
             12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         BuildRunStats(root, run);
 
@@ -357,19 +375,42 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(area, MapArea.x, MapArea.y);
 
         var choices = map.Choices();
+        // Hints of hidden roads first, then roads, so cities and their marks sit on top.
         foreach (MapNode node in map.nodes)
             if (node.revealed)
                 foreach (int next in node.next)
-                    if (map.nodes[next].revealed)
-                        BuildRoad(area, CityPosition(map, node), CityPosition(map, map.nodes[next]));
+                    if (!map.nodes[next].revealed)
+                        BuildFogStub(area, CityPosition(map, node), CityPosition(map, map.nodes[next]));
+        foreach (MapNode node in map.nodes)
+            if (node.revealed)
+                foreach (int next in node.next)
+                {
+                    MapNode to = map.nodes[next];
+                    if (!to.revealed) continue;
+                    // Ahead: the roads out of where the player stands. Trail: the way already walked.
+                    bool ahead = node.id == map.current;
+                    bool trail = node.cleared && to.cleared;
+                    BuildRoad(area, CityPosition(map, node), CityPosition(map, to), node.id * 7 + next * 13,
+                        ahead ? AheadRoadColor : trail ? TrailRoadColor : DimRoadColor, ahead ? 5f : trail ? 4f : 2f);
+                }
         foreach (MapNode node in map.nodes)
             if (node.revealed) BuildCity(area, map, node, choices.Exists(c => c.id == node.id));
 
+        BuildLegend(column);
+
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
-        UIKit.Button(buttons, "Abandon run", match.RestartRun, 160f, 24f);
         UIKit.Button(buttons, "Shop", () => SetShopOpen(true), 160f, 24f);
+        UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
+        UIKit.Size(UIKit.Group(buttons, "Spacer"), 60f, 24f);
+        // Abandoning loses the run, so it takes a second click.
+        Button abandon = UIKit.Button(buttons, abandonArmed ? "Click again to abandon" : "Abandon run", () =>
+        {
+            if (abandonArmed) { match.RestartRun(); return; }
+            this.abandonArmed = true;
+            shownFor = (MatchState)(-1);
+        }, 160f, 24f);
+        if (abandonArmed) abandon.GetComponent<Image>().color = UIKit.BadColor;
 
         // Two drawers share the left edge, the inventory's tab under the party's. Only one is open
         // at a time; each is built over the last, so the later one's blocker covers the earlier.
@@ -396,6 +437,9 @@ public class RunScreens : MonoBehaviour
             });
         if (shopOpen) BuildMapShop(root);
     }
+
+    // Whether "Abandon run" has been clicked once and now waits for a second click.
+    bool abandonArmed;
 
     // The id of the map drawer that is open, or null when none is.
     string openDrawer;
@@ -827,24 +871,101 @@ public class RunScreens : MonoBehaviour
         return Array.IndexOf(captain.dislikes, tag) >= 0 ? UIKit.BadColor : UIKit.TextColor;
     }
 
-    // Layers run left to right; cities in a layer are spread evenly top to bottom.
+    // Layers run left to right; cities in a layer are spread evenly top to bottom, nudged a little
+    // (the same way every time, from the city's seed) so the map doesn't look like a grid. The
+    // enemy base is pinned to the right edge, centred.
     static Vector2 CityPosition(WorldMap map, MapNode node)
     {
-        float usableWidth = MapArea.x - CitySize.x - 20f, usableHeight = MapArea.y - CitySize.y - 20f;
+        bool isBase = node.id == map.BaseId;
+        Vector2 size = isBase ? BaseSize : CitySize;
+        float usableWidth = MapArea.x - BaseSize.x - 2f * MapMargin, usableHeight = MapArea.y - CitySize.y - 2f * MapMargin - CityJitter;
         float x = map.layerCount > 1 ? node.layer / (float)(map.layerCount - 1) : 0.5f;
-        int size = map.LayerSize(node.layer);
-        float y = (node.lane + 0.5f) / size;
-        return new Vector2((x - 0.5f) * usableWidth, (0.5f - y) * usableHeight);
+        int count = map.LayerSize(node.layer);
+        float y = isBase ? 0.5f : (node.lane + 0.5f) / count;
+        Vector2 position = new((x - 0.5f) * usableWidth, (0.5f - y) * usableHeight);
+        if (isBase) return position;
+        var jitter = new System.Random(node.seed);
+        position.x += ((float)jitter.NextDouble() * 2f - 1f) * CityJitter;
+        position.y += ((float)jitter.NextDouble() * 2f - 1f) * CityJitter * (count > 1 ? 1f : 0.3f);
+        return position;
     }
 
-    static void BuildRoad(RectTransform area, Vector2 from, Vector2 to)
+    // A road as a gentle curve of short straight pieces. bendSeed picks which way and how far it bows.
+    static void BuildRoad(RectTransform area, Vector2 from, Vector2 to, int bendSeed, Color color, float thickness, bool dashed = false)
     {
-        RectTransform road = UIKit.Panel(area, "Road", RoadColor, blocksClicks: false);
         Vector2 delta = to - from;
-        UIKit.Place(road, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(delta.magnitude, 3f));
+        Vector2 side = new Vector2(-delta.y, delta.x).normalized;
+        float bend = (Mathf.Abs(bendSeed) % 5 - 2) * 6f;
+        int pieces = Mathf.Max(2, Mathf.CeilToInt(delta.magnitude / (dashed ? 7f : 18f)));
+        Vector2 previous = from;
+        for (int i = 1; i <= pieces; i++)
+        {
+            float t = i / (float)pieces;
+            Vector2 point = Vector2.Lerp(from, to, t) + side * (bend * 4f * t * (1f - t));
+            if (!dashed || i % 2 == 1) BuildRoadPiece(area, previous, point, color, thickness);
+            previous = point;
+        }
+    }
+
+    static void BuildRoadPiece(RectTransform area, Vector2 from, Vector2 to, Color color, float thickness)
+    {
+        RectTransform road = UIKit.Panel(area, "Road", color, blocksClicks: false);
+        Vector2 delta = to - from;
+        // A little longer than the piece, so the joints in a curve leave no gaps.
+        UIKit.Place(road, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(delta.magnitude + 1.5f, thickness));
         road.pivot = new Vector2(0.5f, 0.5f);
         road.anchoredPosition = (from + to) * 0.5f;
         road.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+    }
+
+    // A dashed road that fades into a "?" toward a city the player has no intel on yet.
+    static void BuildFogStub(RectTransform area, Vector2 from, Vector2 hidden)
+    {
+        Vector2 direction = (hidden - from).normalized;
+        float length = Mathf.Min((hidden - from).magnitude * 0.6f, CitySize.x * 0.5f + 40f);
+        Vector2 end = from + direction * length;
+        BuildRoad(area, from, end, 0, FogRoadColor, 2f, dashed: true);
+        Text mark = UIKit.Label(area, "?", 14, TextAnchor.MiddleCenter, FogRoadColor);
+        mark.fontStyle = FontStyle.Bold;
+        UIKit.Place(mark.rectTransform, new Vector2(0.5f, 0.5f), end + direction * 8f, new Vector2(20f, 20f));
+    }
+
+    // What a kind of stop is marked with: a letter in a badge, and its colour.
+    static (string letter, Color color, string name) KindMark(NodeKind kind, bool isBase) =>
+        isBase ? ("!", BaseColor, "Enemy base") : kind switch
+        {
+            NodeKind.Elite => ("E", EliteColor, "Elite battle"),
+            NodeKind.Rest => ("R", RestColor, "Rest"),
+            NodeKind.Shop => ("$", ShopColor, "Shop"),
+            NodeKind.Event => ("?", EventColor, "Event"),
+            _ => ("B", UIKit.ButtonColor, "Battle"),
+        };
+
+    // A row under the map naming each kind of stop by its badge.
+    void BuildLegend(RectTransform column)
+    {
+        RectTransform legend = UIKit.Group(column, "Legend");
+        UIKit.Layout<HorizontalLayoutGroup>(legend, 0, 14, fitContent: true).childAlignment = TextAnchor.MiddleCenter;
+        foreach (NodeKind kind in new[] { NodeKind.City, NodeKind.Elite, NodeKind.Rest, NodeKind.Shop, NodeKind.Event })
+            LegendEntry(legend, KindMark(kind, false));
+        LegendEntry(legend, KindMark(NodeKind.City, true));
+    }
+
+    static void LegendEntry(Transform legend, (string letter, Color color, string name) mark)
+    {
+        RectTransform entry = UIKit.Group(legend, mark.name);
+        UIKit.Layout<HorizontalLayoutGroup>(entry, 0, 4, fitContent: true);
+        Badge(entry, mark.letter, mark.color, 16f, 10);
+        UIKit.Label(entry, mark.name, 10, color: UIKit.MutedTextColor);
+    }
+
+    static void Badge(Transform parent, string letter, Color color, float size, int fontSize)
+    {
+        RectTransform badge = UIKit.Box(parent, "Badge", color, blocksClicks: false);
+        UIKit.Size(badge, size, size);
+        Text text = UIKit.Shadowed(UIKit.Label(badge, letter, fontSize, TextAnchor.MiddleCenter));
+        text.fontStyle = FontStyle.Bold;
+        UIKit.Stretch(text.rectTransform);
     }
 
     void BuildCity(RectTransform area, WorldMap map, MapNode node, bool choosable)
@@ -859,11 +980,27 @@ public class RunScreens : MonoBehaviour
             NodeKind.Event => "Event ?",
             _ => cityName,
         };
-        if (node.id == map.current) name += " (here)";
-        else if (node.cleared) name += " (won)";
+        bool here = node.id == map.current;
+        Vector2 size = isBase ? BaseSize : CitySize;
+        Vector2 position = CityPosition(map, node);
 
-        Button city = UIKit.Button(area, name, () => match.ChooseCity(node.id));
-        city.GetComponentInChildren<Text>().fontSize = 11;
+        // A second line with what matters when choosing: gates, Gold, healing.
+        var mark = KindMark(node.kind, isBase);
+        string info = isBase ? "Boss fight" : node.kind switch
+        {
+            NodeKind.Elite => $"{match.Data.eliteGoldMultiplier:0.#}x Gold" + GateCount(node, " | "),
+            NodeKind.Rest => $"Heals {match.RestAmount}",
+            NodeKind.Shop => "Gifts for captains",
+            NodeKind.Event => "Unknown",
+            _ => GateCount(node, "").TrimStart(),
+        };
+        string text = name + (info.Length > 0 ? $"\n<size=9><color={UIKit.Hex(UIKit.MutedTextColor)}>{info}</color></size>" : "");
+
+        Button city = UIKit.Button(area, text, () => match.ChooseCity(node.id));
+        Text cityLabel = city.GetComponentInChildren<Text>();
+        cityLabel.fontSize = isBase ? 12 : 11;
+        cityLabel.alignment = TextAnchor.MiddleLeft;
+        cityLabel.rectTransform.offsetMin = new Vector2(BadgeSize + 10f, 4f);
         city.interactable = choosable;
         var image = city.GetComponent<Image>();
         image.color = choosable ? UIKit.SelectedButtonColor : node.cleared ? ClearedCityColor : isBase ? BaseColor
@@ -875,10 +1012,46 @@ public class RunScreens : MonoBehaviour
             colors.disabledColor = new Color(0.85f, 0.85f, 0.85f, 1f);
             city.colors = colors;
         }
-        UIKit.Place((RectTransform)city.transform, new Vector2(0.5f, 0.5f), Vector2.zero, CitySize);
-        ((RectTransform)city.transform).pivot = new Vector2(0.5f, 0.5f);
-        ((RectTransform)city.transform).anchoredPosition = CityPosition(map, node);
-        UIKit.HoverTip((RectTransform)city.transform, name, NodeDescription(node, isBase) + GateNote(node));
+        var rect = (RectTransform)city.transform;
+        UIKit.Place(rect, new Vector2(0.5f, 0.5f), position, size);
+        // The kind's badge at the left edge, and the layout size can't push the label under it.
+        RectTransform badge = UIKit.Box(rect, "Badge", mark.color, blocksClicks: false);
+        UIKit.Place(badge, new Vector2(0f, 0.5f), new Vector2(6f, 0f), new Vector2(BadgeSize, BadgeSize));
+        Text letter = UIKit.Shadowed(UIKit.Label(badge, mark.letter, 15, TextAnchor.MiddleCenter));
+        letter.fontStyle = FontStyle.Bold;
+        UIKit.Stretch(letter.rectTransform);
+
+        // Rings: gold for where the player stands, pulsing gold for what can be picked, and a
+        // standing ring on elite and base cities so they read as dangerous.
+        Color ring = isBase ? new Color(0.9f, 0.3f, 0.3f, 1f) : node.kind == NodeKind.Elite ? new Color(0.78f, 0.5f, 0.9f, 1f) : Color.clear;
+        if (here) ring = UIKit.AccentColor;
+        Image outline = UIKit.Outline(rect, ring);
+        if (choosable)
+        {
+            Color glow = UIKit.AccentColor;
+            refreshers.Add(() =>
+            {
+                glow.a = 0.45f + 0.55f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f));
+                outline.color = glow;
+            });
+        }
+
+        string flag = here ? "YOU ARE HERE" : node.cleared ? "WON" : null;
+        if (flag != null)
+        {
+            Text tag = UIKit.Shadowed(UIKit.Label(area, flag, 9, TextAnchor.MiddleCenter, here ? UIKit.AccentColor : UIKit.GoodColor));
+            tag.fontStyle = FontStyle.Bold;
+            UIKit.Place(tag.rectTransform, new Vector2(0.5f, 0.5f), position + new Vector2(0f, size.y * 0.5f + 8f), new Vector2(110f, 14f));
+        }
+        UIKit.HoverTip(rect, name, NodeDescription(node, isBase) + GateNote(node));
+    }
+
+    // "3 gates" for a battle on more than one road, else empty; prefix goes first when there is text.
+    string GateCount(MapNode node, string prefix)
+    {
+        if (!node.IsMatch || match.Data.layouts.Count == 0) return "";
+        int gates = match.Data.layouts[node.layout % match.Data.layouts.Count].AllRoutes().Count;
+        return gates > 1 ? $"{prefix}{gates} gates" : "";
     }
 
     // Warns about a battle fought on more than one road.
