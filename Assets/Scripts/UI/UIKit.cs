@@ -132,7 +132,27 @@ public static class UIKit
         image.pixelsPerUnitMultiplier = 1f / TexelSize;
     }
 
-    public static Canvas CreateCanvas(string name, int sortingOrder)
+    // Pixel art drawn from rows of text: 'X' is the main colour, 'D' the dark one, anything else clear.
+    // Show it with Icon at a whole multiple of the row size.
+    public static Sprite PixelSprite(string[] rows, Color main, Color dark)
+    {
+        var texture = new Texture2D(rows[0].Length, rows.Length, TextureFormat.RGBA32, false)
+        {
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+            hideFlags = HideFlags.DontSave,
+        };
+        for (int y = 0; y < rows.Length; y++)
+        for (int x = 0; x < rows[y].Length; x++)
+            texture.SetPixel(x, rows.Length - 1 - y, rows[y][x] == 'X' ? main : rows[y][x] == 'D' ? dark : Color.clear);
+        texture.Apply();
+        Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+        sprite.hideFlags = HideFlags.DontSave;
+        return sprite;
+    }
+
+    // uiScale above 1 makes everything on the canvas larger, which also shrinks the layout area.
+    public static Canvas CreateCanvas(string name, int sortingOrder, float uiScale = 1f)
     {
         var canvasObject = new GameObject(name);
         var canvas = canvasObject.AddComponent<Canvas>();
@@ -140,7 +160,7 @@ public static class UIKit
         canvas.sortingOrder = sortingOrder;
         var scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(ReferenceWidth, ReferenceHeight);
+        scaler.referenceResolution = new Vector2(ReferenceWidth, ReferenceHeight) / uiScale;
         scaler.matchWidthOrHeight = 1f;
         canvasObject.AddComponent<GraphicRaycaster>();
         EnsureEventSystem();

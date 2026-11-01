@@ -253,7 +253,15 @@ public class MainMenu : MonoBehaviour
             });
         SettingRow(column, "Quality", () => QualitySettings.names[GameSettings.Quality],
             step => GameSettings.SetQuality(Wrap(GameSettings.Quality + step, QualitySettings.names.Length)));
-        SettingsNote(column, "Changes apply at once and are kept between launches. The editor's Game view ignores resolution and window mode.");
+        SettingRow(column, "Match HUD size", () => $"{Mathf.RoundToInt(GameSettings.UiScale * 100f)}%", step =>
+        {
+            float[] scales = GameSettings.UiScales;
+            int current = 0;
+            for (int i = 0; i < scales.Length; i++)
+                if (Mathf.Abs(scales[i] - GameSettings.UiScale) < Mathf.Abs(scales[current] - GameSettings.UiScale)) current = i;
+            GameSettings.SetUiScale(scales[Wrap(current + step, scales.Length)]);
+        });
+        SettingsNote(column, "Changes apply at once and are kept between launches. The HUD size applies from the next match. The editor's Game view ignores resolution and window mode.");
     }
 
     void BuildAudioTab(RectTransform column)

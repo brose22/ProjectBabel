@@ -374,6 +374,13 @@ public class CaptainRequests : MonoBehaviour
         relationships.Change(tower, RequestRules.ApprovalChange(RequestOutcome.Granted, ApprovalReward, 0f), "got their way");
     }
 
+    // Approval a Yes or a No would change by, for the request card.
+    public float ApprovalIfYes => RequestRules.ApprovalChange(RequestOutcome.Granted, ApprovalReward, 0f);
+
+    public float ApprovalIfNo(Request request) => request.Tower == null ? 0f :
+        RequestRules.ApprovalChange(RequestOutcome.Refused, ApprovalReward,
+            RefusalPenalty * RefusalWeight(request.Kind) * request.Tower.Captain.refusalTemper);
+
     // How much a refusal stings, by request.
     static float RefusalWeight(RequestKind kind) => kind switch
     {
