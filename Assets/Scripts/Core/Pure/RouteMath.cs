@@ -66,7 +66,8 @@ public static class RouteMath
     }
 
     // Which side a gate lies on compared with the map's other gates, for naming it to the player:
-    // "north", "south", "east" or "west". Empty with no other gate to tell it from.
+    // "north", "south", "east" or "west", or a pair like "north-east" when two gates share a side.
+    // Empty with no other gate to tell it from.
     public static string GateDirection(IReadOnlyList<(int x, int y)> gates, int gate)
     {
         if (gates.Count < 2) return "";
@@ -76,7 +77,20 @@ public static class RouteMath
             meanX += x;
             meanY += y;
         }
-        float dx = gates[gate].x - meanX / gates.Count, dy = gates[gate].y - meanY / gates.Count;
+        meanX /= gates.Count;
+        meanY /= gates.Count;
+        float dx = gates[gate].x - meanX, dy = gates[gate].y - meanY;
+        string side = Side(dx, dy);
+        for (int other = 0; other < gates.Count; other++)
+        {
+            if (other == gate || Side(gates[other].x - meanX, gates[other].y - meanY) != side) continue;
+            return side is "east" or "west" ? $"{(dy > 0f ? "north" : "south")}-{side}" : $"{side}-{(dx > 0f ? "east" : "west")}";
+        }
+        return side;
+    }
+
+    static string Side(float dx, float dy)
+    {
         if (dx == 0f && dy == 0f) return "";
         if (Math.Abs(dy) >= Math.Abs(dx)) return dy > 0f ? "north" : "south";
         return dx > 0f ? "east" : "west";

@@ -84,6 +84,15 @@ public class RouteMathTests
     }
 
     [Test]
+    public void GateDirection_TellsApartGatesOnTheSameSide()
+    {
+        var threeGates = new[] { (0, 3), (23, 10), (23, 2) };
+        Assert.That(RouteMath.GateDirection(threeGates, 0), Is.EqualTo("west"));
+        Assert.That(RouteMath.GateDirection(threeGates, 1), Is.EqualTo("north-east"));
+        Assert.That(RouteMath.GateDirection(threeGates, 2), Is.EqualTo("south-east"));
+    }
+
+    [Test]
     public void GateDirection_IsEmptyForALoneGate() =>
         Assert.That(RouteMath.GateDirection(new[] { (0, 5) }, 0), Is.Empty);
 }
