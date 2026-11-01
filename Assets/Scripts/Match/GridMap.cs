@@ -29,8 +29,6 @@ public class GridMap : MonoBehaviour
     // Gates added for routes beyond the first, copies of spawnMarker.
     readonly List<Transform> extraGateMarkers = new();
     readonly Dictionary<Vector2Int, Tower> occupants = new();
-    // The size the scene was built with, which layouts without a size of their own keep.
-    Vector2Int sceneSize;
 
     // Decorative ground painted this many tiles beyond the playable map on every side, so the
     // camera can look past the edge. Nothing can be built or walked there.
@@ -44,11 +42,7 @@ public class GridMap : MonoBehaviour
     public IReadOnlyList<Vector2Int> RoadCells => orderedPathCells;
     public int RouteCount => routeCells.Count;
 
-    void Awake()
-    {
-        sceneSize = size;
-        Paint();
-    }
+    void Awake() => Paint();
 
     public void Paint()
     {
@@ -83,14 +77,13 @@ public class GridMap : MonoBehaviour
                 pathTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), pathTile);
     }
 
-    // Swaps in a city layout's roads and props, sizes the map, moves the gates and the castle to
+    // Swaps in a city layout's roads and props, moves the gates and the castle to
     // the roads' ends and repaints. Called by the match before play starts.
     public void ApplyLayout(CityLayout layout)
     {
         if (layout == null) return;
         List<Vector2Int[]> routes = layout.AllRoutes();
         if (routes.Count == 0) return;
-        size = layout.Area > 0 ? layout.gridSize : sceneSize;
 
         var routePoints = new List<Vector3[]>();
         foreach (Vector2Int[] cells in routes)
