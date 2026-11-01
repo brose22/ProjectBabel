@@ -857,7 +857,15 @@ public class RunScreens : MonoBehaviour
         UIKit.Place((RectTransform)city.transform, new Vector2(0.5f, 0.5f), Vector2.zero, CitySize);
         ((RectTransform)city.transform).pivot = new Vector2(0.5f, 0.5f);
         ((RectTransform)city.transform).anchoredPosition = CityPosition(map, node);
-        UIKit.HoverTip((RectTransform)city.transform, name, NodeDescription(node, isBase));
+        UIKit.HoverTip((RectTransform)city.transform, name, NodeDescription(node, isBase) + GateNote(node));
+    }
+
+    // Warns about a battle fought on more than one road.
+    string GateNote(MapNode node)
+    {
+        if (!node.IsMatch || match.Data.layouts.Count == 0) return "";
+        int gates = match.Data.layouts[node.layout % match.Data.layouts.Count].AllRoutes().Count;
+        return gates > 1 ? $" Enemies come from {gates} gates." : "";
     }
 
     string NodeDescription(MapNode node, bool isBase)
