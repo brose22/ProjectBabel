@@ -6,11 +6,14 @@ public class WaveSpawner : MonoBehaviour
     [SerializeField] Enemy enemyPrefab;
     [SerializeField] EnemyPath path;
 
+    // Enemies spawned so far, so groups that use any route take the routes in turn.
+    int spawned;
+
     public bool IsSpawning { get; private set; }
 
     public void SpawnWave(WaveDefinition wave) => StartCoroutine(Run(wave));
 
-    // One enemy straight onto the road, outside any wave (the enemy base's boss).
+    // One enemy straight onto the first road, outside any wave (the enemy base's boss).
     public Enemy SpawnOne(EnemyData data, float healthMultiplier, float goldMultiplier = 1f)
     {
         Vector3[] points = path.GetPoints();
@@ -28,7 +31,6 @@ public class WaveSpawner : MonoBehaviour
     IEnumerator Run(WaveDefinition wave)
     {
         IsSpawning = true;
-        Vector3[] points = path.GetPoints();
 
         foreach (SpawnGroup group in wave.groups)
         {
@@ -37,6 +39,7 @@ public class WaveSpawner : MonoBehaviour
 
             for (int i = 0; i < group.count; i++)
             {
+                Vector3[] points = path.GetPoints(RouteMath.Pick(group.route, path.RouteCount, spawned++));
                 Enemy enemy = Instantiate(enemyPrefab, points[0], Quaternion.identity);
                 enemy.Init(group.enemy, points, wave.healthMultiplier, wave.goldMultiplier);
                 if (i < group.count - 1)
