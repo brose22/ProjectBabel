@@ -10,7 +10,7 @@ public class CaptainWidget
 {
     const float Width = 250f;
     // Soldier slots per row of the diamond.
-    static readonly int[] SoldierRows = { 1, 2, 1 };
+    static readonly int[] SoldierRows = { 2, 2 };
     static readonly string[] DrawRateLabels = { "Low", "Normal", "High" };
 
     readonly Canvas canvas;
@@ -103,7 +103,7 @@ public class CaptainWidget
         parts.Actions(panel, tower);
     }
 
-    // The soldiers as a diamond: one slot on top, two in the middle, one below. Each shows its
+    // The soldiers as a 2 x 2 grid. Each shows its
     // class, red while the soldier is down. Slots the bond hasn't opened yet show a dash.
     void BuildSoldiers(Tower tower)
     {
@@ -119,12 +119,16 @@ public class CaptainWidget
 
     void BuildSoldierCell(Transform row, Tower tower, int slot)
     {
+        // Each soldier sits on its own inset background.
+        RectTransform cell = UIKit.Box(row, "Soldier", UIKit.InsetColor, blocksClicks: false);
+        UIKit.Layout<HorizontalLayoutGroup>(cell, 3, 0);
+        UIKit.Size(cell, flexibleWidth: 1f);
         if (slot >= tower.Soldiers.Count)
         {
-            UIKit.Size(UIKit.Label(row, "-", 10, TextAnchor.MiddleCenter, UIKit.DisabledTextColor), flexibleWidth: 1f);
+            UIKit.Size(UIKit.Label(cell, "-", 10, TextAnchor.MiddleCenter, UIKit.DisabledTextColor), flexibleWidth: 1f);
             return;
         }
-        Text soldier = UIKit.LiveLabel(row, () => tower.Soldiers[slot].Class.displayName, refreshers, 10);
+        Text soldier = UIKit.LiveLabel(cell, () => tower.Soldiers[slot].Class.displayName, refreshers, 10);
         soldier.alignment = TextAnchor.MiddleCenter;
         UIKit.Size(soldier, flexibleWidth: 1f);
         refreshers.Add(() => soldier.color = tower.Soldiers[slot].IsDead ? UIKit.BadColor : UIKit.TextColor);
