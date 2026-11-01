@@ -194,8 +194,11 @@ public class AiPlayer : MonoBehaviour
     void CheckStall()
     {
         RunState run = RunState.Current;
+        // The boss outlasts the last wave, so its walk and its wounds count as progress too.
+        Enemy boss = match.IsBossAlive ? match.Boss : null;
+        int bossKey = boss == null ? 0 : HashCode.Combine(match.Grid.WorldToCell(boss.transform.position), Mathf.CeilToInt(boss.Health));
         int key = HashCode.Combine((int)match.State, match.WavesCleared, match.Kills, match.Leaks, run?.MatchesPlayed ?? -1,
-            match.City?.id ?? -1, run?.Gold ?? 0, run?.Party.Count ?? 0);
+            match.City?.id ?? -1, run?.Gold ?? 0, HashCode.Combine(run?.Party.Count ?? 0, bossKey));
         if (key != progressKey)
         {
             progressKey = key;
@@ -376,17 +379,6 @@ public class AiPlayer : MonoBehaviour
     void ThinkWave()
     {
         EnsureMatchRow();
-        // Clearing every wave at the enemy base ends the run, even with the boss still walking.
-        if (match.IsBaseMatch && match.WavesCleared >= match.WaveCount)
-        {
-            matchEnded = true;
-            recorder.EndMatch(match, "Won");
-            string note = $"All {match.WaveCount} waves of the enemy base were completed; the run ended there{(match.IsBossAlive ? " with the boss still alive" : "")}.";
-            Decide("Match", note);
-            recorder.Run.note = note;
-            NextRunOrFinish("Victory");
-            return;
-        }
         RestoreTowers();
         SetDrawRates();
         foreach (Tower tower in Tower.All.ToArray())
