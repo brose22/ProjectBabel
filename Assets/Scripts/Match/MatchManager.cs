@@ -54,6 +54,7 @@ public class MatchManager : MonoBehaviour
     float hitStopRemaining;
     CameraShake cameraShake;
     CameraFocus cameraFocus;
+    CameraPan cameraPan;
 
     // Game time the current wave started.
     public float WaveStartTime { get; private set; }
@@ -114,8 +115,8 @@ public class MatchManager : MonoBehaviour
         {
             cameraShake = cam.TryGetComponent(out CameraShake shake) ? shake : cam.gameObject.AddComponent<CameraShake>();
             cameraFocus = cam.TryGetComponent(out CameraFocus focus) ? focus : cam.gameObject.AddComponent<CameraFocus>();
-            if (!cam.TryGetComponent(out CameraPan pan)) pan = cam.gameObject.AddComponent<CameraPan>();
-            pan.Setup(grid);
+            if (!cam.TryGetComponent(out cameraPan)) cameraPan = cam.gameObject.AddComponent<CameraPan>();
+            cameraPan.Setup(grid);
         }
         if (!TryGetComponent(out Relationships _)) gameObject.AddComponent<Relationships>();
         if (!TryGetComponent(out CaptainRequests _)) gameObject.AddComponent<CaptainRequests>();
@@ -304,6 +305,14 @@ public class MatchManager : MonoBehaviour
     public void FocusCamera(Tower tower)
     {
         if (cameraFocus != null) cameraFocus.Focus(tower != null ? tower.transform : null);
+    }
+
+    // True when the player has panned or zoomed away from the default view.
+    public bool CameraMoved => cameraPan != null && cameraPan.IsMoved;
+
+    public void RecenterCamera()
+    {
+        if (cameraPan != null) cameraPan.Recenter();
     }
 
     public void SetRequestPause(bool paused)

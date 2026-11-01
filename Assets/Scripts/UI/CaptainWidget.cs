@@ -9,7 +9,8 @@ using UnityEngine.UI;
 public class CaptainWidget
 {
     const float Width = 250f;
-    const float SlotLabelWidth = 52f;
+    // Soldier slots per row of the diamond.
+    static readonly int[] SoldierRows = { 1, 2, 1 };
     static readonly string[] DrawRateLabels = { "Low", "Normal", "High" };
 
     readonly Canvas canvas;
@@ -102,26 +103,30 @@ public class CaptainWidget
         parts.Actions(panel, tower);
     }
 
-    // A line per slot with its soldier's class, red while the soldier is down. Slots the bond
-    // hasn't opened yet say so.
+    // The soldiers as a diamond: one slot on top, two in the middle, one below. Each shows its
+    // class, red while the soldier is down. Slots the bond hasn't opened yet show a dash.
     void BuildSoldiers(Tower tower)
     {
         UIKit.Header(panel, "Soldiers");
-        for (int i = 0; i < RunState.MaxSoldierSlots; i++)
+        int slot = 0;
+        foreach (int count in SoldierRows)
         {
-            int slot = i;
             Transform row = CaptainPanelParts.Row(panel);
-            UIKit.Size(UIKit.Label(row, CaptainPanelParts.SlotLabel(slot), 11, color: UIKit.MutedTextColor), SlotLabelWidth);
-            if (slot >= tower.Soldiers.Count)
-            {
-                UIKit.Label(row, "Locked", 12, color: UIKit.DisabledTextColor);
-                continue;
-            }
-            Text soldier = UIKit.LiveLabel(row,
-                () => tower.Soldiers[slot].IsDead ? $"{tower.Soldiers[slot].Class.displayName}  <size=10>down</size>" : tower.Soldiers[slot].Class.displayName,
-                refreshers, 12);
-            UIKit.Size(soldier, flexibleWidth: 1f);
-            refreshers.Add(() => soldier.color = tower.Soldiers[slot].IsDead ? UIKit.BadColor : UIKit.TextColor);
+            for (int i = 0; i < count && slot < RunState.MaxSoldierSlots; i++, slot++)
+                BuildSoldierCell(row, tower, slot);
         }
+    }
+
+    void BuildSoldierCell(Transform row, Tower tower, int slot)
+    {
+        if (slot >= tower.Soldiers.Count)
+        {
+            UIKit.Size(UIKit.Label(row, "-", 10, TextAnchor.MiddleCenter, UIKit.DisabledTextColor), flexibleWidth: 1f);
+            return;
+        }
+        Text soldier = UIKit.LiveLabel(row, () => tower.Soldiers[slot].Class.displayName, refreshers, 10);
+        soldier.alignment = TextAnchor.MiddleCenter;
+        UIKit.Size(soldier, flexibleWidth: 1f);
+        refreshers.Add(() => soldier.color = tower.Soldiers[slot].IsDead ? UIKit.BadColor : UIKit.TextColor);
     }
 }
