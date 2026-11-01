@@ -262,30 +262,17 @@ public class CaptainRequests : MonoBehaviour
         ShowNext();
     }
 
-    // How far along the road, in tiles from the gate, a position is: the road tile nearest it.
-    int RoadDistanceFromGate(Vector3 position)
-    {
-        IReadOnlyList<Vector2Int> road = match.Grid.RoadCells;
-        int nearest = 0;
-        float nearestDistance = float.MaxValue;
-        for (int i = 0; i < road.Count; i++)
-        {
-            float distance = Vector2.Distance(position, match.Grid.CellCenter(road[i]));
-            if (distance >= nearestDistance) continue;
-            nearest = i;
-            nearestDistance = distance;
-        }
-        return nearest;
-    }
+    // The route nearest a position, and how far along it, in tiles from its gate, the position is.
+    (int route, int fromGate) NearestRoad(Vector3 position) => RouteMath.Nearest(match.Grid.Routes, position.x, position.y);
 
-    // Among free cells nearer the gate along the road than the captain is now, and still reaching at
-    // least as much road as now, the one whose road distance is closest to MoveCloserFraction less
-    // than the captain's current one. Null when there is none.
+    // Among free cells by the captain's own road, nearer its gate than the captain is now, and still
+    // reaching at least as much road as now, the one whose road distance is closest to
+    // MoveCloserFraction less than the captain's current one. Null when there is none.
     Vector2Int? FindCellNearerSpawner(Tower tower)
     {
         GridMap grid = match.Grid;
         if (grid.RoadCells.Count == 0) return null;
-        int current = RoadDistanceFromGate(tower.transform.position);
+        (int route, int current) = NearestRoad(tower.transform.position);
         int currentCoverage = CountRoadInRange(tower.transform.position, tower.Range);
         float target = current * (1f - MoveCloserFraction);
         float bestError = float.MaxValue;
@@ -297,8 +284,8 @@ public class CaptainRequests : MonoBehaviour
                 var cell = new Vector2Int(x, y);
                 if (!match.CanMoveTo(tower, cell)) continue;
                 Vector3 center = grid.CellCenter(cell);
-                int distance = RoadDistanceFromGate(center);
-                if (distance >= current || !RoadReach.KeepsCoverage(CountRoadInRange(center, tower.Range), currentCoverage)) continue;
+                (int cellRoute, int distance) = NearestRoad(center);
+                if (cellRoute != route || distance >= current || !RoadReach.KeepsCoverage(CountRoadInRange(center, tower.Range), currentCoverage)) continue;
                 float error = Mathf.Abs(distance - target);
                 if (error >= bestError) continue;
                 bestError = error;
