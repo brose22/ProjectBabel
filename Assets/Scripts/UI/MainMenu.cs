@@ -237,10 +237,15 @@ public class MainMenu : MonoBehaviour
 
     void BuildAudioTab(RectTransform column)
     {
-        SettingRow(column, "Master volume", () => $"{Mathf.RoundToInt(GameSettings.Volume * 100f)}%",
-            step => GameSettings.SetVolume(Mathf.Round(GameSettings.Volume * 10f + step) / 10f));
+        VolumeRow(column, "Music", AudioChannel.Music);
+        VolumeRow(column, "Sound effects", AudioChannel.Sfx);
+        VolumeRow(column, "Interface", AudioChannel.Ui);
         SettingsNote(column, "Changes apply at once and are kept between launches.");
     }
+
+    void VolumeRow(RectTransform column, string label, AudioChannel channel) =>
+        SettingRow(column, label, () => $"{Mathf.RoundToInt(GameSettings.ChannelVolume(channel) * 100f)}%",
+            step => GameSettings.SetChannelVolume(channel, Mathf.Round(GameSettings.ChannelVolume(channel) * 10f + step) / 10f));
 
     void BuildGameplayTab(RectTransform column)
     {
