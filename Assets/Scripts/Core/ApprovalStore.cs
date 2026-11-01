@@ -72,6 +72,15 @@ public static class ApprovalStore
         return applied;
     }
 
+    // Puts a captain's bond at exactly the given rank, outside the limits that gains work under.
+    // For starting an AI run at a chosen bond.
+    public static void SetRank(CaptainData captain, int rank)
+    {
+        Entry entry = Get(captain);
+        entry.approval = BondMath.ApprovalForRank(rank);
+        entry.bestRank = Mathf.Clamp(rank, 0, BondMath.MaxRank);
+    }
+
     public static void Save()
     {
         if (entries == null) return;

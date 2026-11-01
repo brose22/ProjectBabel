@@ -21,6 +21,13 @@ public static class BondMath
 
     public static float Clamp(float approval) => Mathf.Clamp(approval, MinApproval, MaxApproval);
 
+    // The lowest approval that is at the given rank: 0 for D.
+    public static float ApprovalForRank(int rank)
+    {
+        rank = Mathf.Clamp(rank, 0, MaxRank);
+        return rank == 0 ? 0f : RankThresholds[rank];
+    }
+
     public static int RankFor(float approval)
     {
         int rank = 0;

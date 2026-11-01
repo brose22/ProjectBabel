@@ -16,6 +16,8 @@ public class AiOptions
     public int layer;
     // How many captains the party fields; 0 keeps the game's party size.
     public int captains;
+    // The bond rank (0 = D to 4 = S) every captain in the party starts the run at.
+    public int bondRank;
     public List<CaptainData> party = new();
 
     public bool IsSingleMatch => layout >= 0;
@@ -236,6 +238,7 @@ public class AiPlayer : MonoBehaviour
         if (options.IsSingleMatch)
         {
             string map = match.Data.layouts[options.layout].displayName;
+            PrepareParty(options.party);
             recorder.BeginRun(runIndex, runSeed, options.party, Time.realtimeSinceStartup, gameSeconds);
             recorder.Run.note = $"One match on {map} at layer {options.layer + 1} of {match.Data.matchesPerRun - 1}, as picked on the AI Run screen.";
             Decide("Setup", $"chosen party {string.Join(", ", options.party.Select(c => c.displayName))} on {map}");
@@ -253,9 +256,27 @@ public class AiPlayer : MonoBehaviour
         List<CaptainData> roster = match.SetupOffer.ToList();
         List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), partySize);
         var party = picks.ConvertAll(i => roster[i]);
+        PrepareParty(party);
         recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds);
         Decide("Setup", $"party {string.Join(", ", party.Select(c => c.displayName))}: strongest mix with a support");
         match.BeginRun(party);
+    }
+
+    // Sets the party's starting bond rank and has each captain field the soldier classes they like,
+    // spread over the slots; a captain who likes none keeps the default mix.
+    void PrepareParty(IEnumerable<CaptainData> party)
+    {
+        foreach (CaptainData captain in party)
+        {
+            ApprovalStore.SetRank(captain, options.bondRank);
+            var liked = new List<SoldierClassData>();
+            foreach (SoldierClassData soldierClass in match.Data.ChoosableClasses)
+                if (soldierClass != null && Relationships.TryGetClassTag(soldierClass, out CaptainTag tag) && Array.IndexOf(captain.likes, tag) >= 0)
+                    liked.Add(soldierClass);
+            if (liked.Count == 0) continue;
+            for (int slot = 0; slot < RunState.MaxSoldierSlots; slot++)
+                RunState.Current.SetLoadoutClass(captain, slot, liked[slot % liked.Count]);
+        }
     }
 
     void ThinkMap()
