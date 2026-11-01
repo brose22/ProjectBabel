@@ -533,6 +533,7 @@ public class MatchManager : MonoBehaviour
                         count = RunScaling.EnemyCount(group.count, layer + pass, data.enemyCountGrowthPerMatch),
                         spawnInterval = group.spawnInterval,
                         delayBefore = group.delayBefore,
+                        route = group.route,
                     });
                 scaled.Add(copy);
             }

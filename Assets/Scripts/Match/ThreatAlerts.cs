@@ -58,7 +58,8 @@ public class ThreatAlerts : MonoBehaviour
     void OnEnemyArrived(Enemy enemy)
     {
         if (!GameSettings.ThreatBanner) return;
-        banner.text = (enemy.IsBoss ? "BOSS: " : "ELITE: ") + enemy.Data.displayName;
+        string gate = TryGetComponent(out MatchManager match) ? match.Grid.GateName(enemy.SpawnPoint) : "";
+        banner.text = (enemy.IsBoss ? "BOSS: " : "ELITE: ") + enemy.Data.displayName + (gate.Length > 0 ? $" at the {gate} gate" : "");
         banner.color = enemy.IsBoss ? UIKit.BadColor : UIKit.AccentColor;
         bannerUntil = Time.unscaledTime + BannerSeconds;
     }

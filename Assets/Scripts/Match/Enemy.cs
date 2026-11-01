@@ -24,6 +24,8 @@ public class Enemy : MonoBehaviour
     public bool IsTargetable { get; private set; }
     // The tower credited with the kill; null for leaks or kills with no tower behind them.
     public Tower KilledBy { get; private set; }
+    // Where the enemy walked on.
+    public Vector3 SpawnPoint => path[0];
 
     Vector3[] path;
     int nextPoint;

@@ -45,6 +45,43 @@ public static class RouteMath
         return order.ConvertAll(i => firstSeen[i]);
     }
 
+    // The road cell nearest a position, as its route and its index along that route. Positions are
+    // in cell units, with a cell's centre half a unit in. Ties keep the earliest route and cell.
+    public static (int route, int index) Nearest(IReadOnlyList<IReadOnlyList<(int x, int y)>> routes, float x, float y)
+    {
+        (int route, int index) nearest = (0, 0);
+        float best = float.MaxValue;
+        for (int route = 0; route < routes.Count; route++)
+        {
+            for (int i = 0; i < routes[route].Count; i++)
+            {
+                float dx = routes[route][i].x + 0.5f - x, dy = routes[route][i].y + 0.5f - y;
+                float distance = dx * dx + dy * dy;
+                if (distance >= best) continue;
+                best = distance;
+                nearest = (route, i);
+            }
+        }
+        return nearest;
+    }
+
+    // Which side a gate lies on compared with the map's other gates, for naming it to the player:
+    // "north", "south", "east" or "west". Empty with no other gate to tell it from.
+    public static string GateDirection(IReadOnlyList<(int x, int y)> gates, int gate)
+    {
+        if (gates.Count < 2) return "";
+        float meanX = 0f, meanY = 0f;
+        foreach ((int x, int y) in gates)
+        {
+            meanX += x;
+            meanY += y;
+        }
+        float dx = gates[gate].x - meanX / gates.Count, dy = gates[gate].y - meanY / gates.Count;
+        if (dx == 0f && dy == 0f) return "";
+        if (Math.Abs(dy) >= Math.Abs(dx)) return dy > 0f ? "north" : "south";
+        return dx > 0f ? "east" : "west";
+    }
+
     // True when every route ends on the same cell, which is where the castle sits.
     public static bool EndAtTheSameCell(IReadOnlyList<IReadOnlyList<(int x, int y)>> routes)
     {
