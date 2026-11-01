@@ -7,6 +7,8 @@ public class EnemyData : ScriptableObject
     public Color color = Color.red;
     [Tooltip("Optional art, drawn for the standard enemy size (0.6) and scaled by size. Without it the enemy is a square in its colour.")]
     public Sprite sprite;
+    [Tooltip("Optional steps of the walk cycle, shown in turn with the standing sprite between them.")]
+    public Sprite[] walkFrames;
     [Tooltip("Head-and-shoulders art for menus and the enemy codex.")]
     public Sprite portrait;
     [Tooltip("Body size in tiles.")]

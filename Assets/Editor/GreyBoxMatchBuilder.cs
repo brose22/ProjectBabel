@@ -924,6 +924,7 @@ public static class GreyBoxMatchBuilder
         {
             UseArt(enemy, enemy.sprite, "enemy_", "its sprite", s => enemy.sprite = s);
             UseArt(enemy, enemy.portrait, "Portraits/enemy_", "its portrait", s => enemy.portrait = s);
+            UseWalkFrames(enemy);
         }
         foreach (AbilityData ability in LoadAll<AbilityData>(DataFolder + "/Abilities"))
             UseArt(ability, ability.icon, "Icons/Abilities/ability_", "its icon", s => ability.icon = s);
@@ -938,6 +939,17 @@ public static class GreyBoxMatchBuilder
         if (sprite == null) return;
         assign(sprite);
         MarkUpgraded(asset, what);
+    }
+
+    // Walk frames are named after the enemy's sprite, so the boss borrows the art it stands in.
+    static void UseWalkFrames(EnemyData enemy)
+    {
+        if (enemy.sprite == null || (enemy.walkFrames != null && enemy.walkFrames.Length > 0)) return;
+        Sprite step1 = ArtSprite(enemy.sprite.name + "_walk1");
+        Sprite step2 = ArtSprite(enemy.sprite.name + "_walk2");
+        if (step1 == null || step2 == null) return;
+        enemy.walkFrames = new[] { step1, step2 };
+        MarkUpgraded(enemy, "its walk frames");
     }
 
     static void MarkUpgraded(Object asset, string what)

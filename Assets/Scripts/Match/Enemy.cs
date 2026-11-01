@@ -61,6 +61,9 @@ public class Enemy : MonoBehaviour
     // How fast the lane direction eases round a corner, per second.
     const float LaneTurnSpeed = 10f;
     float squashUntil;
+    // Game seconds each pose of the walk cycle shows.
+    const float WalkPoseSeconds = 0.18f;
+    float walkTime;
     // Armor labels show at most this often so rapid hits do not stack them.
     const float ArmorLabelGapSeconds = 0.6f;
     float armorLabelUntil;
@@ -96,6 +99,8 @@ public class Enemy : MonoBehaviour
         laneNormal = PathMath.LeftNormal(path[0], path[1]);
         ApplyLane();
         ApplyArt(data);
+        // Each starts at its own point in the cycle so a crowd doesn't march in step.
+        walkTime = Random.Range(0f, 4f * WalkPoseSeconds);
         healthBar.UseEnemyStyle(Data.elite ? 1 : 0);
         healthBar.SetFraction(1f);
         statusIcons = StatusIcons.Create(transform, new Vector3(0f, StatusIconHeight, 0f), body.sortingOrder + 1);
@@ -185,11 +190,13 @@ public class Enemy : MonoBehaviour
                 blocker.TakeDamage(Data.attackDamage);
                 attackTimer = Data.attackInterval * AttackIntervalMultiplier;
             }
+            ShowWalkPose(false);
             return;
         }
 
         TickTowerAttack();
         TickRangedAttack();
+        ShowWalkPose(true);
 
         float step = MoveSpeed * Time.deltaTime;
         if (HasStatus(StatusKind.Dizzy))
@@ -214,6 +221,16 @@ public class Enemy : MonoBehaviour
         int next = Mathf.Clamp(nextPoint, 1, path.Length - 1);
         laneNormal = PathMath.EaseNormal(laneNormal, PathMath.LeftNormal(path[next - 1], path[next]), LaneTurnSpeed * Time.deltaTime);
         transform.position = lanePosition + (Vector3)(laneNormal * laneOffset);
+    }
+
+    // Steps through the walk cycle, standing between steps; a blocked enemy just stands.
+    void ShowWalkPose(bool walking)
+    {
+        Sprite[] frames = Data.walkFrames;
+        if (frames == null || frames.Length == 0 || Data.sprite == null) return;
+        if (walking) walkTime += Time.deltaTime;
+        int pose = Mathf.FloorToInt(walkTime / WalkPoseSeconds);
+        body.sprite = !walking || pose % 2 == 0 ? Data.sprite : frames[pose / 2 % frames.Length];
     }
 
     public bool HasStatus(StatusKind kind) => statusTime[(int)kind] > 0f;

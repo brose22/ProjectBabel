@@ -15,8 +15,12 @@ MonoBehaviour:
   displayName: Grunt
   color: {r: 0.85, g: 0.2, b: 0.25, a: 1}
   sprite: {fileID: 21300000, guid: 84a356448d487c64a84c90e26539363f, type: 3}
+  walkFrames:
+  - {fileID: 21300000, guid: 2c809292d0bf81f479baeeab88b567ed, type: 3}
+  - {fileID: 21300000, guid: 1192ca78bc91c924ab552fc38333bd41, type: 3}
   portrait: {fileID: 21300000, guid: 6a755b9958e1bd7438444b29889acfc8, type: 3}
   size: 0.6
+  elite: 0
   maxHealth: 30
   moveSpeed: 1.2
   goldReward: 7
