@@ -13,6 +13,9 @@ public class MainMenu : MonoBehaviour
 
     static readonly Color BackgroundColor = new(0.05f, 0.06f, 0.09f, 1f);
 
+    [Tooltip("Where the AI Run screen finds the maps and captains to pick from.")]
+    [SerializeField] MatchData data;
+
     Canvas canvas;
     RectTransform screen;
     readonly List<Action> refreshers = new();
@@ -67,20 +70,68 @@ public class MainMenu : MonoBehaviour
     int aiRuns = 1;
     float aiSpeed = 4f;
 
-    // The AI plays whole runs by itself with its own saves, then writes a report to Reports/.
+    // The party rows of a picked map. Static with the map and layer, so the choices are still set
+    // when an AI run comes back to the menu.
+    static readonly CaptainRole[] AiPartyRoles = { CaptainRole.Attacker, CaptainRole.Healer, CaptainRole.Buffer };
+    static readonly Dictionary<CaptainRole, int> aiPicks = new();
+    // The picked layout, or -1 for a full run.
+    static int aiMap = -1;
+    static int aiLayer;
+
+    // The AI plays by itself with its own saves, then writes a report to Reports/.
     void BuildAiRun()
     {
         RectTransform column = NewScreen("AI Run", 520f);
         UIKit.Label(column, "AI RUN", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, "The AI plays whole runs on its own, using separate saves, and writes a report to the project's Reports folder when it is done.",
+        UIKit.Label(column, "The AI plays on its own, using separate saves, and writes a report to the project's Reports folder when it is done.",
             14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        // Picking a map changes which rows there are, so the screen rebuilds.
+        SettingRow(column, "Map", () => aiMap >= 0 ? data.layouts[aiMap].displayName : "Full run (random maps)", step =>
+        {
+            aiMap = Wrap(aiMap + 1 + step, data.layouts.Count + 1) - 1;
+            BuildAiRun();
+        });
+        if (aiMap >= 0) BuildAiMatchRows(column);
         SettingRow(column, "Runs", () => aiRuns.ToString(), step => aiRuns = Mathf.Clamp(aiRuns + step, 1, 50));
         SettingRow(column, "Speed", () => $"{aiSpeed:0}x",
             step => aiSpeed = AiSpeeds[Wrap(Array.IndexOf(AiSpeeds, aiSpeed) + step, AiSpeeds.Length)]);
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Button(buttons, "Start", () => AiPlayer.Begin(new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff }), 180f, 32f);
+        UIKit.Button(buttons, "Start", StartAiRun, 180f, 32f);
         UIKit.Button(buttons, "Back", BuildMain, 140f, 32f);
+    }
+
+    void BuildAiMatchRows(RectTransform column)
+    {
+        int layers = Mathf.Max(1, data.matchesPerRun - 1);
+        SettingRow(column, "Layer", () => $"{aiLayer + 1} of {layers}", step => aiLayer = Wrap(aiLayer + step, layers));
+        foreach (CaptainRole role in AiPartyRoles)
+        {
+            CaptainRole chosen = role;
+            SettingRow(column, role.ToString(), () => AiCaptain(chosen)?.displayName ?? "None", step =>
+            {
+                int count = AiCaptains(chosen).Count;
+                aiPicks[chosen] = Wrap(aiPicks.GetValueOrDefault(chosen) + step, count);
+            });
+        }
+        SettingsNote(column, "One match on this map, with no world map, shops or recruits. Enemies get tougher with each layer.");
+    }
+
+    List<CaptainData> AiCaptains(CaptainRole role) => data.roster.FindAll(c => c != null && c.role == role);
+
+    CaptainData AiCaptain(CaptainRole role)
+    {
+        List<CaptainData> captains = AiCaptains(role);
+        return captains.Count > 0 ? captains[Wrap(aiPicks.GetValueOrDefault(role), captains.Count)] : null;
+    }
+
+    void StartAiRun()
+    {
+        var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer };
+        if (aiMap >= 0)
+            foreach (CaptainRole role in AiPartyRoles)
+                if (AiCaptain(role) != null) options.party.Add(AiCaptain(role));
+        AiPlayer.Begin(options);
     }
 
     void BuildConfirmNewRun()

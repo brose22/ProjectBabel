@@ -236,6 +236,32 @@ public class WorldMapTests
     }
 
     [Test]
+    public void SingleMatch_PicksTheCityOnTheLayoutAndLayer()
+    {
+        WorldMap map = WorldMap.SingleMatch(5, 7, 3, 4);
+        Assert.That(map.Target, Is.Not.Null);
+        Assert.That(map.Target.layout, Is.EqualTo(3));
+        Assert.That(map.Target.layer, Is.EqualTo(4));
+        Assert.That(map.Target.kind, Is.EqualTo(NodeKind.City));
+        Assert.That(map.Target.id, Is.Not.EqualTo(map.BaseId));
+    }
+
+    [Test]
+    public void SingleMatch_KeepsTheCityBeforeTheBase()
+    {
+        Assert.That(WorldMap.SingleMatch(5, 7, 0, 99).Target.layer, Is.EqualTo(5));
+    }
+
+    [Test]
+    public void SingleMatch_WinningLeavesTheBaseUncleared()
+    {
+        WorldMap map = WorldMap.SingleMatch(5, 7, 0, 0);
+        map.ClearTarget(2);
+        Assert.That(map.Target, Is.Null);
+        Assert.That(map.IsComplete, Is.False);
+    }
+
+    [Test]
     public void MapNode_OnlyCitiesAndElitesAreMatches()
     {
         Assert.That(new MapNode { kind = NodeKind.City }.IsMatch);
