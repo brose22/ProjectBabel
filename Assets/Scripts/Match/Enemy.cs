@@ -70,6 +70,9 @@ public class Enemy : MonoBehaviour
     const float DotNumberSeconds = 1f;
     const float DamageNumberHeight = 0.4f;
     const float DamageNumberSpread = 0.2f;
+    const float DamageNumberSize = 1.5f;
+    const float StrongNumberSize = 2.25f;
+    const float ArmorLabelSize = 1.2f;
     static readonly Color ResistedNumberColor = new(0.6f, 0.6f, 0.6f);
     float dotDamage;
     float dotNumberTimer;
@@ -346,7 +349,7 @@ public class Enemy : MonoBehaviour
         if (!GameSettings.DamageNumbers) return;
         bool strong = counter > 1f;
         FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(amount)) + (strong ? "!" : ""),
-            NumberColor(element, counter < 1f), strong ? 1.5f : 1f);
+            NumberColor(element, counter < 1f), strong ? StrongNumberSize : DamageNumberSize);
     }
 
     // "Strong!" or "Resist" above the enemy when its armor counters the hit or is countered by it,
@@ -357,7 +360,7 @@ public class Enemy : MonoBehaviour
         if (Time.unscaledTime < armorLabelUntil) return;
         armorLabelUntil = Time.unscaledTime + ArmorLabelGapSeconds;
         FloatingText.Spawn(transform.position + Vector3.up * 0.65f, counter > 1f ? "Strong!" : "Resist",
-            counter > 1f ? UIKit.AccentColor : ResistedNumberColor, 0.8f, 0.9f);
+            counter > 1f ? UIKit.AccentColor : ResistedNumberColor, ArmorLabelSize, 0.9f);
     }
 
     void AccumulateDot(float amount, Element? element)
@@ -370,7 +373,7 @@ public class Enemy : MonoBehaviour
     {
         if (dotDamage <= 0f) return;
         if (GameSettings.DamageNumbers)
-            FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(dotDamage)).ToString(), dotNumberColor);
+            FloatingText.Spawn(NumberPosition(), Mathf.Max(1, Mathf.RoundToInt(dotDamage)).ToString(), dotNumberColor, DamageNumberSize);
         dotDamage = 0f;
         dotNumberTimer = 0f;
     }
