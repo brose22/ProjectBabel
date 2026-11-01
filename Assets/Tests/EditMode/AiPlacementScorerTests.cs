@@ -55,6 +55,22 @@ public class AiPlacementScorerTests
     }
 
     [Test]
+    public void Support_StillStaysWithinRangeOfTheRoad()
+    {
+        var road = Road();
+        var candidates = new List<(int x, int y)> { (5, 12), (5, 7) };
+        Assert.That(AiPlacementScorer.PickCell(candidates, 3f, road, true, null, out _), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void PickCell_NothingInRange_TakesTheNearestToTheRoad()
+    {
+        var road = Road();
+        var candidates = new List<(int x, int y)> { (5, 14), (5, 9) };
+        Assert.That(AiPlacementScorer.PickCell(candidates, 2f, road, false, null, out _), Is.EqualTo(1));
+    }
+
+    [Test]
     public void PickCell_NoCandidates_ReturnsMinusOne()
     {
         Assert.That(AiPlacementScorer.PickCell(new List<(int x, int y)>(), 3f, Road(), false, null, out _), Is.EqualTo(-1));

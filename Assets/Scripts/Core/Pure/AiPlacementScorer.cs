@@ -5,6 +5,9 @@ using System.Collections.Generic;
 // range is in tiles.
 public static class AiPlacementScorer
 {
+    // Below any score a cell that reaches the road can get.
+    const float OutOfReachScore = -1000f;
+
     // A road cell counts for more the nearer the castle it is, since that is where leaks happen.
     // roadCells run from the gate to the castle. Cells another captain already reaches count less.
     public static float Coverage(int cellX, int cellY, float range, IReadOnlyList<(int x, int y)> roadCells, bool[] alreadyCovered = null)
@@ -27,7 +30,6 @@ public static class AiPlacementScorer
     public static float Score(int cellX, int cellY, float range, IReadOnlyList<(int x, int y)> roadCells, bool support, bool[] alreadyCovered)
     {
         float coverage = Coverage(cellX, cellY, range, roadCells, alreadyCovered);
-        if (!support) return coverage;
         float nearestSqr = float.MaxValue;
         foreach ((int x, int y) in roadCells)
         {
@@ -35,6 +37,10 @@ public static class AiPlacementScorer
             float dy = y - cellY;
             nearestSqr = Math.Min(nearestSqr, dx * dx + dy * dy);
         }
+        // A captain out of range of the whole road never fights, so every cell that reaches the
+        // road beats every one that does not; among those, the nearer to the road is the less bad.
+        if (nearestSqr > range * range) return OutOfReachScore - (float)Math.Sqrt(nearestSqr);
+        if (!support) return coverage;
         return coverage * 0.5f - (nearestSqr <= 2.25f ? 4f : 0f);
     }
 
