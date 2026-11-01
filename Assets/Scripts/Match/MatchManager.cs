@@ -87,8 +87,10 @@ public class MatchManager : MonoBehaviour
     }
 
     public bool CanPlaceTower => !IsOver && Tower.All.Count < data.maxTowers && NextCaptain != null;
+    // Captains can be rearranged for free until the first wave starts.
+    bool MovesAreFree => State == MatchState.Preparing && WavesCleared == 0;
     // Relocation cost for this tower, after any discount a granted request gave it.
-    public int MoveCost(Tower tower) => tower == null ? data.relocationCost : Mathf.RoundToInt(data.relocationCost * tower.MoveCostMultiplier);
+    public int MoveCost(Tower tower) => MovesAreFree ? 0 : tower == null ? data.relocationCost : Mathf.RoundToInt(data.relocationCost * tower.MoveCostMultiplier);
     public bool CanAffordMove(Tower tower) => RunState.Current.Gold >= MoveCost(tower);
 
     void Awake()
