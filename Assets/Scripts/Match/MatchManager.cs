@@ -374,13 +374,13 @@ public class MatchManager : MonoBehaviour
         }
     }
 
-    // The indices of the layouts with more than one gate.
-    List<int> MultiGateLayouts()
+    // How many gates each layout has, by layout index; a missing layout counts as one.
+    List<int> LayoutGateCounts()
     {
-        var indices = new List<int>();
-        for (int i = 0; i < data.layouts.Count; i++)
-            if (data.layouts[i] != null && data.layouts[i].AllRoutes().Count > 1) indices.Add(i);
-        return indices;
+        var counts = new List<int>();
+        foreach (CityLayout layout in data.layouts)
+            counts.Add(layout != null ? Mathf.Max(1, layout.AllRoutes().Count) : 1);
+        return counts;
     }
 
     // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
@@ -390,7 +390,7 @@ public class MatchManager : MonoBehaviour
         RunState.Current.SetParty(party);
         RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
             data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds,
-            MultiGateLayouts(), data.multiGateFirstLayer));
+            LayoutGateCounts(), data.doubleGateFirstLayer, data.tripleGateFirstLayer));
         nextCaptainIndex = 0;
         State = MatchState.Map;
         RunSave.Save(RunState.Current);

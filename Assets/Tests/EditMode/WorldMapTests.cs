@@ -205,34 +205,37 @@ public class WorldMapTests
         Assert.That(odds.Pick(0.75), Is.EqualTo(NodeKind.City));
     }
 
+    // Layouts 0-1 have one gate, 2-3 two, 4 three.
+    static readonly int[] Gates = { 1, 1, 2, 2, 3 };
+
     [Test]
-    public void Generate_HoldsLateLayoutsBackFromEarlyLayers([Values(1, 7, 99, 1234)] int seed)
+    public void Generate_GivesEachLayerItsGateCount([Values(1, 7, 99, 1234)] int seed)
     {
-        WorldMap map = WorldMap.Generate(seed, 7, 5, 2, 3, 2, default, new[] { 4 }, 2);
-        Assert.That(map.nodes.Where(n => n.layer < 2).Select(n => n.layout), Has.None.EqualTo(4));
+        WorldMap map = WorldMap.Generate(seed, 7, 5, 2, 3, 2, default, Gates, 2, 5);
+        foreach (MapNode node in map.nodes)
+            Assert.That(Gates[node.layout], Is.EqualTo(WorldMap.GatesForLayer(node.layer, 2, 5)), $"layer {node.layer}");
     }
 
     [Test]
-    public void Generate_CanUseLateLayoutsFromTheirLayer()
+    public void GatesForLayer_StepsUpAtTheTierLayers()
     {
-        bool seen = Enumerable.Range(0, 50).Any(seed =>
-            WorldMap.Generate(seed, 7, 5, 2, 3, 2, default, new[] { 4 }, 2).nodes.Any(n => n.layout == 4));
-        Assert.That(seen, Is.True);
+        Assert.That(Enumerable.Range(0, 7).Select(l => WorldMap.GatesForLayer(l, 2, 5)), Is.EqualTo(new[] { 1, 1, 2, 2, 2, 3, 3 }));
     }
 
     [Test]
-    public void Generate_WithoutLateLayoutsChangesNothing()
+    public void Generate_WithoutGateCountsChangesNothing()
     {
         WorldMap plain = WorldMap.Generate(5, 7, 5, 2, 3, 2);
-        WorldMap empty = WorldMap.Generate(5, 7, 5, 2, 3, 2, default, new int[0], 2);
+        WorldMap empty = WorldMap.Generate(5, 7, 5, 2, 3, 2, default, null, 2, 5);
         Assert.That(empty.nodes.Select(n => n.layout), Is.EqualTo(plain.nodes.Select(n => n.layout)));
     }
 
     [Test]
-    public void Generate_KeepsLateLayoutsWhenThereIsNothingElse()
+    public void Generate_FallsBackToTheNearestFewerGatesWhenATierHasNoLayout()
     {
-        WorldMap map = WorldMap.Generate(3, 7, 1, 2, 3, 2, default, new[] { 0 }, 2);
-        Assert.That(map.nodes.Select(n => n.layout), Is.All.EqualTo(0));
+        // No three-gate layout: the last layers use the two-gate ones.
+        WorldMap map = WorldMap.Generate(3, 7, 3, 2, 3, 2, default, new[] { 1, 1, 2 }, 2, 5);
+        Assert.That(map.nodes.Where(n => n.layer >= 2).Select(n => n.layout), Is.All.EqualTo(2));
     }
 
     [Test]

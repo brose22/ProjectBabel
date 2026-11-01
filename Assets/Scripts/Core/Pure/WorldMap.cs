@@ -175,10 +175,12 @@ public class WorldMap
     // (past the first layer) and a road out (before the base), so every branch reaches the base.
     // The first layer, intel from the starting position and the base are revealed. Cities get
     // special kinds by odds, except in the first layer, the layer before the base and the base,
-    // which stay plain cities. lateLayouts, when given, are layouts kept out of the layers before
-    // lateLayoutsFromLayer, unless they are the only layouts there are.
+    // which stay plain cities. layoutGates, when given, is the gate count of each layout; cities then
+    // play layouts with one gate before doubleGateFromLayer, two gates from there until
+    // tripleGateFromLayer, and three from there on (GatesForLayer).
     public static WorldMap Generate(int seed, int matchCount, int layoutCount, int minLanes, int maxLanes, int intelDepth,
-        NodeOdds odds = default, IReadOnlyList<int> lateLayouts = null, int lateLayoutsFromLayer = 0)
+        NodeOdds odds = default, IReadOnlyList<int> layoutGates = null, int doubleGateFromLayer = int.MaxValue,
+        int tripleGateFromLayer = int.MaxValue)
     {
         var random = new Random(seed);
         matchCount = Math.Max(2, matchCount);
@@ -211,7 +213,7 @@ public class WorldMap
                     if (map.nodes[id].layout == node.layout && map.nodes[id].layer < matchCount - 1)
                         map.nodes[id].layout = (node.layout + 1 + random.Next(layoutCount - 1)) % layoutCount;
 
-        if (lateLayouts != null && lateLayouts.Count > 0) HoldBackLayouts(map, layoutCount, new HashSet<int>(lateLayouts), lateLayoutsFromLayer, random);
+        if (layoutGates != null && layoutGates.Count == layoutCount) ApplyGateTiers(map, layoutGates, doubleGateFromLayer, tripleGateFromLayer, random);
 
         foreach (MapNode node in map.nodes)
         {
@@ -235,15 +237,37 @@ public class WorldMap
         return map;
     }
 
-    // Moves cities before fromLayer off the held-back layouts, onto any of the others.
-    static void HoldBackLayouts(WorldMap map, int layoutCount, HashSet<int> held, int fromLayer, Random random)
+    // How many gates (enemy spawn points) the layers use: one before doubleFromLayer, two from there
+    // until tripleFromLayer, three from there on.
+    public static int GatesForLayer(int layer, int doubleFromLayer, int tripleFromLayer) =>
+        layer >= tripleFromLayer ? 3 : layer >= doubleFromLayer ? 2 : 1;
+
+    // Gives every city a layout with the gate count its layer calls for. With none of that exact
+    // count, the nearest count below is used, else the nearest above. Layouts the city's own
+    // roads in already used are avoided when there is another choice.
+    static void ApplyGateTiers(WorldMap map, IReadOnlyList<int> layoutGates, int doubleFromLayer, int tripleFromLayer, Random random)
     {
-        var open = new List<int>();
-        for (int layout = 0; layout < layoutCount; layout++)
-            if (!held.Contains(layout)) open.Add(layout);
-        if (open.Count == 0) return;
         foreach (MapNode node in map.nodes)
-            if (node.layer < fromLayer && held.Contains(node.layout)) node.layout = open[random.Next(open.Count)];
+        {
+            int wanted = GatesForLayer(node.layer, doubleFromLayer, tripleFromLayer);
+            int best = int.MinValue;
+            foreach (int gates in layoutGates)
+                if (gates <= wanted && gates > best) best = gates;
+            if (best == int.MinValue)
+            {
+                best = int.MaxValue;
+                foreach (int gates in layoutGates) best = Math.Min(best, gates);
+            }
+
+            var matching = new List<int>();
+            for (int layout = 0; layout < layoutGates.Count; layout++)
+                if (layoutGates[layout] == best) matching.Add(layout);
+            if (matching.Count == 0) continue;
+
+            var fresh = matching.FindAll(layout => !map.nodes.Exists(other => other.next.Contains(node.id) && other.layout == layout));
+            List<int> pool = fresh.Count > 0 ? fresh : matching;
+            node.layout = pool[random.Next(pool.Count)];
+        }
     }
 
     // Walks both layers top to bottom, linking the current pair and then stepping one or both
