@@ -58,6 +58,26 @@ public static class GameSettings
         Save();
     }
 
+    // Match HUD size, as a multiplier on the reference layout.
+    public static readonly float[] UiScales = { 0.8f, 0.9f, 1f, 1.1f, 1.25f, 1.5f };
+    public static float UiScale => Mathf.Clamp(PlayerPrefs.GetFloat("settings.uiScale", 1f), UiScales[0], UiScales[^1]);
+
+    public static void SetUiScale(float scale)
+    {
+        PlayerPrefs.SetFloat("settings.uiScale", Mathf.Clamp(scale, UiScales[0], UiScales[^1]));
+        Save();
+    }
+
+    // Matches started so far; the full controls hint shows for the first few, then folds away.
+    public const int HintMatches = 2;
+    public static int MatchesStarted => PlayerPrefs.GetInt("settings.matchesStarted", 0);
+
+    public static void CountMatchStarted()
+    {
+        PlayerPrefs.SetInt("settings.matchesStarted", MatchesStarted + 1);
+        PlayerPrefs.Save();
+    }
+
     // Roster captains offered to fill the party at run start. At least the party size, at most the roster.
     public const int MaxCaptainsOffered = 12;
     public const int MinCaptainsOffered = 3;

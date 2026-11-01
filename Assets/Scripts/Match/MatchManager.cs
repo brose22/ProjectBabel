@@ -172,6 +172,9 @@ public class MatchManager : MonoBehaviour
         NextWaveCountdown = -1f;
         State = MatchState.WaveActive;
         WaveStartTime = Time.time;
+        resolvedAtWaveStart = Kills + Leaks;
+        WaveEnemyTotal = 0;
+        foreach (SpawnGroup group in waves[WavesCleared].groups) WaveEnemyTotal += group.count;
         Tower.ClearWaveBoosts();
         spawner.SpawnWave(waves[WavesCleared]);
         if (IsBaseMatch && data.boss != null && Boss == null)
@@ -287,6 +290,34 @@ public class MatchManager : MonoBehaviour
     {
         GameSpeed = GameSpeed > 1f ? 1f : 2f;
         ApplyTimeScale();
+    }
+
+    // The player's speeds, stepped by the HUD button and the F key; the AI Run sets any speed directly.
+    public static readonly float[] PlayerSpeeds = { 1f, 2f, 3f };
+
+    public void CycleGameSpeed()
+    {
+        int next = 0;
+        for (int i = 0; i < PlayerSpeeds.Length; i++)
+            if (Mathf.Approximately(PlayerSpeeds[i], GameSpeed)) next = (i + 1) % PlayerSpeeds.Length;
+        SetGameSpeed(PlayerSpeeds[next]);
+    }
+
+    // Enemies the current wave fields, and how many have been killed or leaked so far. The boss
+    // is not counted in the total, so the progress is clamped.
+    public int WaveEnemyTotal { get; private set; }
+    public int WaveEnemiesResolved => Mathf.Clamp(Kills + Leaks - resolvedAtWaveStart, 0, WaveEnemyTotal);
+    int resolvedAtWaveStart;
+
+    // Distinct enemy types of the wave about to start, in the order they appear; empty when none is due.
+    public List<EnemyData> NextWaveEnemies()
+    {
+        var types = new List<EnemyData>();
+        if (waves == null || WavesCleared >= WaveCount) return types;
+        foreach (SpawnGroup group in waves[WavesCleared].groups)
+            if (group.enemy != null && !types.Contains(group.enemy)) types.Add(group.enemy);
+        if (IsBaseMatch && data.boss != null && Boss == null) types.Add(data.boss);
+        return types;
     }
 
     public const float MaxGameSpeed = 8f;
