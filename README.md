@@ -15,8 +15,6 @@ You claim cities on a world map, defend them in wave-based matches, and use the 
 
 ## Status
 
-Early development. One developer at 20 hours a week, with a vertical slice targeted at month 12.
-
 | Milestone | Scope | State |
 |---|---|---|
 | M1: grey-box match | Path, waves, global health and Gold, tower placement, Attacker captains, basic soldiers, placeholder HUD | Done (merged) |
