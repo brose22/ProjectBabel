@@ -1,6 +1,6 @@
 // How a captain's request ends. Expired is a request still open when its wave ended: it is dismissed
 // without a verdict, so it neither pleases nor angers the captain.
-public enum RequestOutcome { Refused, Partial, Granted, Expired }
+public enum RequestOutcome { Refused, Granted, Expired }
 
 public static class RequestRules
 {
@@ -8,7 +8,6 @@ public static class RequestRules
     public static float ApprovalChange(RequestOutcome outcome, float reward, float refusalPenalty) => outcome switch
     {
         RequestOutcome.Refused => -refusalPenalty,
-        RequestOutcome.Partial => reward * 0.5f,
         RequestOutcome.Granted => reward,
         _ => 0f,
     };

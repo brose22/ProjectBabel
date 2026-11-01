@@ -574,8 +574,7 @@ public class AiPlayer : MonoBehaviour
     {
         CaptainRequests.Request request = requests != null ? requests.Active : null;
         if (request == null) return;
-        bool wouldFire = request.Tower != null && request.Tower.CanUseAbility && ShouldFire(request.Tower, out _);
-        int answer = AiAbilityRules.AnswerRequest((int)request.Kind, RunState.Current.Gold, Tower.All.Count, wouldFire);
+        int answer = AiAbilityRules.AnswerRequest((int)request.Kind, RunState.Current.Gold, Tower.All.Count);
         string who = request.Tower != null ? request.Tower.Captain.displayName : "A captain";
         Decide("Request", $"{who} asked: {request.Text} Answered {(RequestAnswer)answer}");
         recorder.NoteRequest(request.Kind, (RequestAnswer)answer);

@@ -5,20 +5,20 @@ using UnityEngine;
 // New kinds go at the end: AiAbilityRules mirrors this order.
 public enum RequestKind { MoreDraw, Relocate, NewMix, UseSpecial, Reinforce, LowerDraw }
 
-public enum RequestAnswer { No, Some, Yes }
+public enum RequestAnswer { No, Yes }
 
 // Captains ask for things when something happens in the match (GDD: up to 2 per wave, often none):
 //   MoreDraw   - a soldier fell and the reserve can't pay to bring it back.
-//   Relocate   - nothing has come within the captain's range for a while. Yes only: the captain
-//                moves themselves, free, 10% closer to the enemy gate along the road.
+//   Relocate   - nothing has come within the captain's range for a while. The captain moves
+//                themselves, free, 10% closer to the enemy gate along the road.
 //   NewMix     - the captain levelled up and a class they like isn't in every slot.
 //   UseSpecial - an elite or the boss walked on, an enemy leaked, or the special just finished
-//                charging. Yes only: the captain fires it by themselves, as soon as it can be used.
-//   Reinforce  - another captain fell. Yes only: the captain walks to the free spot nearest the
-//                fallen tower that still covers road, free.
-//   LowerDraw  - the reserve has sat full for a while. Yes sets the draw to Low, Some one step down.
-// The player answers No (0%), Some (50%) or Yes (100%): the answer grants that share of the request
-// and of the approval reward. Refusing always costs approval, scaled by request and captain.
+//                charging. The captain fires it by themselves, as soon as it can be used.
+//   Reinforce  - another captain fell. The captain walks to the free spot nearest the fallen tower
+//                that still covers road, free.
+//   LowerDraw  - the reserve has sat full for a while. Sets the draw to Low.
+// The player answers Yes, which grants the request and the approval reward, or No, which always
+// costs approval, scaled by request and captain.
 // Requests are shown one at a time and the match pauses while one waits; one left unanswered when
 // its countdown runs out counts as a refusal, while one still open when the wave ends is dropped
 // without costing approval. Added to the match at runtime.
@@ -369,16 +369,9 @@ public class CaptainRequests : MonoBehaviour
             return;
         }
 
-        // A move or a special is all or nothing, so Some counts as Yes.
-        if (IsYesNo(request.Kind)) answer = RequestAnswer.Yes;
-        bool full = answer == RequestAnswer.Yes;
-        Grant(request, full);
-        float reward = RequestRules.ApprovalChange(full ? RequestOutcome.Granted : RequestOutcome.Partial, ApprovalReward, 0f);
-        relationships.Change(tower, reward, full ? "got their way" : "got some of their way");
+        Grant(request);
+        relationships.Change(tower, RequestRules.ApprovalChange(RequestOutcome.Granted, ApprovalReward, 0f), "got their way");
     }
-
-    // Requests that can only be answered Yes or No.
-    public static bool IsYesNo(RequestKind kind) => kind is RequestKind.Relocate or RequestKind.UseSpecial or RequestKind.Reinforce;
 
     // How much a refusal stings, by request.
     static float RefusalWeight(RequestKind kind) => kind switch
@@ -388,23 +381,21 @@ public class CaptainRequests : MonoBehaviour
         _ => 1f,
     };
 
-    // Yes grants the request in full; Some grants half of it.
-    void Grant(Request request, bool full)
+    void Grant(Request request)
     {
         Tower tower = request.Tower;
         switch (request.Kind)
         {
             case RequestKind.MoreDraw:
-                tower.SetDrawRate(full ? DrawRate.High : (DrawRate)Mathf.Min((int)tower.DrawRate + 1, (int)DrawRate.High));
+                tower.SetDrawRate(DrawRate.High);
                 break;
             case RequestKind.Relocate:
                 MoveTowardSpawner(tower);
                 break;
             case RequestKind.NewMix:
-                // All slots switch for free, or half of them (rounded up).
-                int switches = full ? tower.Soldiers.Count : (tower.Soldiers.Count + 1) / 2;
-                for (int slot = 0; slot < tower.Soldiers.Count && switches > 0; slot++)
-                    if (tower.SetSlotClass(slot, request.WantedClass, free: true)) switches--;
+                // All slots switch for free.
+                for (int slot = 0; slot < tower.Soldiers.Count; slot++)
+                    tower.SetSlotClass(slot, request.WantedClass, free: true);
                 break;
             case RequestKind.UseSpecial:
                 // Fires now, or the moment it can if nothing is in reach yet.
@@ -414,7 +405,7 @@ public class CaptainRequests : MonoBehaviour
                 if (request.Fallen != null) MoveFreeTo(tower, FindCellNear(tower, request.Fallen.transform.position));
                 break;
             case RequestKind.LowerDraw:
-                tower.SetDrawRate(full ? DrawRate.Low : (DrawRate)Mathf.Max((int)tower.DrawRate - 1, (int)DrawRate.Low));
+                tower.SetDrawRate(DrawRate.Low);
                 break;
         }
     }
