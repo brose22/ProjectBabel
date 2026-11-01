@@ -94,8 +94,8 @@ public class MatchData : ScriptableObject
     public int intelDepth = 2;
     [Tooltip("The first layer, counting from 0, that can use a layout with more than one gate.")]
     public int multiGateFirstLayer = 2;
-    [Tooltip("Chance of each special node (elite city, rest, shop, event) on the middle layers. The first layer, the layer before the base and the base stay plain cities.")]
-    public NodeOdds nodeOdds = new(0.15f, 0.12f, 0.1f, 0.15f);
+    [Tooltip("Chance of each special node (elite city, rest, event) on the middle layers; shop is kept at 0 because the shop opens from the map. The first layer, the layer before the base and the base stay plain cities.")]
+    public NodeOdds nodeOdds = new(0.15f, 0.12f, 0f, 0.15f);
     [Tooltip("Extra enemy health per match into the run (0.12 = +12% per layer).")]
     public float enemyHealthGrowthPerMatch = 0.12f;
     [Tooltip("Extra Gold per kill and per win further into the run (0.07 = +7% per layer).")]

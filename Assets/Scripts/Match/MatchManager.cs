@@ -443,14 +443,19 @@ public class MatchManager : MonoBehaviour
         LeaveStop();
     }
 
-    // The gifts on this shop's shelves: shopSize of the full list, picked by the shop's seed.
+    // Whether the shop can be shopped at now: from the world map, or at a shop node in an older save.
+    public bool ShopOpen => State == MatchState.Map || (State == MatchState.Stop && City.kind == NodeKind.Shop);
+
+    // The gifts on the shelves: shopSize of the full list, picked by the shop node's seed, or by
+    // the run's first node when shopping from the map.
     public List<GiftData> ShopStock
     {
         get
         {
             var stock = new List<GiftData>();
-            if (State != MatchState.Stop || City.kind != NodeKind.Shop) return stock;
-            foreach (int index in global::ShopStock.Pick(data.shopGifts.Count, data.shopSize, City.seed))
+            if (!ShopOpen) return stock;
+            int seed = State == MatchState.Stop ? City.seed : RunState.Current.Map.nodes[0].seed;
+            foreach (int index in global::ShopStock.Pick(data.shopGifts.Count, data.shopSize, seed))
                 if (data.shopGifts[index] != null) stock.Add(data.shopGifts[index]);
             return stock;
         }
@@ -458,8 +463,7 @@ public class MatchManager : MonoBehaviour
 
     // A shop item the player can pay for right now.
     public bool CanBuyGift(GiftData gift) =>
-        State == MatchState.Stop && City.kind == NodeKind.Shop && gift != null && RunState.Current.Gold >= gift.cost
-        && ShopStock.Contains(gift);
+        ShopOpen && gift != null && RunState.Current.Gold >= gift.cost && ShopStock.Contains(gift);
 
     // Buys a gift at the shop for Gold; it goes into the run's inventory. Saved straight away so
     // quitting at the shop keeps it.
@@ -598,14 +602,6 @@ public class MatchManager : MonoBehaviour
         if (!CanCheatRevealMap) return;
         foreach (MapNode node in RunState.Current.Map.nodes) node.revealed = true;
         if (State != MatchState.Map) return;
-        RunSave.Save(RunState.Current);
-        SceneManager.LoadScene(gameObject.scene.name);
-    }
-
-    // Cheat: adds a shop as one more choice for the next step on the map, and redraws it.
-    public void CheatAddShop()
-    {
-        if (State != MatchState.Map || RunState.Current.Map.AddStop(NodeKind.Shop) == null) return;
         RunSave.Save(RunState.Current);
         SceneManager.LoadScene(gameObject.scene.name);
     }
