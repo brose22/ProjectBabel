@@ -947,7 +947,7 @@ public class RunScreens : MonoBehaviour
     {
         RectTransform legend = UIKit.Group(column, "Legend");
         UIKit.Layout<HorizontalLayoutGroup>(legend, 0, 14, fitContent: true).childAlignment = TextAnchor.MiddleCenter;
-        foreach (NodeKind kind in new[] { NodeKind.City, NodeKind.Elite, NodeKind.Rest, NodeKind.Shop, NodeKind.Event })
+        foreach (NodeKind kind in new[] { NodeKind.City, NodeKind.Elite, NodeKind.Rest, NodeKind.Event })
             LegendEntry(legend, KindMark(kind, false));
         LegendEntry(legend, KindMark(NodeKind.City, true));
     }
