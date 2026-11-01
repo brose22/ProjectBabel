@@ -26,5 +26,6 @@ MonoBehaviour:
   homeTile: 2
   attackStyle: 2
   knockbackDistance: 0
+  knockbackChance: 0.25
   projectileSpeed: 10
   splashRadius: 1
