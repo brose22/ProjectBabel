@@ -6,6 +6,7 @@ using UnityEngine;
 public class PixelArtImporter : AssetPostprocessor
 {
     const string Folder = "Assets/Art/Sprites/";
+    const string IconFolder = "Assets/Art/Sprites/Icons/Controller/";
     public const int PixelsPerUnit = 16;
 
     void OnPreprocessTexture()
@@ -15,10 +16,14 @@ public class PixelArtImporter : AssetPostprocessor
         importer.textureType = TextureImporterType.Sprite;
         importer.spriteImportMode = SpriteImportMode.Single;
         importer.spritePixelsPerUnit = PixelsPerUnit;
-        importer.filterMode = FilterMode.Point;
         importer.textureCompression = TextureImporterCompression.Uncompressed;
-        importer.mipmapEnabled = false;
         importer.alphaIsTransparency = true;
+        // The controller icons are larger than they are shown; PadIconLibraryBuilder filters those.
+        if (!assetPath.StartsWith(IconFolder))
+        {
+            importer.filterMode = FilterMode.Point;
+            importer.mipmapEnabled = false;
+        }
         importer.wrapMode = TextureWrapMode.Clamp;
     }
 }

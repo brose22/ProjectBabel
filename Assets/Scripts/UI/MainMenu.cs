@@ -109,7 +109,7 @@ public class MainMenu : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Start", StartAiRun, 180f, 32f);
-        UIKit.Button(buttons, "Back", BuildMain, 140f, 32f);
+        UIKit.PadBadge(UIKit.Button(buttons, "Back", BuildMain, 140f, 32f), PadGlyph.East);
     }
 
     void BuildAiMatchRows(RectTransform column)
@@ -166,7 +166,7 @@ public class MainMenu : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Start new run", StartRun, 180f, 32f);
-        UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f);
+        UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f), PadGlyph.East);
     }
 
     static void StartRun()
@@ -230,7 +230,7 @@ public class MainMenu : MonoBehaviour
             default: BuildGameplayTab(options); break;
         }
 
-        UIKit.Button(column, "Back", BuildMain, 200f, 32f);
+        UIKit.PadBadge(UIKit.Button(column, "Back", BuildMain, 200f, 32f), PadGlyph.East);
     }
 
     void BuildGraphicsTab(RectTransform column)
