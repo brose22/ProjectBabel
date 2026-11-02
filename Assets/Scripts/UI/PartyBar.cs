@@ -5,7 +5,9 @@ using UnityEngine.UI;
 
 // The party along the bottom of the match screen, a card per captain still with the run.
 // Clicking a captain who isn't on the field makes them the next one placed; clicking one who is
-// fires their special once its meter is full. Cards rebuild only when the party or the field changes.
+// fires their special once its meter is full. The gamepad steps a highlight along the bar instead:
+// landing on a captain makes them next, or moves the tile cursor to their tower, and the special
+// button fires the highlighted one. Cards rebuild only when the party or the field changes.
 public class PartyBar
 {
     public const float Height = 48f;
@@ -13,16 +15,22 @@ public class PartyBar
     // The 32 px portraits at 1x, so their pixels stay square.
     const float PortraitSize = 32f;
     const float TipWidth = 220f;
+    // Seconds the highlighted captain's tip stays up after stepping to them.
+    const float PadTipSeconds = 2.5f;
     static readonly Color CardColor = new(0.17f, 0.2f, 0.28f, 1f);
 
     readonly MatchManager match;
+    readonly PlacementController placement;
     readonly RectTransform bar;
     readonly List<Action> refreshers = new();
     string key;
+    CaptainData highlighted;
+    float tipUntil;
 
-    public PartyBar(Transform parent, MatchManager match)
+    public PartyBar(Transform parent, MatchManager match, PlacementController placement)
     {
         this.match = match;
+        this.placement = placement;
         bar = UIKit.Group(parent, "Party Bar");
         UIKit.Place(bar, new Vector2(0.5f, 0f), new Vector2(0f, UIKit.Pad), new Vector2(0f, Height));
         UIKit.Layout<HorizontalLayoutGroup>(bar, 0, UIKit.Gap, fitContent: true);
@@ -31,6 +39,7 @@ public class PartyBar
     public void Update()
     {
         RunState run = RunState.Current;
+        UpdatePad(run);
         string newKey = Key(run);
         if (newKey != key)
         {
@@ -41,6 +50,30 @@ public class PartyBar
                 if (!run.HasDeparted(captain)) Card(captain, TowerOf(captain));
         }
         UIKit.Refresh(refreshers);
+    }
+
+    void UpdatePad(RunState run)
+    {
+        if (match.IsOver) return;
+        int step = GameInput.PartyStep;
+        if (step != 0) StepHighlight(run, step);
+        if (highlighted == null || !GameInput.UseSpecial) return;
+        Tower tower = TowerOf(highlighted);
+        if (tower != null) tower.TryUseAbility();
+    }
+
+    // The first step starts from the captain up next.
+    void StepHighlight(RunState run, int step)
+    {
+        List<CaptainData> present = run.Party.FindAll(captain => captain != null && !run.HasDeparted(captain));
+        if (present.Count == 0) return;
+        int index = present.IndexOf(highlighted != null ? highlighted : match.NextCaptain);
+        highlighted = present[(Mathf.Max(index, 0) + step + present.Count) % present.Count];
+        tipUntil = Time.unscaledTime + PadTipSeconds;
+
+        Tower tower = TowerOf(highlighted);
+        if (tower != null) placement.JumpCursor(tower.Cell);
+        else match.ChooseNextCaptain(highlighted);
     }
 
     static Tower TowerOf(CaptainData captain) => Tower.All.Find(t => t.Captain == captain);
@@ -95,7 +128,7 @@ public class PartyBar
             actionable = () => false;
         }
 
-        if (captain.ability != null) UIKit.HoverTip(card, captain.ability.displayName, captain.ability.description, TipWidth);
+        RectTransform tip = captain.ability != null ? UIKit.HoverTip(card, captain.ability.displayName, captain.ability.description, TipWidth) : null;
 
         Image ring = UIKit.Outline(card, UIKit.AccentColor);
         ring.rectTransform.offsetMin = new Vector2(2f, 2f);
@@ -104,6 +137,15 @@ public class PartyBar
         {
             ring.enabled = actionable();
             name.color = ring.enabled ? UIKit.AccentColor : UIKit.TextColor;
+        });
+
+        // White like the menus' focus ring, and just outside the gold one.
+        Image highlight = UIKit.Outline(card, Color.white);
+        refreshers.Add(() =>
+        {
+            bool isHighlighted = GameInput.UsingGamepad && highlighted == captain;
+            highlight.enabled = isHighlighted;
+            if (tip != null && GameInput.UsingGamepad) tip.gameObject.SetActive(isHighlighted && Time.unscaledTime < tipUntil);
         });
     }
 }

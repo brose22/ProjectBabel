@@ -4,9 +4,8 @@ using UnityEngine.Rendering.Universal;
 
 // Lets the player look around the match: drag with the middle mouse button or use the arrow keys or
 // right stick to pan, the scroll wheel or left trigger and right stick to zoom. The view stays inside
-// the padded map. Pixel-perfect rendering only
-// allows whole-number zooms, so it is turned off while the view is moved or zoomed and back on once
-// the camera is home again. Does nothing while CameraFocus has the camera, and moves it through
+// the padded map. Pixel-perfect rendering only allows whole-number zooms, so it is turned off while
+// the view is moved or zoomed and back on once the camera is home again. Does nothing while CameraFocus has the camera, and moves it through
 // CameraShake's rest position so a shake still plays.
 [RequireComponent(typeof(Camera), typeof(CameraShake), typeof(CameraFocus))]
 public class CameraPan : MonoBehaviour

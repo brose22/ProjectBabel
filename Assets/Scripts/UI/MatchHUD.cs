@@ -11,6 +11,9 @@ public class MatchHUD : MonoBehaviour
 {
     const float TopBarHeight = 40f;
     const float RequestWidth = 440f;
+    // Seconds a new request ignores answers, so a button already being pressed for the map can't
+    // answer a question that just appeared.
+    const float AnswerLockSeconds = 0.35f;
     // Seconds the health figure stays red after an enemy leaks.
     const float LeakFlashSeconds = 0.6f;
     // The wave button pulses over the last seconds of the countdown.
@@ -61,6 +64,7 @@ public class MatchHUD : MonoBehaviour
     Text moveHint;
     ApprovalToasts toasts;
     string requestKey;
+    float answersFrom;
     RectTransform pauseMenu;
     RectTransform statsPanel;
     RectTransform wavePreview;
@@ -110,7 +114,7 @@ public class MatchHUD : MonoBehaviour
         // After the toasts, so the stats list draws over them.
         BuildStatsPanel();
 
-        partyBar = new PartyBar(canvas.transform, match);
+        partyBar = new PartyBar(canvas.transform, match, placement);
         BuildControlsHint();
         captainWidget = new CaptainWidget(canvas, TopBarHeight + UIKit.Pad, match, placement);
         // The full captain panel is a testing tool, kept out of release builds.
@@ -175,15 +179,26 @@ public class MatchHUD : MonoBehaviour
         if (controlsLabel.text != text) controlsLabel.text = text;
     }
 
-    // Tab folds the controls hint, F steps the game speed, Y and N answer a captain's request.
+    // Tab folds the controls hint, F steps the game speed, Y and N answer a captain's request, with
+    // the gamepad's equivalents, and the pause button opens and closes the pause menu.
     void UpdateKeys()
     {
         if (match.IsBetweenMatches) return;
         if (GameInput.ToggleHint) hintOpen = !hintOpen;
-        if (match.IsPaused || match.IsOver) return;
+        if (match.IsPaused)
+        {
+            if (GameInput.Resume) match.SetPaused(false);
+            return;
+        }
+        if (match.IsOver) return;
+        if (GameInput.Pause)
+        {
+            match.SetPaused(true);
+            return;
+        }
         if (GameInput.CycleSpeed) match.CycleGameSpeed();
         CaptainRequests.Request request = Requests != null ? Requests.Active : null;
-        if (request == null) return;
+        if (request == null || Time.unscaledTime < answersFrom) return;
         if (GameInput.AnswerYes) Requests.Answer(request, RequestAnswer.Yes);
         else if (GameInput.AnswerNo) Requests.Answer(request, RequestAnswer.No);
     }
@@ -298,16 +313,21 @@ public class MatchHUD : MonoBehaviour
         statsPanel = UIKit.Box(canvas.transform, "Stats");
         UIKit.Place(statsPanel, new Vector2(1f, 1f), new Vector2(-UIKit.Pad, -TopBarHeight - UIKit.Gap), new Vector2(220f, 0f));
         UIKit.Layout<VerticalLayoutGroup>(statsPanel, UIKit.Pad, 2, fitContent: true);
-        DetailRow("City", CityLabel);
-        DetailRow("Kills", () => $"{match.Kills}");
-        DetailRow("Leaks", () => $"{match.Leaks}");
-        DetailRow("Casualties", () => $"{match.Casualties}");
+        DetailRows(statsPanel);
         statsPanel.gameObject.SetActive(false);
     }
 
-    void DetailRow(string caption, Func<string> value)
+    void DetailRows(Transform parent)
     {
-        RectTransform row = UIKit.Group(statsPanel, caption);
+        DetailRow(parent, "City", CityLabel);
+        DetailRow(parent, "Kills", () => $"{match.Kills}");
+        DetailRow(parent, "Leaks", () => $"{match.Leaks}");
+        DetailRow(parent, "Casualties", () => $"{match.Casualties}");
+    }
+
+    void DetailRow(Transform parent, string caption, Func<string> value)
+    {
+        RectTransform row = UIKit.Group(parent, caption);
         UIKit.Layout<HorizontalLayoutGroup>(row, 0, 6);
         UIKit.Size(UIKit.Label(row, caption, 12, color: UIKit.MutedTextColor), flexibleWidth: 1f);
         UIKit.LiveLabel(row, value, barRefreshers, 13, TextAnchor.MiddleRight);
@@ -324,6 +344,8 @@ public class MatchHUD : MonoBehaviour
         UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 0f));
         UIKit.Layout<VerticalLayoutGroup>(window, 14, 8, fitContent: true);
         UIKit.Label(window, "PAUSED", 22, TextAnchor.MiddleCenter);
+        // Here as well as behind the Stats button, which the gamepad can't reach during play.
+        DetailRows(window);
         UIKit.Size(UIKit.Primary(UIKit.Button(window, "Resume", () => match.SetPaused(false)), barRefreshers), height: 32f, flexibleWidth: 1f);
         UIKit.Size(UIKit.Button(window, "Exit Match", match.ExitMatch), height: 32f, flexibleWidth: 1f);
         UIKit.Size(UIKit.Button(window, "Exit Game", MainMenu.Quit), height: 32f, flexibleWidth: 1f);
@@ -335,7 +357,6 @@ public class MatchHUD : MonoBehaviour
         if (pauseMenu == null) return;
         // The match can end under the menu (a request timing out is paused too, but be safe).
         if (match.IsPaused && (match.IsOver || match.IsBetweenMatches)) match.SetPaused(false);
-        if (match.IsPaused && GameInput.Resume) match.SetPaused(false);
         pauseMenu.gameObject.SetActive(match.IsPaused);
     }
 
@@ -399,6 +420,7 @@ public class MatchHUD : MonoBehaviour
         requestRefreshers.Clear();
         UIKit.Clear(requestList);
         if (request == null || request.Tower == null) return;
+        answersFrom = Time.unscaledTime + AnswerLockSeconds;
         // Deselecting closes the captain widget, so it doesn't sit over the question.
         placement.Select(null);
         string accent = UIKit.Hex(UIKit.AccentColor);

@@ -20,6 +20,7 @@ public class CaptainWidget
     readonly RectTransform panel;
     readonly List<Action> refreshers = new();
     readonly CaptainPanelParts parts;
+    readonly UIFocusScope focus;
     string key;
 
     public CaptainWidget(Canvas canvas, float topMargin, MatchManager match, PlacementController placement)
@@ -32,6 +33,9 @@ public class CaptainWidget
         panel = UIKit.Box(canvas.transform, "Captain Widget");
         UIKit.Place(panel, Vector2.zero, Vector2.zero, new Vector2(Width, 0f));
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 3, fitContent: true);
+        // Only takes gamepad focus when asked to; a selected tower shouldn't stop the tile cursor.
+        focus = UIKit.Focus(panel, () => placement.WidgetFocused = false);
+        focus.enabled = false;
         panel.gameObject.SetActive(false);
     }
 
@@ -39,6 +43,7 @@ public class CaptainWidget
     {
         // Out of the way while the player picks where to move; right-click or Esc still cancels.
         Tower tower = placement.IsMoving ? null : placement.Selected;
+        focus.enabled = tower != null && placement.WidgetFocused;
         string newKey = Key(tower);
         if (newKey != key)
         {

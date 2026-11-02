@@ -19,6 +19,8 @@ public class PlacementController : MonoBehaviour
     public Tower Selected { get; private set; }
     // While moving, clicks pick a new tile for the selected tower instead of placing or selecting.
     public bool IsMoving { get; private set; }
+    // Whether gamepad focus is in the selected captain's widget, whose buttons the tile cursor can't reach.
+    public bool WidgetFocused { get; set; }
 
     const float CursorRepeatDelay = 0.25f;
     const float CursorRepeatInterval = 0.09f;
@@ -28,6 +30,13 @@ public class PlacementController : MonoBehaviour
     CameraPan cameraPan;
     PlacementGhosts ghosts;
     Vector2Int cursorCell = new(-1, -1);
+    CaptainRequests requests;
+
+    // Added to the match at runtime, so it is looked up rather than wired in the scene.
+    CaptainRequests Requests => requests != null ? requests : requests = match.GetComponent<CaptainRequests>();
+
+    // The confirm and cancel buttons answer an open request instead of acting on the map.
+    bool IsAsked => Requests != null && Requests.Active != null;
 
     void Awake()
     {
@@ -46,7 +55,8 @@ public class PlacementController : MonoBehaviour
         Mouse mouse = Mouse.current;
         Vector2 screen = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
         // A hidden mouse's position means nothing, so the gamepad only asks whether a menu is up.
-        bool blocked = pad ? match.IsOver || match.IsBetweenMatches || match.IsPaused : mouse == null || hud.IsPointerOverHud(screen);
+        bool blocked = pad ? match.IsOver || match.IsBetweenMatches || match.IsPaused || UIFocusScope.Top != null || IsAsked
+            : mouse == null || hud.IsPointerOverHud(screen);
         if (ended || blocked)
         {
             hoverMarker.enabled = false;
@@ -74,7 +84,9 @@ public class PlacementController : MonoBehaviour
         // Placing leaves the new captain unselected, so its widget only opens when clicked.
         if (confirm)
         {
-            if (hovered != null) Select(hovered);
+            // The widget's buttons have no keys on the gamepad, so confirming again goes into it.
+            if (pad && hovered != null && hovered == Selected) WidgetFocused = true;
+            else if (hovered != null) Select(hovered);
             else
             {
                 if (canBuild) match.PlaceTower(cell);
@@ -96,6 +108,13 @@ public class PlacementController : MonoBehaviour
         if (grid.InBounds(cursorCell + step)) cursorCell += step;
         cameraPan.KeepInView(grid.CellCenter(cursorCell));
         return cursorCell;
+    }
+
+    // Puts the tile cursor on a tile, for jumping to a captain from the party bar.
+    public void JumpCursor(Vector2Int cell)
+    {
+        cursorCell = cell;
+        cameraPan.KeepInView(grid.CellCenter(cell));
     }
 
     // Consumes every click while moving so it can't also select or place.
@@ -159,6 +178,7 @@ public class PlacementController : MonoBehaviour
     public void Select(Tower tower)
     {
         IsMoving = false;
+        WidgetFocused = false;
         if (Selected != null) Selected.SetSelected(false);
         Selected = tower;
         if (Selected != null) Selected.SetSelected(true);
@@ -170,12 +190,14 @@ public class PlacementController : MonoBehaviour
         match.SellTower(Selected);
         Selected = null;
         IsMoving = false;
+        WidgetFocused = false;
     }
 
     public void BeginMove()
     {
         if (!match.CanMove(Selected) || !match.CanAffordMove(Selected)) return;
         IsMoving = true;
+        WidgetFocused = false;
     }
 
     public void CancelMove() => IsMoving = false;
