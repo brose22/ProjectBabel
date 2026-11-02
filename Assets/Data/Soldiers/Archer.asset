@@ -21,7 +21,7 @@ MonoBehaviour:
   maxHealth: 12
   damageMultiplier: 1.2
   attackRange: 2
-  reach: 2
+  reach: 2.5
   moveSpeed: 3.5
   homeTile: 2
   attackStyle: 1
