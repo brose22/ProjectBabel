@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// Mouse and keyboard control for the match: place towers on free tiles, select them,
-// change their Gold draw rate, move them and sell them.
+// Mouse, keyboard and gamepad control for the match: place towers on free tiles, select them,
+// change their Gold draw rate, move them and sell them. The gamepad works a tile cursor where the
+// mouse points; both feed the same place, select and move logic.
 public class PlacementController : MonoBehaviour
 {
     [SerializeField] MatchManager match;
@@ -19,12 +20,19 @@ public class PlacementController : MonoBehaviour
     // While moving, clicks pick a new tile for the selected tower instead of placing or selecting.
     public bool IsMoving { get; private set; }
 
+    const float CursorRepeatDelay = 0.25f;
+    const float CursorRepeatInterval = 0.09f;
+
+    readonly StepRepeat cursorRepeat = new(CursorRepeatDelay, CursorRepeatInterval);
     Camera cam;
+    CameraPan cameraPan;
     PlacementGhosts ghosts;
+    Vector2Int cursorCell = new(-1, -1);
 
     void Awake()
     {
         cam = Camera.main;
+        cameraPan = cam.GetComponent<CameraPan>();
         ghosts = new PlacementGhosts(hoverMarker);
     }
 
@@ -32,21 +40,27 @@ public class PlacementController : MonoBehaviour
     {
         HandleKeys();
 
-        Mouse mouse = Mouse.current;
-        Vector2 screen = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
         bool ended = match.State is MatchState.Won or MatchState.Lost;
         if (IsMoving && !match.CanMove(Selected)) IsMoving = false;
-        if (mouse == null || ended || hud.IsPointerOverHud(screen))
+        bool pad = GameInput.UsingGamepad;
+        Mouse mouse = Mouse.current;
+        Vector2 screen = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
+        // A hidden mouse's position means nothing, so the gamepad only asks whether a menu is up.
+        bool blocked = pad ? match.IsOver || match.IsBetweenMatches || match.IsPaused : mouse == null || hud.IsPointerOverHud(screen);
+        if (ended || blocked)
         {
             hoverMarker.enabled = false;
             ghosts.Hide();
             return;
         }
 
-        Vector2Int cell = grid.WorldToCell(cam.ScreenToWorldPoint(screen));
+        // The gamepad's cancel button goes through HandleKeys, like Esc.
+        Vector2Int cell = pad ? StepCursor() : grid.WorldToCell(cam.ScreenToWorldPoint(screen));
+        bool confirm = pad ? GameInput.ConfirmTile : mouse.leftButton.wasPressedThisFrame;
+        bool back = !pad && mouse.rightButton.wasPressedThisFrame;
         if (IsMoving)
         {
-            UpdateMove(mouse, cell);
+            UpdateMove(cell, confirm, back);
             return;
         }
 
@@ -58,7 +72,7 @@ public class PlacementController : MonoBehaviour
         else ghosts.Hide();
 
         // Placing leaves the new captain unselected, so its widget only opens when clicked.
-        if (mouse.leftButton.wasPressedThisFrame)
+        if (confirm)
         {
             if (hovered != null) Select(hovered);
             else
@@ -67,26 +81,37 @@ public class PlacementController : MonoBehaviour
                 Select(null);
             }
         }
-        else if (mouse.rightButton.wasPressedThisFrame)
+        else if (back)
         {
             Select(null);
         }
     }
 
+    // Moves the gamepad's tile cursor, which starts mid-map, and keeps it on screen.
+    Vector2Int StepCursor()
+    {
+        if (!grid.InBounds(cursorCell)) cursorCell = grid.Size / 2;
+        Vector2Int step = cursorRepeat.Update(PadMath.ToStep(GameInput.PadMove), Time.unscaledTime);
+        if (step == Vector2Int.zero) return cursorCell;
+        if (grid.InBounds(cursorCell + step)) cursorCell += step;
+        cameraPan.KeepInView(grid.CellCenter(cursorCell));
+        return cursorCell;
+    }
+
     // Consumes every click while moving so it can't also select or place.
-    void UpdateMove(Mouse mouse, Vector2Int cell)
+    void UpdateMove(Vector2Int cell, bool confirm, bool back)
     {
         bool valid = match.CanMoveTo(Selected, cell) && match.CanAffordMove(Selected);
         ShowMarker(cell, valid);
         if (valid) ShowGhosts(cell, Selected.Captain, Selected.SlotClasses(), Selected);
         else ghosts.Hide();
 
-        if (mouse.leftButton.wasPressedThisFrame)
+        if (confirm)
         {
             // Deselecting keeps the widget closed while the captain walks.
             if (valid && match.MoveTower(Selected, cell)) Select(null);
         }
-        else if (mouse.rightButton.wasPressedThisFrame)
+        else if (back)
         {
             CancelMove();
         }
