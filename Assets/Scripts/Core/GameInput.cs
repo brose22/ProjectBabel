@@ -41,15 +41,15 @@ public static class GameInput
     // Steps through the party with the shoulder buttons: -1, 1, or 0.
     public static int PartyStep => (Pressed(WorldPad?.rightShoulder) ? 1 : 0) - (Pressed(WorldPad?.leftShoulder) ? 1 : 0);
 
-    // Arrow keys, as a direction for the camera.
+    // WASD, as a direction for the camera.
     public static Vector2 PanKeys
     {
         get
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return Vector2.zero;
-            return new Vector2((keyboard.rightArrowKey.isPressed ? 1f : 0f) - (keyboard.leftArrowKey.isPressed ? 1f : 0f),
-                (keyboard.upArrowKey.isPressed ? 1f : 0f) - (keyboard.downArrowKey.isPressed ? 1f : 0f));
+            return new Vector2((keyboard.dKey.isPressed ? 1f : 0f) - (keyboard.aKey.isPressed ? 1f : 0f),
+                (keyboard.wKey.isPressed ? 1f : 0f) - (keyboard.sKey.isPressed ? 1f : 0f));
         }
     }
 

@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering.Universal;
 
-// Lets the player look around the match: drag with the middle mouse button or use the arrow keys or
+// Lets the player look around the match: drag with the middle mouse button or use WASD or the
 // right stick to pan, the scroll wheel or left trigger and right stick to zoom. The view stays inside
 // the padded map. Pixel-perfect rendering only allows whole-number zooms, so it is turned off while
 // the view is moved or zoomed and back on once the camera is home again. Does nothing while CameraFocus has the camera, and moves it through
@@ -14,7 +14,7 @@ public class CameraPan : MonoBehaviour
     const float MinSizeShare = 0.4f;
     // Zoom per scroll step (120 units of wheel delta).
     const float ZoomPerStep = 1.15f;
-    // Arrow-key speed, in view heights per second.
+    // WASD speed, in view heights per second.
     const float KeySpeed = 0.9f;
     const float HomeTolerance = 0.01f;
     // Zoom steps per second at full stick.
