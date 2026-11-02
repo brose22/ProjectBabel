@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.DualShock;
 
 // Every game action in one place, so screens ask for "start the wave" rather than for a key. Also
 // tracks which kind of device was used last: the gamepad, or the mouse, keyboard and touch together.
@@ -50,6 +51,20 @@ public static class GameInput
                 (keyboard.upArrowKey.isPressed ? 1f : 0f) - (keyboard.downArrowKey.isPressed ? 1f : 0f));
         }
     }
+
+    // Button names for the hints, as printed on the gamepad in hand.
+    public static string ConfirmName => PadName("A", "Cross");
+    public static string CancelName => PadName("B", "Circle");
+    public static string MoveName => PadName("X", "Square");
+    public static string WaveName => PadName("Y", "Triangle");
+    public static string PartyName => PadName("LB/RB", "L1/R1");
+    public static string SpecialName => PadName("RT", "R2");
+    public static string SpeedName => PadName("View", "Share");
+    public static string ZoomName => PadName("LT + R stick", "L2 + R stick");
+    public static string PanName => "R stick";
+    public static string HintName => PadName("L stick press", "L3");
+
+    static string PadName(string xbox, string playStation) => Pad is DualShockGamepad ? playStation : xbox;
 
     // The menus' back button. Confirm goes through the UI input module to the focused button.
     public static bool UiCancel => Pressed(Pad?.buttonEast);
