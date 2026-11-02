@@ -23,15 +23,21 @@ public static class GameInput
         }
     }
 
-    public static bool StartWave => KeyDown(Key.Space);
-    public static bool Cancel => KeyDown(Key.Escape);
-    public static bool MoveTower => KeyDown(Key.M);
+    public static bool StartWave => KeyDown(Key.Space) || Pressed(WorldPad?.buttonNorth);
+    public static bool Cancel => KeyDown(Key.Escape) || Pressed(WorldPad?.buttonEast);
+    public static bool MoveTower => KeyDown(Key.M) || Pressed(WorldPad?.buttonWest);
+    // On the gamepad, selling is in the captain widget, where it can't be pressed by accident.
     public static bool SellTower => KeyDown(Key.X);
-    public static bool CycleSpeed => KeyDown(Key.F);
-    public static bool ToggleHint => KeyDown(Key.Tab);
-    public static bool AnswerYes => KeyDown(Key.Y);
-    public static bool AnswerNo => KeyDown(Key.N);
-    public static bool Resume => KeyDown(Key.Escape);
+    public static bool CycleSpeed => KeyDown(Key.F) || Pressed(WorldPad?.selectButton);
+    public static bool ToggleHint => KeyDown(Key.Tab) || Pressed(WorldPad?.leftStickButton);
+    public static bool AnswerYes => KeyDown(Key.Y) || Pressed(WorldPad?.buttonSouth);
+    public static bool AnswerNo => KeyDown(Key.N) || Pressed(WorldPad?.buttonEast);
+    public static bool Pause => Pressed(WorldPad?.startButton);
+    public static bool Resume => KeyDown(Key.Escape) || Pressed(Pad?.startButton) || Pressed(Pad?.buttonEast);
+    public static bool UseSpecial => Pressed(WorldPad?.rightTrigger);
+
+    // Steps through the party with the shoulder buttons: -1, 1, or 0.
+    public static int PartyStep => (Pressed(WorldPad?.rightShoulder) ? 1 : 0) - (Pressed(WorldPad?.leftShoulder) ? 1 : 0);
 
     // Arrow keys, as a direction for the camera.
     public static Vector2 PanKeys
@@ -55,15 +61,18 @@ public static class GameInput
     public static float PadScroll => Pad != null ? Pad.rightStick.ReadValue().y : 0f;
 
     // Places or selects on the tile under the gamepad's cursor.
-    public static bool ConfirmTile => Pressed(Pad?.buttonSouth);
+    public static bool ConfirmTile => Pressed(WorldPad?.buttonSouth);
 
-    public static bool Recenter => Pressed(Pad?.rightStickButton);
+    public static bool Recenter => Pressed(WorldPad?.rightStickButton);
 
     // The right stick pans the camera, or zooms it (up and down) with the left trigger held.
     public static Vector2 PadPan => Pad != null && !Pad.leftTrigger.isPressed ? Pad.rightStick.ReadValue() : Vector2.zero;
     public static float PadZoom => Pad != null && Pad.leftTrigger.isPressed ? Pad.rightStick.ReadValue().y : 0f;
 
     static Gamepad Pad => Gamepad.current;
+
+    // The gamepad for match actions: none while a menu, window or the captain widget has its focus.
+    static Gamepad WorldPad => UIFocusScope.Top == null ? Gamepad.current : null;
 
     static bool Pressed(ButtonControl button) => button != null && button.wasPressedThisFrame;
 

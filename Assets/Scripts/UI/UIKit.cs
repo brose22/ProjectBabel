@@ -429,7 +429,7 @@ public static class UIKit
     // A box above target with a bold title and a muted description, shown while the pointer is on
     // it, or while the gamepad focuses it. It has its own sorting override, so it draws over every
     // other widget on the screen.
-    public static void HoverTip(RectTransform target, string title, string description, float width = 220f)
+    public static RectTransform HoverTip(RectTransform target, string title, string description, float width = 220f)
     {
         RectTransform tip = Box(target, "Hover Tip", blocksClicks: false);
         tip.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
@@ -457,6 +457,7 @@ public static class UIKit
             entry.callback.AddListener(_ => tip.gameObject.SetActive(show()));
             trigger.triggers.Add(entry);
         }
+        return tip;
     }
 
     // Marks a button as the screen's main action: gold while it can be pressed.
