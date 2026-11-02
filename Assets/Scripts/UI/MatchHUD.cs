@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // The match HUD, built in uGUI at runtime: top bar, party bar, captain widget, move hint, captain
@@ -179,15 +178,14 @@ public class MatchHUD : MonoBehaviour
     // Tab folds the controls hint, F steps the game speed, Y and N answer a captain's request.
     void UpdateKeys()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null || match.IsBetweenMatches) return;
-        if (keyboard.tabKey.wasPressedThisFrame) hintOpen = !hintOpen;
+        if (match.IsBetweenMatches) return;
+        if (GameInput.ToggleHint) hintOpen = !hintOpen;
         if (match.IsPaused || match.IsOver) return;
-        if (keyboard.fKey.wasPressedThisFrame) match.CycleGameSpeed();
+        if (GameInput.CycleSpeed) match.CycleGameSpeed();
         CaptainRequests.Request request = Requests != null ? Requests.Active : null;
         if (request == null) return;
-        if (keyboard.yKey.wasPressedThisFrame) Requests.Answer(request, RequestAnswer.Yes);
-        else if (keyboard.nKey.wasPressedThisFrame) Requests.Answer(request, RequestAnswer.No);
+        if (GameInput.AnswerYes) Requests.Answer(request, RequestAnswer.Yes);
+        else if (GameInput.AnswerNo) Requests.Answer(request, RequestAnswer.No);
     }
 
     // ---------- Next wave preview ----------
@@ -336,8 +334,7 @@ public class MatchHUD : MonoBehaviour
         if (pauseMenu == null) return;
         // The match can end under the menu (a request timing out is paused too, but be safe).
         if (match.IsPaused && (match.IsOver || match.IsBetweenMatches)) match.SetPaused(false);
-        Keyboard keyboard = Keyboard.current;
-        if (match.IsPaused && keyboard != null && keyboard.escapeKey.wasPressedThisFrame) match.SetPaused(false);
+        if (match.IsPaused && GameInput.Resume) match.SetPaused(false);
         pauseMenu.gameObject.SetActive(match.IsPaused);
     }
 
