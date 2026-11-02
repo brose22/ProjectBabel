@@ -160,7 +160,8 @@ public class MatchHUD : MonoBehaviour
     void UpdateControlsHint()
     {
         var keys = new List<(string, string)>();
-        if (hintOpen)
+        if (GameInput.UsingGamepad) AddGamepadHints(keys);
+        else if (hintOpen)
         {
             if (placement.Selected != null) keys.Add(("M", "move")); else keys.Add(("Click", "place / select"));
             if (placement.Selected != null) keys.Add(("X", "sell"));
@@ -177,6 +178,35 @@ public class MatchHUD : MonoBehaviour
         foreach ((string key, string action) in keys) parts.Add($"<color={accent}>{key}</color> {action}");
         string text = string.Join("   ", parts);
         if (controlsLabel.text != text) controlsLabel.text = text;
+    }
+
+    void AddGamepadHints(List<(string, string)> keys)
+    {
+        if (!hintOpen)
+        {
+            keys.Add((GameInput.HintName, "controls"));
+            return;
+        }
+        if (placement.IsMoving)
+        {
+            keys.Add((GameInput.ConfirmName, "move here"));
+            keys.Add((GameInput.CancelName, "cancel"));
+        }
+        else if (placement.WidgetFocused) keys.Add((GameInput.CancelName, "back to map"));
+        else if (placement.Selected != null)
+        {
+            keys.Add((GameInput.ConfirmName, "actions"));
+            keys.Add((GameInput.MoveName, "move"));
+            keys.Add((GameInput.CancelName, "deselect"));
+        }
+        else keys.Add((GameInput.ConfirmName, "place / select"));
+        keys.Add((GameInput.PartyName, "party"));
+        keys.Add((GameInput.SpecialName, "special"));
+        if (match.State == MatchState.Preparing) keys.Add((GameInput.WaveName, "start wave"));
+        keys.Add((GameInput.SpeedName, "speed"));
+        keys.Add((GameInput.PanName, "pan"));
+        keys.Add((GameInput.ZoomName, "zoom"));
+        keys.Add((GameInput.HintName, "hide"));
     }
 
     // Tab folds the controls hint, F steps the game speed, Y and N answer a captain's request, with
@@ -397,7 +427,9 @@ public class MatchHUD : MonoBehaviour
         bool moving = placement.IsMoving && tower != null;
         moveHintBox.gameObject.SetActive(moving);
         if (!moving) return;
-        moveHint.text = $"Moving {tower.Captain.displayName}: click a free tile (Esc / right-click to cancel)" +
+        string how = GameInput.UsingGamepad ? $"{GameInput.ConfirmName} on a free tile ({GameInput.CancelName} to cancel)"
+            : "click a free tile (Esc / right-click to cancel)";
+        moveHint.text = $"Moving {tower.Captain.displayName}: {how}" +
                         (match.CanAffordMove(tower) ? "" : "  - not enough Gold");
     }
 
@@ -449,8 +481,8 @@ public class MatchHUD : MonoBehaviour
         RectTransform buttons = UIKit.Group(card, "Answers");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, UIKit.Pad);
         UIKit.Size(UIKit.Group(buttons, "Spacer"), flexibleWidth: 1f);
-        AnswerButton(buttons, request, "No  [N]", RequestAnswer.No, NoColor);
-        AnswerButton(buttons, request, "Yes  [Y]", RequestAnswer.Yes, YesColor);
+        AnswerButton(buttons, request, "No", () => GameInput.UsingGamepad ? GameInput.CancelName : "N", RequestAnswer.No, NoColor);
+        AnswerButton(buttons, request, "Yes", () => GameInput.UsingGamepad ? GameInput.ConfirmName : "Y", RequestAnswer.Yes, YesColor);
 
         UIKit.LiveBar(card, () => Requests.SecondsLeft / CaptainRequests.ResponseSeconds,
             () => $"{(GameSettings.PauseDuringRequests ? "Paused - " : "")}{Mathf.CeilToInt(Requests.SecondsLeft)}s to answer", UIKit.ReserveBarColor, requestRefreshers, 14f);
@@ -470,9 +502,12 @@ public class MatchHUD : MonoBehaviour
         _ => "granted",
     };
 
-    void AnswerButton(Transform card, CaptainRequests.Request request, string text, RequestAnswer answer, Color color)
+    void AnswerButton(Transform card, CaptainRequests.Request request, string text, Func<string> key, RequestAnswer answer, Color color)
     {
-        Button button = UIKit.Button(card, text, () => Requests.Answer(request, answer), 100f, 30f);
+        Button button = UIKit.Button(card, "", () => Requests.Answer(request, answer), 100f, 30f);
         button.GetComponent<Image>().color = color;
+        Text label = button.GetComponentInChildren<Text>();
+        label.text = $"{text}  [{key()}]";
+        requestRefreshers.Add(() => label.text = $"{text}  [{key()}]");
     }
 }

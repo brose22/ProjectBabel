@@ -407,8 +407,8 @@ public class RunScreens : MonoBehaviour
         UIKit.Button(buttons, "Shop", () => SetShopOpen(true), 160f, 24f);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
         UIKit.Size(UIKit.Group(buttons, "Spacer"), 60f, 24f);
-        // Abandoning loses the run, so it takes a second click.
-        Button abandon = UIKit.Button(buttons, abandonArmed ? "Click again to abandon" : "Abandon run", () =>
+        // Abandoning loses the run, so it takes a second press.
+        Button abandon = UIKit.Button(buttons, abandonArmed ? "Press again to abandon" : "Abandon run", () =>
         {
             if (abandonArmed) { match.RestartRun(); return; }
             this.abandonArmed = true;
