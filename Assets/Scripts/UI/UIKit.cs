@@ -404,6 +404,25 @@ public static class UIKit
         return button;
     }
 
+    // Hangs a gamepad button's icon on a widget, by default across its left edge so it takes no
+    // space from the label. A button with no way to be pressed right now hides its icon by itself.
+    public static PadIcon PadBadge(Component target, PadGlyph glyph, Func<bool> shown = null, Vector2? anchor = null, Vector2 offset = default)
+    {
+        Image image = Icon(target.transform, null, PadIcons.Size);
+        image.GetComponent<LayoutElement>().ignoreLayout = true;
+        RectTransform rect = image.rectTransform;
+        rect.anchorMin = rect.anchorMax = anchor ?? new Vector2(0f, 0.5f);
+        rect.sizeDelta = Vector2.one * PadIcons.Size;
+        rect.anchoredPosition = offset;
+        var icon = image.gameObject.AddComponent<PadIcon>();
+        icon.Glyph = glyph;
+        icon.Shown = shown;
+        icon.Widget = target.GetComponent<Selectable>();
+        icon.Image = image;
+        icon.Refresh();
+        return icon;
+    }
+
     // Makes a panel (a card, say) clickable, with the same hover and press tints as buttons.
     public static Button Clickable(RectTransform panel, Action onClick)
     {

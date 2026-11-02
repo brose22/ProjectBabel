@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -52,19 +53,35 @@ public static class GameInput
         }
     }
 
-    // Button names for the hints, as printed on the gamepad in hand.
-    public static string ConfirmName => PadName("A", "Cross");
-    public static string CancelName => PadName("B", "Circle");
-    public static string MoveName => PadName("X", "Square");
-    public static string WaveName => PadName("Y", "Triangle");
-    public static string PartyName => PadName("LB/RB", "L1/R1");
-    public static string SpecialName => PadName("RT", "R2");
-    public static string SpeedName => PadName("View", "Share");
-    public static string ZoomName => PadName("LT + R stick", "L2 + R stick");
-    public static string PanName => "R stick";
-    public static string HintName => PadName("L stick press", "L3");
+    // Which button art matches the gamepad in hand. Steam sets SteamDeck on the Deck's own controls;
+    // Switch goes by layout name because its device class isn't compiled on every platform.
+    public static PadFamily PadFamily
+    {
+        get
+        {
+            if (Pad is DualShockGamepad) return PadFamily.PlayStation;
+            if (Pad != null && Pad.layout.Contains("Switch")) return PadFamily.Switch;
+            if (Environment.GetEnvironmentVariable("SteamDeck") == "1") return PadFamily.SteamDeck;
+            return PadFamily.Xbox;
+        }
+    }
 
-    static string PadName(string xbox, string playStation) => Pad is DualShockGamepad ? playStation : xbox;
+    // For the sentence in the move hint, where an icon can't sit in the text.
+    public static string ConfirmName => PadFamily switch
+    {
+        PadFamily.PlayStation => "Cross",
+        PadFamily.Switch => "B",
+        _ => "A",
+    };
+    public static string CancelName => PadFamily switch
+    {
+        PadFamily.PlayStation => "Circle",
+        PadFamily.Switch => "A",
+        _ => "B",
+    };
+
+    // Whether the gamepad acts on the match rather than on a menu, window or the captain widget.
+    public static bool PadInMatch => UIFocusScope.Top == null;
 
     // The menus' back button. Confirm goes through the UI input module to the focused button.
     public static bool UiCancel => Pressed(Pad?.buttonEast);
@@ -87,7 +104,7 @@ public static class GameInput
     static Gamepad Pad => Gamepad.current;
 
     // The gamepad for match actions: none while a menu, window or the captain widget has its focus.
-    static Gamepad WorldPad => UIFocusScope.Top == null ? Gamepad.current : null;
+    static Gamepad WorldPad => PadInMatch ? Gamepad.current : null;
 
     static bool Pressed(ButtonControl button) => button != null && button.wasPressedThisFrame;
 

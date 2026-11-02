@@ -17,6 +17,8 @@ public class PartyBar
     const float TipWidth = 220f;
     // Seconds the highlighted captain's tip stays up after stepping to them.
     const float PadTipSeconds = 2.5f;
+    // How far the shoulder button icons sit from the ends of the bar.
+    const float BadgeGap = 14f;
     static readonly Color CardColor = new(0.17f, 0.2f, 0.28f, 1f);
 
     readonly MatchManager match;
@@ -48,6 +50,9 @@ public class PartyBar
             UIKit.Clear(bar);
             foreach (CaptainData captain in run.Party)
                 if (!run.HasDeparted(captain)) Card(captain, TowerOf(captain));
+            // The shoulder buttons step along the bar, so they sit at its ends.
+            UIKit.PadBadge(bar, PadGlyph.LeftShoulder, () => GameInput.PadInMatch, new Vector2(0f, 0.5f), Vector2.left * BadgeGap);
+            UIKit.PadBadge(bar, PadGlyph.RightShoulder, () => GameInput.PadInMatch, new Vector2(1f, 0.5f), Vector2.right * BadgeGap);
         }
         UIKit.Refresh(refreshers);
     }
@@ -147,5 +152,8 @@ public class PartyBar
             highlight.enabled = isHighlighted;
             if (tip != null && GameInput.UsingGamepad) tip.gameObject.SetActive(isHighlighted && Time.unscaledTime < tipUntil);
         });
+        // The special button works on the highlighted captain, once their meter is full.
+        if (tower != null && tower.HasAbility)
+            UIKit.PadBadge(card, PadGlyph.RightTrigger, () => highlighted == captain && tower.CanUseAbility && GameInput.PadInMatch, Vector2.one);
     }
 }

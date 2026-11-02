@@ -70,6 +70,8 @@ public class MatchHUD : MonoBehaviour
     RectTransform wavePreview;
     string previewKey;
     Text controlsLabel;
+    RectTransform controlsIcons;
+    string controlsIconsKey;
     bool hintOpen;
     float canvasWidth;
     int lastLeaks;
@@ -153,15 +155,25 @@ public class MatchHUD : MonoBehaviour
         UIKit.Place(box, new Vector2(1f, 0f), new Vector2(-UIKit.Pad, UIKit.Pad + PartyBar.Height + UIKit.Gap), Vector2.zero);
         UIKit.Layout<HorizontalLayoutGroup>(box, 5, 0, fitContent: true);
         controlsLabel = UIKit.Label(box, "", 12, TextAnchor.MiddleRight, UIKit.TextColor);
+        controlsIcons = UIKit.Group(box, "Gamepad");
+        UIKit.Layout<HorizontalLayoutGroup>(controlsIcons, 0, 3);
     }
 
     // Keys in the accent colour, each followed by what it does. Only the keys that apply now are
     // listed: a selected tower adds move and sell, the pause between waves adds starting the next.
     void UpdateControlsHint()
     {
+        bool pad = GameInput.UsingGamepad;
+        controlsLabel.gameObject.SetActive(!pad);
+        controlsIcons.gameObject.SetActive(pad);
+        if (pad)
+        {
+            UpdateGamepadHint();
+            return;
+        }
+
         var keys = new List<(string, string)>();
-        if (GameInput.UsingGamepad) AddGamepadHints(keys);
-        else if (hintOpen)
+        if (hintOpen)
         {
             if (placement.Selected != null) keys.Add(("M", "move")); else keys.Add(("Click", "place / select"));
             if (placement.Selected != null) keys.Add(("X", "sell"));
@@ -180,33 +192,50 @@ public class MatchHUD : MonoBehaviour
         if (controlsLabel.text != text) controlsLabel.text = text;
     }
 
-    void AddGamepadHints(List<(string, string)> keys)
+    // The same hint for the gamepad, with button icons, rebuilt only when what it lists changes.
+    void UpdateGamepadHint()
     {
+        List<(PadGlyph[], string)> hints = GamepadHints();
+        var parts = new List<string> { GameInput.PadFamily.ToString() };
+        foreach ((PadGlyph[] glyphs, string action) in hints) parts.Add(string.Join("+", glyphs) + action);
+        string key = string.Join("|", parts);
+        if (key == controlsIconsKey) return;
+        controlsIconsKey = key;
+
+        UIKit.Clear(controlsIcons);
+        foreach ((PadGlyph[] glyphs, string action) in hints)
+        {
+            foreach (PadGlyph glyph in glyphs) UIKit.Icon(controlsIcons, PadIcons.Get(glyph), PadIcons.Size);
+            UIKit.Label(controlsIcons, action, 12);
+            UIKit.Size(UIKit.Group(controlsIcons, "Gap"), 5f);
+        }
+    }
+
+    List<(PadGlyph[], string)> GamepadHints()
+    {
+        var hints = new List<(PadGlyph[], string)>();
+        void Add(string action, params PadGlyph[] glyphs) => hints.Add((glyphs, action));
         if (!hintOpen)
         {
-            keys.Add((GameInput.HintName, "controls"));
-            return;
+            Add("controls", PadGlyph.LeftStickPress);
+            return hints;
         }
         if (placement.IsMoving)
         {
-            keys.Add((GameInput.ConfirmName, "move here"));
-            keys.Add((GameInput.CancelName, "cancel"));
+            Add("move here", PadGlyph.South);
+            Add("cancel", PadGlyph.East);
         }
-        else if (placement.WidgetFocused) keys.Add((GameInput.CancelName, "back to map"));
+        else if (placement.WidgetFocused) Add("back to map", PadGlyph.East);
         else if (placement.Selected != null)
         {
-            keys.Add((GameInput.ConfirmName, "actions"));
-            keys.Add((GameInput.MoveName, "move"));
-            keys.Add((GameInput.CancelName, "deselect"));
+            Add("actions", PadGlyph.South);
+            Add("deselect", PadGlyph.East);
         }
-        else keys.Add((GameInput.ConfirmName, "place / select"));
-        keys.Add((GameInput.PartyName, "party"));
-        keys.Add((GameInput.SpecialName, "special"));
-        if (match.State == MatchState.Preparing) keys.Add((GameInput.WaveName, "start wave"));
-        keys.Add((GameInput.SpeedName, "speed"));
-        keys.Add((GameInput.PanName, "pan"));
-        keys.Add((GameInput.ZoomName, "zoom"));
-        keys.Add((GameInput.HintName, "hide"));
+        else Add("place / select", PadGlyph.South);
+        Add("pan", PadGlyph.RightStick);
+        Add("zoom", PadGlyph.LeftTrigger, PadGlyph.RightStick);
+        Add("hide", PadGlyph.LeftStickPress);
+        return hints;
     }
 
     // Tab folds the controls hint, F steps the game speed, Y and N answer a captain's request, with
@@ -299,15 +328,19 @@ public class MatchHUD : MonoBehaviour
         Button wave = UIKit.Primary(UIKit.LiveButton(bar, WaveButtonLabel, match.StartNextWave, barRefreshers,
             interactable: () => match.State == MatchState.Preparing, width: 160f, height: buttonHeight), barRefreshers);
         BuildWaveProgress(wave);
-        UIKit.LiveButton(bar, () => $"Speed x{match.GameSpeed:0.#}", match.CycleGameSpeed, barRefreshers,
-            selected: () => match.GameSpeed > 1f, width: 78f, height: buttonHeight);
+        UIKit.PadBadge(wave, PadGlyph.North, () => GameInput.PadInMatch);
+        Button speed = UIKit.LiveButton(bar, () => $"Speed x{match.GameSpeed:0.#}", match.CycleGameSpeed, barRefreshers,
+            selected: () => match.GameSpeed > 1f, width: 88f, height: buttonHeight);
+        UIKit.PadBadge(speed, PadGlyph.View, () => GameInput.PadInMatch);
         // Only offered once the camera has been moved, so it takes no room otherwise.
-        Button recenter = UIKit.LiveButton(bar, () => "Recenter", match.RecenterCamera, barRefreshers, width: 72f, height: buttonHeight);
+        Button recenter = UIKit.LiveButton(bar, () => "Recenter", match.RecenterCamera, barRefreshers, width: 86f, height: buttonHeight);
         barRefreshers.Add(() => recenter.gameObject.SetActive(match.CameraMoved));
+        UIKit.PadBadge(recenter, PadGlyph.RightStickPress, () => GameInput.PadInMatch);
         UIKit.LiveButton(bar, () => "Stats", () => statsPanel.gameObject.SetActive(!statsPanel.gameObject.activeSelf), barRefreshers,
             selected: () => statsPanel != null && statsPanel.gameObject.activeSelf, width: 56f, height: buttonHeight);
-        UIKit.LiveButton(bar, () => "Pause", () => match.SetPaused(true), barRefreshers,
+        Button pause = UIKit.LiveButton(bar, () => "Pause", () => match.SetPaused(true), barRefreshers,
             interactable: () => !match.IsOver && !match.IsBetweenMatches, width: 60f, height: buttonHeight);
+        UIKit.PadBadge(pause, PadGlyph.Menu, () => GameInput.PadInMatch);
     }
 
     // A fill behind the wave button's label that follows the enemies killed or leaked this wave,
@@ -376,7 +409,9 @@ public class MatchHUD : MonoBehaviour
         UIKit.Label(window, "PAUSED", 22, TextAnchor.MiddleCenter);
         // Here as well as behind the Stats button, which the gamepad can't reach during play.
         DetailRows(window);
-        UIKit.Size(UIKit.Primary(UIKit.Button(window, "Resume", () => match.SetPaused(false)), barRefreshers), height: 32f, flexibleWidth: 1f);
+        Button resume = UIKit.Primary(UIKit.Button(window, "Resume", () => match.SetPaused(false)), barRefreshers);
+        UIKit.Size(resume, height: 32f, flexibleWidth: 1f);
+        UIKit.PadBadge(resume, PadGlyph.Menu);
         UIKit.Size(UIKit.Button(window, "Exit Match", match.ExitMatch), height: 32f, flexibleWidth: 1f);
         UIKit.Size(UIKit.Button(window, "Exit Game", MainMenu.Quit), height: 32f, flexibleWidth: 1f);
         pauseMenu.gameObject.SetActive(false);
@@ -481,8 +516,8 @@ public class MatchHUD : MonoBehaviour
         RectTransform buttons = UIKit.Group(card, "Answers");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, UIKit.Pad);
         UIKit.Size(UIKit.Group(buttons, "Spacer"), flexibleWidth: 1f);
-        AnswerButton(buttons, request, "No", () => GameInput.UsingGamepad ? GameInput.CancelName : "N", RequestAnswer.No, NoColor);
-        AnswerButton(buttons, request, "Yes", () => GameInput.UsingGamepad ? GameInput.ConfirmName : "Y", RequestAnswer.Yes, YesColor);
+        AnswerButton(buttons, request, "No", "N", PadGlyph.East, RequestAnswer.No, NoColor);
+        AnswerButton(buttons, request, "Yes", "Y", PadGlyph.South, RequestAnswer.Yes, YesColor);
 
         UIKit.LiveBar(card, () => Requests.SecondsLeft / CaptainRequests.ResponseSeconds,
             () => $"{(GameSettings.PauseDuringRequests ? "Paused - " : "")}{Mathf.CeilToInt(Requests.SecondsLeft)}s to answer", UIKit.ReserveBarColor, requestRefreshers, 14f);
@@ -502,12 +537,15 @@ public class MatchHUD : MonoBehaviour
         _ => "granted",
     };
 
-    void AnswerButton(Transform card, CaptainRequests.Request request, string text, Func<string> key, RequestAnswer answer, Color color)
+    // Shows its key in the label, or the gamepad button's icon beside it.
+    void AnswerButton(Transform card, CaptainRequests.Request request, string text, string key, PadGlyph glyph, RequestAnswer answer, Color color)
     {
         Button button = UIKit.Button(card, "", () => Requests.Answer(request, answer), 100f, 30f);
         button.GetComponent<Image>().color = color;
         Text label = button.GetComponentInChildren<Text>();
-        label.text = $"{text}  [{key()}]";
-        requestRefreshers.Add(() => label.text = $"{text}  [{key()}]");
+        Func<string> caption = () => GameInput.UsingGamepad ? text : $"{text}  [{key}]";
+        label.text = caption();
+        requestRefreshers.Add(() => label.text = caption());
+        UIKit.PadBadge(button, glyph);
     }
 }

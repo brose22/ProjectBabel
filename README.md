@@ -108,7 +108,7 @@ The AI picks a party and route, then places towers, answers requests and fires s
 | `F2` | Full captain debug panel, editor and development builds only (likes and dislikes, Gold draw, soldier class switching) |
 | `1` / `2` / `3` | While the `F2` panel is open: set the selected tower's Gold draw to Low / Normal / High |
 
-**Gamepad:** a full run can be played on a controller. Whichever device was used last is active: the mouse cursor hides while the gamepad is in use, and the hints show its buttons. In menus, the left stick or D-pad moves focus, A confirms, B goes back and the right stick scrolls lists. In a match:
+**Gamepad:** a full run can be played on a controller. Whichever device was used last is active: the mouse cursor hides while the gamepad is in use, and icons of its buttons (Xbox, PlayStation, Switch or Steam Deck) appear next to what they control. In menus, the left stick or D-pad moves focus, A confirms, B goes back and the right stick scrolls lists. In a match:
 
 | Button | Action |
 |---|---|
@@ -126,7 +126,7 @@ The AI picks a party and route, then places towers, answers requests and fires s
 | L3 | Show or hide the controls hint |
 | Start | Pause (Start or B resumes); the Stats list is in the pause menu |
 
-On a Steam Deck, launch the game through Steam (as a Non-Steam Game), since Desktop Mode normally treats the Deck's controls as mouse and keyboard. There is no in-game rebinding, and the `F1` and `F2` panels stay keyboard only. `GameInput` holds every action and binding; `UIFocus` and `UIFocusScope` handle menu focus, and a new screen or window joins in with `UIKit.Focus`.
+On a Steam Deck, launch the game through Steam (as a Non-Steam Game), since Desktop Mode normally treats the Deck's controls as mouse and keyboard. There is no in-game rebinding, and the `F1` and `F2` panels stay keyboard only. `GameInput` holds every action and binding; `UIFocus` and `UIFocusScope` handle menu focus, a new screen or window joins in with `UIKit.Focus`, and `UIKit.PadBadge` puts a button's icon on a widget. The icons come from the pack in `Assets/Art/Sprites/Icons/Controller` through `Assets/Resources/PadIconLibrary.asset`; after changing which art is used, run **Babel → Build Pad Icon Library**.
 
 ## Project layout
 
