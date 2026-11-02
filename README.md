@@ -108,6 +108,26 @@ The AI picks a party and route, then places towers, answers requests and fires s
 | `F2` | Full captain debug panel, editor and development builds only (likes and dislikes, Gold draw, soldier class switching) |
 | `1` / `2` / `3` | While the `F2` panel is open: set the selected tower's Gold draw to Low / Normal / High |
 
+**Gamepad:** a full run can be played on a controller. Whichever device was used last is active: the mouse cursor hides while the gamepad is in use, and the hints show its buttons. In menus, the left stick or D-pad moves focus, A confirms, B goes back and the right stick scrolls lists. In a match:
+
+| Button | Action |
+|---|---|
+| Left stick / D-pad | Move the tile cursor |
+| A | Place or select; on the selected tower, go into its widget (Use, Restore, Move, Sell); Yes on a request |
+| B | Deselect or cancel a move; leave the widget; No on a request |
+| X | Move the selected tower |
+| Y | Start the next wave |
+| LB / RB | Step through the party: a captain on the field moves the cursor to them, one not yet placed becomes next to place |
+| RT | Fire the highlighted captain's special |
+| Right stick | Pan the camera |
+| LT + right stick up/down | Zoom |
+| R3 | Recenter the camera |
+| View | Switch the game speed |
+| L3 | Show or hide the controls hint |
+| Start | Pause (Start or B resumes); the Stats list is in the pause menu |
+
+On a Steam Deck, launch the game through Steam (as a Non-Steam Game), since Desktop Mode normally treats the Deck's controls as mouse and keyboard. There is no in-game rebinding, and the `F1` and `F2` panels stay keyboard only. `GameInput` holds every action and binding; `UIFocus` and `UIFocusScope` handle menu focus, and a new screen or window joins in with `UIKit.Focus`.
+
 ## Project layout
 
 ```

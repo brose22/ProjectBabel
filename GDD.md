@@ -170,6 +170,7 @@ Left-click places the next captain's tower or selects a tower (opens its captain
 - **AI Run:** the AI picks a party and route, places towers, answers requests and fires specials over 1–50 runs at up to 8× speed, writing a Markdown report and per-wave CSV to `Reports/`. It uses its own saves.
 - **Stats:** every match writes a per-wave CSV for balance review.
 - **Builds:** Windows, Steam Deck (Linux) and Android (Fire tablet) from the **Babel** menu.
+- **Input:** mouse and keyboard, or a gamepad for the whole game, switching to whichever was used last. All actions are in `GameInput`.
 
 ## 9. Status
 

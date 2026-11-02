@@ -34,6 +34,8 @@ public class PlacementController : MonoBehaviour
 
     // Added to the match at runtime, so it is looked up rather than wired in the scene.
     CaptainRequests Requests => requests != null ? requests : requests = match.GetComponent<CaptainRequests>();
+    // Added to the camera at runtime too.
+    CameraPan CameraPan => cameraPan != null ? cameraPan : cameraPan = cam.GetComponent<CameraPan>();
 
     // The confirm and cancel buttons answer an open request instead of acting on the map.
     bool IsAsked => Requests != null && Requests.Active != null;
@@ -41,7 +43,6 @@ public class PlacementController : MonoBehaviour
     void Awake()
     {
         cam = Camera.main;
-        cameraPan = cam.GetComponent<CameraPan>();
         ghosts = new PlacementGhosts(hoverMarker);
     }
 
@@ -106,7 +107,7 @@ public class PlacementController : MonoBehaviour
         Vector2Int step = cursorRepeat.Update(PadMath.ToStep(GameInput.PadMove), Time.unscaledTime);
         if (step == Vector2Int.zero) return cursorCell;
         if (grid.InBounds(cursorCell + step)) cursorCell += step;
-        cameraPan.KeepInView(grid.CellCenter(cursorCell));
+        CameraPan.KeepInView(grid.CellCenter(cursorCell));
         return cursorCell;
     }
 
@@ -114,7 +115,7 @@ public class PlacementController : MonoBehaviour
     public void JumpCursor(Vector2Int cell)
     {
         cursorCell = cell;
-        cameraPan.KeepInView(grid.CellCenter(cell));
+        CameraPan.KeepInView(grid.CellCenter(cell));
     }
 
     // Consumes every click while moving so it can't also select or place.
