@@ -152,6 +152,8 @@ public static class UIKit
     }
 
     // uiScale above 1 makes everything on the canvas larger, which also shrinks the layout area.
+    // Expand keeps the whole reference area on screen: a screen that isn't 16:9, like the Steam
+    // Deck's 16:10, gets extra canvas on one axis instead of cropping the other.
     public static Canvas CreateCanvas(string name, int sortingOrder, float uiScale = 1f)
     {
         var canvasObject = new GameObject(name);
@@ -161,7 +163,7 @@ public static class UIKit
         var scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(ReferenceWidth, ReferenceHeight) / uiScale;
-        scaler.matchWidthOrHeight = 1f;
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
         canvasObject.AddComponent<GraphicRaycaster>();
         EnsureEventSystem();
         return canvas;

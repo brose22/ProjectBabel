@@ -28,7 +28,10 @@ public class ThreatAlerts : MonoBehaviour
             RectTransform strip = UIKit.Panel(canvas.transform, "Edge", FlashColor, false);
             Vector2 anchor = i switch { 0 => new Vector2(0.5f, 1f), 1 => new Vector2(0.5f, 0f), 2 => new Vector2(0f, 0.5f), _ => new Vector2(1f, 0.5f) };
             bool horizontal = i < 2;
-            UIKit.Place(strip, anchor, Vector2.zero, horizontal ? new Vector2(UIKit.ReferenceWidth, EdgeThickness) : new Vector2(EdgeThickness, UIKit.ReferenceHeight));
+            UIKit.Place(strip, anchor, Vector2.zero, horizontal ? new Vector2(0f, EdgeThickness) : new Vector2(EdgeThickness, 0f));
+            // Each strip spans its whole edge, whatever the canvas's shape.
+            strip.anchorMin = horizontal ? new Vector2(0f, anchor.y) : new Vector2(anchor.x, 0f);
+            strip.anchorMax = horizontal ? new Vector2(1f, anchor.y) : new Vector2(anchor.x, 1f);
             edges[i] = strip.GetComponent<Image>();
         }
 
