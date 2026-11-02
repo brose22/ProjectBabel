@@ -33,6 +33,8 @@ public class RunScreens : MonoBehaviour
     // World map party drawer.
     const float DrawerWidth = 300f;
     const float DrawerSlideSeconds = 0.2f;
+    // Light, so the map stays readable behind an open drawer.
+    const float DrawerDim = 0.18f;
     static readonly Vector2 DrawerTabSize = new(30f, 110f);
     // Art drawn at whole multiples so its pixels stay square: 32 px portraits at 2x, 16 px icons at 1x.
     const float PortraitSize = 64f;
@@ -102,6 +104,18 @@ public class RunScreens : MonoBehaviour
             else if (match.IsOver) BuildResults();
         }
         UIKit.Refresh(refreshers);
+        if (shownFor == MatchState.Map && !shownRecruiting) PadDrawerShortcuts();
+    }
+
+    // On the world map the shoulder buttons toggle the drawers: right for the party, left for the
+    // inventory. Not while a captain, gift or shop window is up, which have their own focus.
+    void PadDrawerShortcuts()
+    {
+        int step = GameInput.PartyStep;
+        if (step == 0 || shopOpen || screen == null) return;
+        if (screen.Find("Captain Details") != null || screen.Find("Gift") != null) return;
+        string id = step > 0 ? "Party" : "Inventory";
+        openDrawer = openDrawer == id ? null : id;
     }
 
     void OnDestroy()
@@ -484,7 +498,7 @@ public class RunScreens : MonoBehaviour
         float shown = 0f;
         Action<bool> setOpen = open => openDrawer = open ? id : null;
 
-        RectTransform blocker = UIKit.Stretch(UIKit.Panel(root, id + " Drawer Blocker", new Color(0f, 0f, 0f, 0.4f)));
+        RectTransform blocker = UIKit.Stretch(UIKit.Panel(root, id + " Drawer Blocker", new Color(0f, 0f, 0f, DrawerDim)));
         var dismiss = blocker.gameObject.AddComponent<Button>();
         dismiss.transition = Selectable.Transition.None;
         dismiss.onClick.AddListener(() => setOpen(false));
@@ -520,6 +534,9 @@ public class RunScreens : MonoBehaviour
         tabLabel.fontStyle = FontStyle.Bold;
         UIKit.Place(tabLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, UIKit.Gap / 2f), new Vector2(DrawerTabSize.y, DrawerTabSize.x));
         tabLabel.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+        // The shoulder button that toggles this drawer, shown while a gamepad is in use.
+        UIKit.PadBadge(tab, id == "Party" ? PadGlyph.RightShoulder : PadGlyph.LeftShoulder, () => GameInput.UsingGamepad,
+            new Vector2(0.5f, 1f), Vector2.down * 10f);
 
         refreshers.Add(() =>
         {
@@ -590,6 +607,10 @@ public class RunScreens : MonoBehaviour
         // Live, so a gift given from the details window shows on the card behind it.
         if (live) UIKit.LiveLabel(info, Bond, refreshers, 12);
         else UIKit.Label(info, Bond(), 12);
+        // How far along the bond is, so a rank-up (and the soldier slot it opens) can be seen coming.
+        if (live)
+            UIKit.LiveBar(info, () => (ApprovalStore.ApprovalOf(captain) - BondMath.MinApproval) / (BondMath.MaxApproval - BondMath.MinApproval),
+                () => "", BondBarColor, refreshers, 6f);
         Transform special = UIKit.Group(info, "Special");
         UIKit.Layout<HorizontalLayoutGroup>(special, 0, 4);
         UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, IconSize);
@@ -620,12 +641,14 @@ public class RunScreens : MonoBehaviour
         RectTransform stats = UIKit.Group(window, "Stats");
         UIKit.Layout<HorizontalLayoutGroup>(stats, 0, 8).childAlignment = TextAnchor.UpperCenter;
         UIKit.Size(stats, flexibleWidth: 1f);
-        Stat(stats, "POWER", $"{captain.power * LevelMath.StatFactor(level):0}");
+        // Small lines under the values: power against the level-1 base, the rest as a party ranking.
+        // Range follows the loadout, so it has none.
+        Stat(stats, "POWER", $"{captain.power * LevelMath.StatFactor(level):0}", level > 1 ? $"base {captain.power:0}" : PartyRank(run, captain, c => c.power));
         Text rangeStat = Stat(stats, "RANGE", $"{match.RangeFor(captain):0.#}");
-        Stat(stats, "SPEED", $"{captain.speed:0.##}");
-        Stat(stats, "HEALTH", $"{captain.health}");
-        Stat(stats, "RESERVE", $"{captain.resourceCapacity}");
-        Stat(stats, "DRAW", $"{captain.resourceRegen:0.#}/s");
+        Stat(stats, "SPEED", $"{captain.speed:0.##}", PartyRank(run, captain, c => c.speed));
+        Stat(stats, "HEALTH", $"{captain.health}", PartyRank(run, captain, c => c.health));
+        Stat(stats, "RESERVE", $"{captain.resourceCapacity}", PartyRank(run, captain, c => c.resourceCapacity));
+        Stat(stats, "DRAW", $"{captain.resourceRegen:0.#}/s", PartyRank(run, captain, c => c.resourceRegen));
 
         UIKit.Size(UIKit.Header(window, "Special"), flexibleWidth: 1f);
         Transform special = UIKit.Group(window, "Special");
@@ -804,7 +827,20 @@ public class RunScreens : MonoBehaviour
 
         UIKit.LiveBar(info, () => (ApprovalStore.ApprovalOf(captain) - BondMath.MinApproval) / (BondMath.MaxApproval - BondMath.MinApproval),
             () => $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {ApprovalStore.ApprovalOf(captain):0}", BondBarColor, drawOnce);
+        UIKit.LiveLabel(info, () => NextRankLine(captain), drawOnce, 11, color: UIKit.MutedTextColor);
         UIKit.Refresh(drawOnce);
+    }
+
+    // What the next bond rank takes and gives, e.g. "Next: B at 65 (opens Slot 4)".
+    static string NextRankLine(CaptainData captain)
+    {
+        int rank = ApprovalStore.RankOf(captain);
+        if (rank >= BondMath.MaxRank) return "Bond is at its highest rank";
+        int next = rank + 1;
+        string reward = BondMath.SoldierCount(next) > BondMath.SoldierCount(rank)
+            ? $"opens Slot {BondMath.SoldierCount(next)}"
+            : "stronger status and charge";
+        return $"Next: {BondMath.RankName(next)} at {BondMath.ApprovalForRank(next):0} ({reward})";
     }
 
     static void TagLine(Transform parent, string caption, CaptainTag[] tags, Color color)
@@ -823,6 +859,9 @@ public class RunScreens : MonoBehaviour
     void BuildLoadout(Transform window, RunState run, CaptainData captain, Action onChanged = null)
     {
         UIKit.Size(UIKit.Header(window, "Soldiers"), flexibleWidth: 1f);
+        // The class names are coloured by taste; spell it out so colour isn't the only cue.
+        UIKit.Label(window, $"<color={UIKit.Hex(UIKit.GoodColor)}>Green</color> = liked by this captain, " +
+                            $"<color={UIKit.Hex(UIKit.BadColor)}>red</color> = disliked", 10, color: UIKit.MutedTextColor);
         var classes = match.Data.ChoosableClasses;
         int open = match.SoldierCountFor(captain);
         for (int i = 0; i < RunState.MaxSoldierSlots; i++)
@@ -1232,13 +1271,26 @@ public class RunScreens : MonoBehaviour
 
     static void StatRule(Transform parent) => UIKit.Size(UIKit.Panel(parent, "Rule", UIKit.RuleColor, blocksClicks: false), 2f, 34f);
 
-    static Text Stat(Transform parent, string caption, string value)
+    // A stat column; sub is a small line under the value, such as how the captain ranks in the party.
+    static Text Stat(Transform parent, string caption, string value, string sub = null)
     {
         RectTransform stat = UIKit.Group(parent, caption);
         UIKit.Layout<VerticalLayoutGroup>(stat, 0, -1f).childAlignment = TextAnchor.UpperCenter;
         UIKit.Size(stat, 66f);
         UIKit.Label(stat, caption, 9, TextAnchor.MiddleCenter, UIKit.MutedTextColor).fontStyle = FontStyle.Bold;
-        return UIKit.Label(stat, value, 15, TextAnchor.MiddleCenter);
+        Text text = UIKit.Label(stat, value, 15, TextAnchor.MiddleCenter);
+        if (sub != null) UIKit.Label(stat, sub, 9, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        return text;
+    }
+
+    // "#2/4": where the captain stands among the party still with the run on a stat, 1 being highest.
+    static string PartyRank(RunState run, CaptainData captain, Func<CaptainData, float> stat)
+    {
+        List<CaptainData> present = run.Party.FindAll(c => c != null && !run.HasDeparted(c));
+        if (!present.Contains(captain) || present.Count < 2) return null;
+        float mine = stat(captain);
+        int rank = 1 + present.FindAll(c => stat(c) > mine + 0.001f).Count;
+        return $"#{rank}/{present.Count}";
     }
 
     static RectTransform ResultRow(Transform panel, bool shaded)

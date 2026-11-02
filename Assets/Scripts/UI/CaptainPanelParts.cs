@@ -115,9 +115,13 @@ public class CaptainPanelParts
             UIKit.Label(panel, ability.description, 11, color: UIKit.MutedTextColor);
     }
 
-    // Move (or Cancel move while moving) and Sell.
+    // The tower whose Sell was pressed once and now waits for a second press.
+    Tower sellArmed;
+
+    // Move (or Cancel move while moving) and Sell, which takes a second press.
     public void Actions(Transform panel, Tower tower)
     {
+        sellArmed = null;
         UIKit.Size(UIKit.Group(panel, "Gap"), height: 2f);
         Transform actions = Row(panel);
         if (placement.IsMoving)
@@ -129,7 +133,12 @@ public class CaptainPanelParts
             Flexible(move);
             UIKit.PadBadge(move, PadGlyph.West, () => GameInput.PadInMatch);
         }
-        Flexible(UIKit.Button(actions, "Sell (returns reserve)", placement.SellSelected));
+        Flexible(UIKit.LiveButton(actions, () => sellArmed == tower ? "Press again to sell" : $"Sell (+{tower.Reserve} reserve)", () =>
+        {
+            if (sellArmed != tower) { sellArmed = tower; return; }
+            sellArmed = null;
+            placement.SellSelected();
+        }, refreshers, width: -1f));
     }
 
     static bool HasBoosts(Tower tower)
