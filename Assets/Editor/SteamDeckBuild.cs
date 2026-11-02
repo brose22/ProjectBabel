@@ -8,12 +8,12 @@ using UnityEngine;
 // One-click Steam Deck build: Babel > Build Steam Deck (Linux) puts the main menu first in Build
 // Settings, sets the Linux player up for the Deck (SteamOS is x86-64 Linux,
 // Mono scripting so only the Mono Linux module is needed), then builds the enabled scenes into
-// Builds/SteamDeck/<product name>.x86_64 (git-ignored) and opens that folder. To run it on the
+// Builds/SteamDeck/ProjectBabel/<product name>.x86_64 (git-ignored) and opens that folder. To run it on the
 // Deck, copy the whole folder over and either launch it from Desktop Mode, or in Steam add it as
 // a Non-Steam Game (make the file executable first: chmod +x <product name>.x86_64).
 public static class SteamDeckBuild
 {
-    const string OutputFolder = "Builds/SteamDeck";
+    const string OutputFolder = "Builds/SteamDeck/ProjectBabel";
     const string MatchScenePath = "Assets/Scenes/Match.unity";
 
     [MenuItem("Babel/Build Steam Deck (Linux)", priority = 102)]
