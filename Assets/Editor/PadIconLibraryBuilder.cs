@@ -7,7 +7,7 @@ using UnityEngine;
 // dropping pixels like the game's pixel art.
 public static class PadIconLibraryBuilder
 {
-    const string PackFolder = "Assets/Art/Sprites/Icons/Controller";
+    const string PackFolder = "Assets/Art/Controller";
     const string LibraryPath = "Assets/Resources/PadIconLibrary.asset";
 
     // File names without their extension, in PadGlyph order.
