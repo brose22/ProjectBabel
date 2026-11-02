@@ -68,6 +68,7 @@ public class RunScreens : MonoBehaviour
     Relationships relationships;
     Canvas canvas;
     RectTransform screen;
+    UIFocusScope screenFocus;
     readonly List<Action> refreshers = new();
     readonly List<CaptainData> picked = new();
     MatchState shownFor = (MatchState)(-1);
@@ -111,6 +112,7 @@ public class RunScreens : MonoBehaviour
     RectTransform NewScreen(string name)
     {
         screen = UIKit.Stretch(UIKit.Panel(canvas.transform, name, DimColor));
+        screenFocus = UIKit.Focus(screen);
         return screen;
     }
 
@@ -395,6 +397,8 @@ public class RunScreens : MonoBehaviour
                 }
         foreach (MapNode node in map.nodes)
             if (node.revealed) BuildCity(area, map, node, choices.Exists(c => c.id == node.id));
+        // The gamepad starts on a stop it can pick, not on a drawer tab.
+        screenFocus.Default = () => Array.Find(area.GetComponentsInChildren<Button>(), city => city.interactable);
 
         BuildLegend(column);
 
@@ -457,6 +461,7 @@ public class RunScreens : MonoBehaviour
     void BuildMapShop(RectTransform root)
     {
         RectTransform overlay = UIKit.Stretch(UIKit.Panel(root, "Shop", DimColor));
+        UIKit.Focus(overlay, () => SetShopOpen(false));
         RectTransform panel = UIKit.Box(overlay, "Panel");
         UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 0f));
         UIKit.Layout<VerticalLayoutGroup>(panel, 16, 8, fitContent: true).childAlignment = TextAnchor.UpperCenter;
@@ -502,6 +507,9 @@ public class RunScreens : MonoBehaviour
         ScrollRect list = UIKit.ScrollList(drawer, "Contents", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         fill(list);
+        // Focus waits for the slide, and starts on the list rather than on Close.
+        UIKit.Focus(blocker, () => setOpen(false), drawer, DrawerSlideSeconds).Default =
+            () => list.content.GetComponentInChildren<Button>();
 
         // The tab hangs off the drawer's right edge, so it rides along as the drawer slides.
         Button tab = UIKit.Button(drawer, "", () => setOpen(openDrawer != id), DrawerTabSize.x, DrawerTabSize.y);
@@ -596,6 +604,7 @@ public class RunScreens : MonoBehaviour
         var dismiss = overlay.gameObject.AddComponent<Button>();
         dismiss.transition = Selectable.Transition.None;
         dismiss.onClick.AddListener(() => Destroy(overlay.gameObject));
+        UIKit.Focus(overlay, () => Destroy(overlay.gameObject));
 
         RectTransform window = UIKit.Box(overlay, "Window", WindowColor);
         // Swallows clicks on the window, which would otherwise bubble up to the overlay and close it.
@@ -653,6 +662,7 @@ public class RunScreens : MonoBehaviour
         var dismiss = backdrop.gameObject.AddComponent<Button>();
         dismiss.transition = Selectable.Transition.None;
         dismiss.onClick.AddListener(() => Destroy(backdrop.gameObject));
+        UIKit.Focus(backdrop, () => Destroy(backdrop.gameObject));
 
         RectTransform window = UIKit.Box(backdrop, "Window", WindowColor);
         // Swallows clicks on the window, which would otherwise bubble up to the backdrop and close it.

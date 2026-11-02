@@ -36,11 +36,13 @@ public class MainMenu : MonoBehaviour
 
     void LateUpdate() => UIKit.Refresh(refreshers);
 
+    // Every screen but the first goes back to it on the gamepad's cancel button.
     RectTransform NewScreen(string name, float width)
     {
         refreshers.Clear();
         if (screen != null) Destroy(screen.gameObject);
         screen = UIKit.Stretch(UIKit.Panel(canvas.transform, name, BackgroundColor));
+        UIKit.Focus(screen, name == "Main" ? null : BuildMain);
         RectTransform column = UIKit.Group(screen, "Column");
         UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 10, fitContent: true);

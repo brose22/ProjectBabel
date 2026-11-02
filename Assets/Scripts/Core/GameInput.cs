@@ -45,6 +45,28 @@ public static class GameInput
         }
     }
 
+    // The menus' back button. Confirm goes through the UI input module to the focused button.
+    public static bool UiCancel => Pressed(Pad?.buttonEast);
+
+    // Left stick and D-pad together, for stepping through menus and tiles.
+    public static Vector2 PadMove => Pad == null ? Vector2.zero : Vector2.ClampMagnitude(Pad.leftStick.ReadValue() + Pad.dpad.ReadValue(), 1f);
+
+    // Right stick up and down, for scrolling a list without moving focus.
+    public static float PadScroll => Pad != null ? Pad.rightStick.ReadValue().y : 0f;
+
+    // Places or selects on the tile under the gamepad's cursor.
+    public static bool ConfirmTile => Pressed(Pad?.buttonSouth);
+
+    public static bool Recenter => Pressed(Pad?.rightStickButton);
+
+    // The right stick pans the camera, or zooms it (up and down) with the left trigger held.
+    public static Vector2 PadPan => Pad != null && !Pad.leftTrigger.isPressed ? Pad.rightStick.ReadValue() : Vector2.zero;
+    public static float PadZoom => Pad != null && Pad.leftTrigger.isPressed ? Pad.rightStick.ReadValue().y : 0f;
+
+    static Gamepad Pad => Gamepad.current;
+
+    static bool Pressed(ButtonControl button) => button != null && button.wasPressedThisFrame;
+
     // For the testing panels, whose keys are not game actions.
     public static bool KeyDown(Key key)
     {
