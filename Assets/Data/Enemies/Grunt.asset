@@ -23,7 +23,7 @@ MonoBehaviour:
   elite: 0
   maxHealth: 30
   moveSpeed: 1.2
-  goldReward: 7
+  goldReward: 1
   xpReward: 10
   leakDamage: 1
   attackDamage: 6

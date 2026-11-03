@@ -190,8 +190,11 @@ public class Soldier : MonoBehaviour
     void TickDead()
     {
         timer -= Time.deltaTime;
-        if (timer <= 0f && Tower.TrySpendReserve(RespawnCost))
-            Revive();
+        if (timer > 0f) return;
+        int cost = RespawnCost;
+        if (!Tower.TrySpendReserve(cost)) return;
+        GameEvents.RaiseSoldierRespawned(this, cost);
+        Revive();
     }
 
     // Returns true once within stopDistance of the destination.

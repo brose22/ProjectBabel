@@ -32,4 +32,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 02f20f6add697a8468a680c661b1f9f6, type: 2}
   - {fileID: 11400000, guid: d01ae25dec5ea0747905fb81fb184935, type: 2}
   elements: 0100000002000000
-  boss: {fileID: 0}
+  boss: {fileID: 11400000, guid: 3aa8be080f4c4667b8946576716da8b3, type: 2}

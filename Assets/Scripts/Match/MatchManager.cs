@@ -360,11 +360,13 @@ public class MatchManager : MonoBehaviour
     }
 
     public const float MaxGameSpeed = 8f;
+    // AI Run batches for tuning may go faster than a player can; frames get shorter with the frame cap off.
+    public const float MaxAiGameSpeed = 32f;
 
-    // Any speed from 1x to 8x, for the AI Run; the time scale still resolves through TimeScaleRules.
+    // Any speed from 1x to 32x, for the AI Run; the time scale still resolves through TimeScaleRules.
     public void SetGameSpeed(float speed)
     {
-        GameSpeed = Mathf.Clamp(speed, 1f, MaxGameSpeed);
+        GameSpeed = Mathf.Clamp(speed, 1f, MaxAiGameSpeed);
         ApplyTimeScale();
     }
 
@@ -460,6 +462,17 @@ public class MatchManager : MonoBehaviour
     {
         if (!IsBetweenMatches && !IsOver) return;
         MainMenu.Open();
+    }
+
+    // AI runs: moves a run still at its setup to the location at this index, opening it (and those
+    // before it) in the profile.
+    public void SetupAtLocation(int index)
+    {
+        if (State != MatchState.Setup || index < 0 || index >= data.locations.Count || data.locations[index] == null) return;
+        Profile profile = RunState.Current.Profile;
+        profile.UnlockLocations(index + 1);
+        RunState.StartNewRun(profile, data.locations[index].id, data.startingHealth);
+        Location = data.locations[index];
     }
 
     // At least this many captains are offered, for an AI run that fields a bigger party than usual.

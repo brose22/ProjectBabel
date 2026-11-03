@@ -20,7 +20,7 @@ MonoBehaviour:
   statBonus: 1
   respawnCost: 12
   maxHealth: 18
-  damageMultiplier: 2
+  damageMultiplier: 1.4
   attackRange: 1.5
   reach: 3
   moveSpeed: 3
@@ -29,4 +29,4 @@ MonoBehaviour:
   knockbackDistance: 0
   knockbackChance: 0.25
   projectileSpeed: 10
-  splashRadius: 1
+  splashRadius: 0.8

@@ -15,6 +15,7 @@ public class AiRunRecorder
     readonly Dictionary<string, float> approvalGainedByCaptain = new();
     readonly Dictionary<string, float> approvalLostByCaptain = new();
     int currentWave;
+    float untypedDamage;
     int nextMatchIndex;
     float runStartReal;
     float runStartGame;
@@ -34,6 +35,11 @@ public class AiRunRecorder
         GameEvents.TowerRestored += OnTowerRestored;
         GameEvents.TowerSold += OnTowerSold;
         GameEvents.ApprovalNoticed += OnApprovalNoticed;
+        GameEvents.MatchupHit += OnMatchupHit;
+        GameEvents.EnemyKilled += OnEnemyKilled;
+        GameEvents.EnemyLeaked += OnEnemyLeaked;
+        GameEvents.SoldierDied += OnSoldierDied;
+        GameEvents.SoldierRespawned += OnSoldierRespawned;
     }
 
     public void Unsubscribe()
@@ -48,6 +54,11 @@ public class AiRunRecorder
         GameEvents.TowerRestored -= OnTowerRestored;
         GameEvents.TowerSold -= OnTowerSold;
         GameEvents.ApprovalNoticed -= OnApprovalNoticed;
+        GameEvents.MatchupHit -= OnMatchupHit;
+        GameEvents.EnemyKilled -= OnEnemyKilled;
+        GameEvents.EnemyLeaked -= OnEnemyLeaked;
+        GameEvents.SoldierDied -= OnSoldierDied;
+        GameEvents.SoldierRespawned -= OnSoldierRespawned;
     }
 
     void OnDamage(Tower source, float amount, Element? element)
@@ -60,6 +71,49 @@ public class AiRunRecorder
             damageByCaptain[name] = damageByCaptain.TryGetValue(name, out float byCaptain) ? byCaptain + amount : amount;
         }
         damageByWave[currentWave] = damageByWave.TryGetValue(currentWave, out float byWave) ? byWave + amount : amount;
+        untypedDamage += amount;
+    }
+
+    // Typed hits on enemies are moved out of the untyped total as they land, so it ends as burns and zones.
+    void OnMatchupHit(bool byParty, DamageType type, float amount, float typeMultiplier, float elementMultiplier)
+    {
+        if (Run == null) return;
+        if (!byParty)
+        {
+            Run.enemyHits.Add(typeMultiplier, elementMultiplier);
+            return;
+        }
+        Run.partyHits.Add(typeMultiplier, elementMultiplier);
+        string key = type.ToString();
+        Run.damageByType[key] = Run.damageByType.TryGetValue(key, out float sum) ? sum + amount : amount;
+        untypedDamage -= amount;
+    }
+
+    void OnEnemyKilled(Enemy enemy)
+    {
+        if (Run != null && enemy.IsBoss) Run.boss = $"killed in wave {currentWave}";
+    }
+
+    void OnEnemyLeaked(Enemy enemy)
+    {
+        if (Run != null && enemy.IsBoss) Run.boss = $"walked out in wave {currentWave}";
+    }
+
+    void OnSoldierDied(Soldier soldier)
+    {
+        if (Run == null) return;
+        string key = soldier.Class.soldierClass.ToString();
+        Run.soldierDeathsByClass[key] = Run.soldierDeathsByClass.TryGetValue(key, out int count) ? count + 1 : 1;
+    }
+
+    void OnSoldierRespawned(Soldier soldier, int cost) => NoteGold(false, "Respawns (from reserves)", cost);
+
+    // Gold into (income) or out of the pool, by source, for the run's ledger.
+    public void NoteGold(bool income, string source, int amount)
+    {
+        if (Run == null || amount == 0) return;
+        var ledger = income ? Run.goldIn : Run.goldOut;
+        ledger[source] = ledger.TryGetValue(source, out int sum) ? sum + amount : amount;
     }
 
     void OnAbility(Tower tower)
@@ -107,9 +161,10 @@ public class AiRunRecorder
         Run.requestAnswers[key] = Run.requestAnswers.TryGetValue(key, out int count) ? count + 1 : 1;
     }
 
-    public void BeginRun(int index, int seed, IEnumerable<Captain> party, float realNow, float gameNow)
+    public void BeginRun(int index, int seed, IEnumerable<Captain> party, float realNow, float gameNow, string location = "")
     {
-        Run = new AiRunRecord { index = index, seed = seed };
+        Run = new AiRunRecord { index = index, seed = seed, location = location, startGold = RunState.Current?.Gold ?? 0 };
+        untypedDamage = 0f;
         damageByCaptain.Clear();
         abilitiesByCaptain.Clear();
         approvalStartByCaptain.Clear();
@@ -191,7 +246,14 @@ public class AiRunRecorder
                     damage = damageByWave.TryGetValue(w.Wave, out float damage) ? damage : 0f,
                     killsByCaptain = new Dictionary<string, int>(w.KillsByCaptain),
                 });
+                NoteGold(true, "Kills", w.GoldEarned);
+                NoteGold(true, "Wave clears", w.GoldBonus);
             }
+        }
+        if (result == "Won")
+        {
+            NoteGold(true, "Win bonus", match.WinGoldEarned);
+            NoteGold(true, "Reserve returned on wins", match.ReserveRefunded);
         }
         CurrentMatch = null;
     }
@@ -219,6 +281,7 @@ public class AiRunRecorder
     {
         if (Run == null) return;
         Run.result = result;
+        if (untypedDamage > 0.5f) Run.damageByType["Untyped"] = untypedDamage;
         RunState run = RunState.Current;
         if (run != null)
         {
