@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 
-// Which captains an offer rolls: a template for each one and the seed it's rolled with.
+// Which captains an offer (recruits, extra AI captains) rolls: a template for each one and the
+// seed it's rolled with. The starting captains are drawn by StartingCaptains instead.
 public static class CaptainOffer
 {
-    // The offer size: the setting, but never fewer than a party.
-    public static int Size(int setting, int partySize) => Math.Max(partySize, setting);
-
     // The template index and roll seed of each captain in an offer of the given size. Every
     // template is used once before any repeats, and the offer is in template order. The same seed
     // gives the same offer.

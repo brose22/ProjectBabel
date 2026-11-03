@@ -3,12 +3,6 @@ using NUnit.Framework;
 
 public class CaptainOfferTests
 {
-    [TestCase(5, 3, 5)]
-    [TestCase(2, 3, 3)]
-    [TestCase(20, 3, 20)]
-    public void Size_IsAtLeastAParty(int setting, int party, int expected) =>
-        Assert.That(CaptainOffer.Size(setting, party), Is.EqualTo(expected));
-
     [Test]
     public void Draw_UsesEveryTemplateOnceBeforeRepeating()
     {
