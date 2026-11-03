@@ -697,9 +697,9 @@ public static class GreyBoxMatchBuilder
             Location("Saltmarsh", "saltmarsh", "Saltmarsh", "Flooded coast towns. Slingers and bombards fire from the reeds.",
                 new[] { grunt, slinger, brute, bombard }, new[] { Element.Water, Element.Ice },
                 matches: 9, minLanes: 2, maxLanes: 3, doubleGate: 2, tripleGate: 5, new NodeOdds(0.18f, 0.12f, 0.15f)),
-            // Grunts are played by Raiders: every wave chips at the towers.
+            // All five wave enemies: bombards from range, raiders chipping at the towers.
             Location("Cinderpeak", "cinderpeak", "Cinderpeak", "The enemy's mountain road. Raiders, brutes and bombards, and more gates sooner.",
-                new[] { raider, slinger, brute, bombard }, new[] { Element.Fire, Element.Ice },
+                new[] { grunt, raider, slinger, brute, bombard }, new[] { Element.Fire, Element.Ice },
                 matches: 11, minLanes: 2, maxLanes: 4, doubleGate: 1, tripleGate: 4, new NodeOdds(0.22f, 0.1f, 0.15f)),
         };
         if (match.locations.Count > 0) return;
@@ -738,7 +738,8 @@ public static class GreyBoxMatchBuilder
     // the bases ramp up with the locations.
     static void AssignBoss(MatchData match)
     {
-        EnemyData boss = Boss("Warlord", new Color(0.35f, 0.05f, 0.1f), health: 6000f, damage: 30f, towerDamage: 12f, gold: 60, xp: 300);
+        // Slower than the others: Cinderpeak's base comes at layer 10, where it has over twice its health.
+        EnemyData boss = Boss("Warlord", "Warlord", new Color(0.35f, 0.05f, 0.1f), health: 4500f, damage: 22f, towerDamage: 12f, gold: 60, xp: 300, speed: 0.035f);
         AssignLocationBoss(match, 0, Boss("BanditChief", "Bandit Chief", new Color(0.45f, 0.3f, 0.1f), health: 2600f, damage: 15f, towerDamage: 8f, gold: 30, xp: 150));
         AssignLocationBoss(match, 1, Boss("TideWarden", "Tide Warden", new Color(0.1f, 0.25f, 0.4f), health: 4500f, damage: 22f, towerDamage: 10f, gold: 45, xp: 225));
         AssignLocationBoss(match, 2, boss);
@@ -748,10 +749,8 @@ public static class GreyBoxMatchBuilder
         Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with the enemy base boss.");
     }
 
-    static EnemyData Boss(string asset, Color color, float health, float damage, float towerDamage, int gold, int xp) =>
-        Boss(asset, asset, color, health, damage, towerDamage, gold, xp);
-
-    static EnemyData Boss(string asset, string displayName, Color color, float health, float damage, float towerDamage, int gold, int xp)
+    static EnemyData Boss(string asset, string displayName, Color color, float health, float damage, float towerDamage, int gold, int xp,
+        float speed = 0.045f)
     {
         return LoadOrCreate<EnemyData>($"{DataFolder}/Enemies/{asset}.asset", e =>
         {
@@ -760,7 +759,7 @@ public static class GreyBoxMatchBuilder
             e.sprite = ArtSprite("enemy_brute");
             e.size = 1.5f;
             e.maxHealth = health;
-            e.moveSpeed = 0.045f;
+            e.moveSpeed = speed;
             e.goldReward = gold;
             e.xpReward = xp;
             e.leakDamage = 999;

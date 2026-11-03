@@ -21,6 +21,10 @@ public class AiOptions
     public int captains;
     // The bond rank (0 = D to 4 = S) every captain in the party starts the run at.
     public int bondRank;
+    // For a veteran party: the level every captain starts the run at (0 leaves them as rolled),
+    // and the least rarity of their soldiers (-1 leaves them as rolled).
+    public int captainLevel;
+    public int soldierRarity = -1;
     // The roles of a single match's party, rolled from the templates when the run starts.
     public List<CaptainRole> partyRoles = new();
 
@@ -268,7 +272,13 @@ public class AiPlayer : MonoBehaviour
     void PrepareParty(IEnumerable<Captain> party)
     {
         foreach (Captain captain in party)
+        {
             ApprovalStore.SetRank(captain, options.bondRank);
+            if (options.captainLevel > 1) captain.xp = Mathf.Max(captain.xp, LevelMath.XpForLevel(options.captainLevel));
+            if (options.soldierRarity < 0) continue;
+            foreach (SoldierItem soldier in RunState.Current.Soldiers.EquippedTo(captain.id))
+                if ((int)soldier.rarity < options.soldierRarity) soldier.rarity = (SoldierRarity)options.soldierRarity;
+        }
     }
 
     void ThinkMap()
