@@ -319,6 +319,46 @@ public static class UIKit
         return track;
     }
 
+    // One line of an item list: icon, bold name, a muted detail line under it, and the row's action
+    // buttons added after it by the caller. A rarity draws a pip down the left edge in its colour.
+    public const float ItemRowHeight = 44f;
+    public const float ItemIconSize = 32f;
+    public const float ItemActionWidth = 100f;
+    public const float ItemActionHeight = 26f;
+    public static readonly Color ItemRowColor = new(0.17f, 0.2f, 0.28f, 1f);
+
+    public static RectTransform ItemRow(Transform list, string name, Sprite icon, string title, Color titleColor, string detail,
+        out Text detailLabel, SoldierRarity? rarity = null)
+    {
+        RectTransform row = Box(list, name, ItemRowColor, blocksClicks: false);
+        Size(row, height: ItemRowHeight, flexibleWidth: 1f);
+        HorizontalLayoutGroup layout = Layout<HorizontalLayoutGroup>(row, 6, 8);
+        layout.padding.left = 14;
+        if (rarity.HasValue)
+        {
+            RectTransform pip = Panel(row, "Rarity", RarityColor(rarity.Value), blocksClicks: false);
+            pip.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            pip.anchorMin = Vector2.zero;
+            pip.anchorMax = new Vector2(0f, 1f);
+            pip.offsetMin = new Vector2(TexelSize * 2f, TexelSize * 3f);
+            pip.offsetMax = new Vector2(TexelSize * 4f, -TexelSize * 3f);
+        }
+        Image image = Icon(row, icon, ItemIconSize);
+        // A row without art keeps its text lined up with the rest.
+        image.enabled = true;
+        if (icon == null) image.color = Color.clear;
+        RectTransform text = Group(row, "Text");
+        Layout<VerticalLayoutGroup>(text, 0, 1);
+        Size(text, flexibleWidth: 1f);
+        Text titleLabel = Label(text, title, BodySize, color: titleColor);
+        titleLabel.fontStyle = FontStyle.Bold;
+        detailLabel = Label(text, detail, CaptionSize, color: MutedTextColor);
+        return row;
+    }
+
+    public static RectTransform ItemRow(Transform list, string name, Sprite icon, string title, Color titleColor, string detail,
+        SoldierRarity? rarity = null) => ItemRow(list, name, icon, title, titleColor, detail, out _, rarity);
+
     // An invisible container, for grouping and layout only.
     public static RectTransform Group(Transform parent, string name)
     {

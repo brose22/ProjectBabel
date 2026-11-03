@@ -16,7 +16,7 @@ public partial class CastleScreen : MonoBehaviour
     // The party taken on a run (item: party).
     const int MaxParty = 5;
     const float InventoryWidth = 900f;
-    const float InventoryBodyHeight = 380f;
+    const float InventoryBodyHeight = 370f;
     const float CaptainListWidth = 380f;
     const float CardHeight = 76f;
     const float PortraitSize = 64f;
@@ -24,7 +24,7 @@ public partial class CastleScreen : MonoBehaviour
     const int PartyColumns = 3;
 
     static readonly Color BackgroundColor = new(0.05f, 0.06f, 0.09f, 1f);
-    static readonly Color CardColor = new(0.17f, 0.2f, 0.28f, 1f);
+    static readonly Color CardColor = UIKit.ItemRowColor;
     static readonly Color PickedCardColor = new(0.27f, 0.24f, 0.2f, 1f);
 
     [Tooltip("The captain templates, soldier classes and starting values the Castle reads.")]
@@ -68,16 +68,40 @@ public partial class CastleScreen : MonoBehaviour
     {
         UIKit.Refresh(refreshers);
         ShopFeedback();
+        if (screenFade != null && screenFade.alpha < 1f)
+            screenFade.alpha = Mathf.Clamp01(screenFade.alpha + Time.unscaledDeltaTime / FadeSeconds);
     }
 
-    // A full-screen page with a centred column; the gamepad's cancel button runs back.
-    RectTransform NewScreen(string name, float width, Action back)
+    // Every screen's Back sits in the same place: centred in a strip along the bottom, which the
+    // column is kept above.
+    const float FooterHeight = 52f;
+    static readonly Vector2 BackSize = new(160f, 32f);
+    const float FadeSeconds = 0.12f;
+    CanvasGroup screenFade;
+    UIFocusScope screenScope;
+
+    // A full-screen page with a centred column; the gamepad's cancel button runs back, and so does
+    // the Back button, unless backButton is off (a confirm, which has its own Cancel). A new screen
+    // fades in on unscaled time; it takes clicks and the cancel button while it does. Rebuilding the
+    // same screen (a purchase, a tab) doesn't fade.
+    RectTransform NewScreen(string name, float width, Action back, bool backButton = true)
     {
         refreshers.Clear();
+        bool fade = screen == null || screen.name != name;
         if (screen != null) Destroy(screen.gameObject);
         screen = UIKit.Stretch(UIKit.Panel(canvas.transform, name, BackgroundColor));
-        UIKit.Focus(screen, back);
-        RectTransform column = UIKit.Group(screen, "Column");
+        screenScope = UIKit.Focus(screen, back);
+        screenFade = screen.gameObject.AddComponent<CanvasGroup>();
+        screenFade.alpha = fade ? 0f : 1f;
+        RectTransform content = UIKit.Stretch(UIKit.Group(screen, "Content"));
+        content.offsetMin = new Vector2(0f, FooterHeight);
+        if (back != null && backButton)
+        {
+            Button button = UIKit.Button(screen, "Back", back);
+            UIKit.Place((RectTransform)button.transform, new Vector2(0.5f, 0f), new Vector2(0f, (FooterHeight - BackSize.y) / 2f), BackSize);
+            UIKit.PadBadge(button, PadGlyph.East);
+        }
+        RectTransform column = UIKit.Group(content, "Column");
         UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 10, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
@@ -154,8 +178,6 @@ public partial class CastleScreen : MonoBehaviour
         UIKit.Size(body, InventoryWidth, InventoryBodyHeight);
         if (tab == Tab.Captains) BuildCaptainsTab(body);
         else BuildSoldiersTab(body);
-
-        UIKit.PadBadge(UIKit.Button(column, "Back", BuildHome, 200f, 32f), PadGlyph.East);
     }
 
     // The roster on the left; the picked captain's soldier slots (or the soldier picker for one of
@@ -240,14 +262,11 @@ public partial class CastleScreen : MonoBehaviour
             SoldierItem chosen = soldier;
             bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
             RectTransform row = SoldierRow(list.content, soldier, here ? "In this slot" : WhereIs(soldier));
-            if (here) UIKit.Button(row, "Remove", () => Change(() => profile.Soldiers.Unequip(chosen.id)), 70f, 24f);
-            else UIKit.Button(row, "Equip", () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)), 70f, 24f);
+            if (here) RowAction(row, "Remove", () => Change(() => profile.Soldiers.Unequip(chosen.id)));
+            else RowAction(row, "Equip", () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
         }
         if (profile.Soldiers.Items.Count == 0)
             UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-
-        Button back = UIKit.Button(side, "Back", () => { pickingSlot = -1; BuildInventory(); }, height: 26f);
-        UIKit.Size(back, height: 26f, flexibleWidth: 1f);
     }
 
     // Every soldier owned and who has it; an equipped one can be sent back to the inventory.
@@ -265,12 +284,12 @@ public partial class CastleScreen : MonoBehaviour
             SoldierItem chosen = soldier;
             RectTransform row = SoldierRow(list.content, soldier, WhereIs(soldier));
             if (!soldier.IsEquipped) continue;
-            UIKit.Button(row, "Unequip", () =>
+            RowAction(row, "Unequip", () =>
             {
                 profile.Soldiers.Unequip(chosen.id);
                 ProfileSave.Save(profile);
                 BuildInventory();
-            }, 80f, 24f);
+            });
         }
         if (profile.Soldiers.Items.Count == 0)
             UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
@@ -285,21 +304,20 @@ public partial class CastleScreen : MonoBehaviour
         return soldiers;
     }
 
-    // Class portrait, name and bonus, and a line under them; buttons go on the end.
+    // Class portrait and rarity pip, "Rare Knight" in its rarity's colour, and its bonus, damage type
+    // and where (a line the caller picks) under it; buttons go on the end.
     RectTransform SoldierRow(Transform list, SoldierItem soldier, string where)
     {
-        RectTransform row = UIKit.Box(list, soldier.id, CardColor, blocksClicks: false);
-        UIKit.Size(row, flexibleWidth: 1f);
-        UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
         SoldierClassData soldierClass = data.ClassData(soldier.soldierClass);
-        UIKit.Icon(row, soldierClass != null ? soldierClass.portrait : null, 32f);
-        RectTransform text = UIKit.Group(row, "Text");
-        UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
-        UIKit.Size(text, flexibleWidth: 1f);
-        UIKit.Label(text, SoldierSummary(soldier), 13);
-        UIKit.Label(text, where, 11, color: UIKit.MutedTextColor);
-        return row;
+        string name = $"{soldier.rarity} {(soldierClass != null ? soldierClass.displayName : soldier.soldierClass.ToString())}";
+        string detail = CaptainPanelParts.SoldierBonus(soldier, soldierClass) + (soldierClass != null ? $"  {soldierClass.damageType}" : "");
+        return UIKit.ItemRow(list, soldier.id, soldierClass != null ? soldierClass.portrait : null, name,
+            UIKit.RarityColor(soldier.rarity), $"{detail}   <color={UIKit.Hex(UIKit.TextColor)}>{where}</color>", soldier.rarity);
     }
+
+    // The button at the end of an item row; every list uses the same size.
+    static Button RowAction(RectTransform row, string text, Action onClick) =>
+        UIKit.Button(row, text, onClick, UIKit.ItemActionWidth, UIKit.ItemActionHeight);
 
     // "Rare Knight  +0.75 Defense  Melee".
     string SoldierSummary(SoldierItem soldier)
@@ -318,7 +336,7 @@ public partial class CastleScreen : MonoBehaviour
 
     void BuildConfirmRelease(Captain captain)
     {
-        RectTransform column = NewScreen("Confirm", 460f, BuildInventory);
+        RectTransform column = NewScreen("Confirm", 460f, BuildInventory, backButton: false);
         UIKit.Label(column, $"RELEASE {captain.displayName.ToUpperInvariant()}?", 24, TextAnchor.MiddleCenter);
         UIKit.Label(column, "They leave your roster for good. Their soldiers go back to the inventory.", 14,
             TextAnchor.MiddleCenter, UIKit.MutedTextColor);
@@ -330,9 +348,13 @@ public partial class CastleScreen : MonoBehaviour
             ProfileSave.Save(profile);
             selected = null;
             BuildInventory();
-        }, 180f, 32f);
+        }, BackSize.x, BackSize.y);
         release.GetComponent<Image>().color = UIKit.BadColor;
-        UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildInventory, 140f, 32f), PadGlyph.East);
+        release.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+        // Cancel takes focus first, so a stray confirm press doesn't release anyone.
+        Button cancel = UIKit.Button(buttons, "Cancel", BuildInventory, BackSize.x, BackSize.y);
+        UIKit.PadBadge(cancel, PadGlyph.East);
+        screenScope.Default = () => cancel;
     }
 
     // ---------- Setting out ----------
@@ -371,16 +393,20 @@ public partial class CastleScreen : MonoBehaviour
             }
         }
 
+        // Disabled until someone is picked, with the reason beside it (a blank the same width on the
+        // other side keeps the button centred).
         RectTransform buttons = Row(column, "Buttons", 10);
-        UIKit.Primary(UIKit.LiveButton(buttons, () => party.Count > 0 ? "Choose a location" : "Pick a captain", BuildLocations, refreshers,
+        UIKit.Size(UIKit.Group(buttons, "Balance"), 200f);
+        UIKit.Primary(UIKit.LiveButton(buttons, () => "Choose a location", BuildLocations, refreshers,
             () => party.Count > 0, width: 220f, height: 32f), refreshers);
-        UIKit.PadBadge(UIKit.Button(buttons, "Back", BuildHome, 140f, 32f), PadGlyph.East);
+        UIKit.Size(UIKit.LiveLabel(buttons, () => party.Count > 0 ? "" : "Pick at least one captain first.", refreshers,
+            UIKit.CaptionSize, color: UIKit.BadColor), 200f);
     }
 
     // Picked cards get a gold ring, name and tag; the rest fade once the party is full.
     void PartyCard(Transform row, Captain captain)
     {
-        RectTransform card = CaptainCard(row, captain, "IN PARTY", () =>
+        RectTransform card = CaptainCard(row, captain, "", () =>
         {
             if (!party.Remove(captain) && party.Count < PartyLimit) party.Add(captain);
         }, false, out Text name, out Text tag);
@@ -396,6 +422,8 @@ public partial class CastleScreen : MonoBehaviour
             image.color = picked ? PickedCardColor : CardColor;
             ring.enabled = picked;
             tag.enabled = picked;
+            // The order picked, which is the order they join the run in.
+            if (picked) tag.text = $"PICK {party.IndexOf(captain) + 1}";
             name.color = picked ? UIKit.AccentColor : UIKit.TextColor;
             fade.alpha = picked || party.Count < PartyLimit ? 1f : 0.45f;
         });
@@ -407,26 +435,51 @@ public partial class CastleScreen : MonoBehaviour
         UIKit.Label(column, "CHOOSE A LOCATION", 24, TextAnchor.MiddleCenter);
         UIKit.Label(column, $"Party: {string.Join(", ", party.ConvertAll(c => c.displayName))}", 13, TextAnchor.MiddleCenter,
             UIKit.MutedTextColor);
-        // One row per location, in unlock order: its name and description, and a button that sets
-        // out for it while it is open.
+        // One row per location, in unlock order: a mark, its name and a line under it, and Set out.
+        // A locked row is dimmed, with a lock for the mark, what opens it on the line and no button.
+        LocationData previous = null;
         foreach (LocationSelect.Entry entry in LocationSelect.Entries(data, profile))
         {
             LocationData location = entry.location;
             RectTransform row = UIKit.Box(column, location.displayName, entry.unlocked ? null : UIKit.InsetColor, blocksClicks: false);
-            UIKit.Size(row, 520f);
+            UIKit.Size(row, 520f).minHeight = 52f;
             UIKit.Layout<HorizontalLayoutGroup>(row, 8, 8).childAlignment = TextAnchor.MiddleLeft;
+            Image mark = UIKit.Icon(row, entry.unlocked ? null : LockSprite, LockIconSize);
+            mark.enabled = true;
+            if (entry.unlocked) mark.color = Color.clear;
             RectTransform text = UIKit.Group(row, "Text");
             UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
             UIKit.Size(text, flexibleWidth: 1f);
-            Text name = UIKit.Label(text, location.displayName, 15, color: entry.unlocked ? UIKit.TextColor : UIKit.DisabledTextColor);
+            Text name = UIKit.Label(text, location.displayName, 15);
             name.fontStyle = FontStyle.Bold;
-            UIKit.Label(text, entry.unlocked ? location.description : "Win the location before it to open this one.", 11,
-                color: UIKit.MutedTextColor);
-            Button button = UIKit.Button(row, entry.unlocked ? "Set out" : "Locked", () => SetOut(location), 110f, 28f);
-            button.interactable = entry.unlocked;
+            string requirement = previous != null ? $"Locked: win a run at {previous.displayName} to open it." : "Locked.";
+            UIKit.Label(text, entry.unlocked ? location.description : requirement, 11,
+                color: entry.unlocked ? UIKit.MutedTextColor : UIKit.AccentColor);
+            if (entry.unlocked) UIKit.Button(row, "Set out", () => SetOut(location), 110f, 28f);
+            else
+            {
+                UIKit.Size(UIKit.Label(row, "LOCKED", UIKit.CaptionSize, TextAnchor.MiddleCenter, UIKit.DisabledTextColor), 110f, 28f);
+                row.gameObject.AddComponent<CanvasGroup>().alpha = 0.55f;
+            }
+            previous = location;
         }
-        UIKit.PadBadge(UIKit.Button(column, "Back", BuildParty, 200f, 32f), PadGlyph.East);
     }
+
+    const float LockIconSize = 24f;
+    static Sprite lockSprite;
+
+    // A padlock in pixel art, for locked rows.
+    static Sprite LockSprite => lockSprite != null ? lockSprite : lockSprite = UIKit.PixelSprite(new[]
+    {
+        "..XXXX..",
+        ".X....X.",
+        ".X....X.",
+        "XXXXXXXX",
+        "XXXDDXXX",
+        "XXXDDXXX",
+        "XXXXXXXX",
+        "XXXXXXXX",
+    }, UIKit.MutedTextColor, UIKit.InsetColor);
 
     // Starts a run at the location with the picked party; the match makes its world map.
     void SetOut(LocationData location)
@@ -486,7 +539,8 @@ public partial class CastleScreen : MonoBehaviour
     // The level the captain has reached, counting XP not yet levelled up.
     static int Level(Captain captain) => Mathf.Max(captain.level, LevelMath.LevelForXp(captain.xp));
 
-    // The captain's soldiers in slot order, each in its rarity's colour.
+    // The captain's soldiers in slot order, each class in its rarity's colour (the colour carries the
+    // rarity, so the line fits on one row of a card).
     string SoldiersLine(Captain captain)
     {
         List<SoldierItem> soldiers = profile.SoldiersOf(captain);
@@ -494,6 +548,11 @@ public partial class CastleScreen : MonoBehaviour
         if (!profile.Owns(captain)) return $"<color={muted}>Brings {StartingCaptains.SoldiersEach} random soldiers</color>";
         if (soldiers.Count == 0) return $"<color={muted}>No soldiers</color>";
         return $"<color={muted}>Soldiers</color> " +
-               string.Join(", ", soldiers.ConvertAll(s => CaptainPanelParts.SoldierName(s, data.ClassData(s.soldierClass))));
+               string.Join(", ", soldiers.ConvertAll(s =>
+               {
+                   SoldierClassData soldierClass = data.ClassData(s.soldierClass);
+                   string name = soldierClass != null ? soldierClass.displayName : s.soldierClass.ToString();
+                   return $"<color={UIKit.Hex(UIKit.RarityColor(s.rarity))}>{name}</color>";
+               }));
     }
 }
