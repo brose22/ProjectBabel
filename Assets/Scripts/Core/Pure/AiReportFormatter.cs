@@ -69,6 +69,35 @@ public class AiCaptainRow
     public bool departed;
 }
 
+// Hits with a damage type, counted by the matchups they got. A hit can have both an advantage in
+// one matchup and a disadvantage in the other.
+public class AiMatchupCounts
+{
+    public int hits;
+    public int typeAdvantage;
+    public int typeDisadvantage;
+    public int elementAdvantage;
+    public int elementDisadvantage;
+
+    public void Add(float typeMultiplier, float elementMultiplier)
+    {
+        hits++;
+        if (typeMultiplier > 1f) typeAdvantage++;
+        else if (typeMultiplier < 1f) typeDisadvantage++;
+        if (elementMultiplier > 1f) elementAdvantage++;
+        else if (elementMultiplier < 1f) elementDisadvantage++;
+    }
+
+    public void Add(AiMatchupCounts other)
+    {
+        hits += other.hits;
+        typeAdvantage += other.typeAdvantage;
+        typeDisadvantage += other.typeDisadvantage;
+        elementAdvantage += other.elementAdvantage;
+        elementDisadvantage += other.elementDisadvantage;
+    }
+}
+
 public class AiDecisionRow
 {
     public float seconds;
@@ -82,6 +111,8 @@ public class AiRunRecord
     public int index;
     public int seed;
     public List<string> startParty = new();
+    // The location the run was played at, by display name; empty for single matches.
+    public string location = "";
     // "Victory", "Defeat", "Stopped" or "Stalled".
     public string result = "";
     // Anything worth saying about how the run ended.
@@ -90,6 +121,19 @@ public class AiRunRecord
     public List<AiMatchRow> matches = new();
     public List<AiCaptainRow> captains = new();
     public Dictionary<string, float> damageByElement = new();
+    // Damage the party dealt by damage type; "Untyped" is burns, zones and anything else without one.
+    public Dictionary<string, float> damageByType = new();
+    // Matchups of the party's hits on enemies, and of enemies' hits on soldiers and towers.
+    public AiMatchupCounts partyHits = new();
+    public AiMatchupCounts enemyHits = new();
+    public Dictionary<string, int> soldierDeathsByClass = new();
+    // Gold into and out of the pool by source ("Kills", "Respawns"). Respawns are paid from the
+    // towers' reserves, which were drawn from the pool; unspent reserve comes back on a win.
+    public Dictionary<string, int> goldIn = new();
+    public Dictionary<string, int> goldOut = new();
+    public int startGold;
+    // What became of the enemy base's boss ("killed in wave 12", "walked out in wave 10"); empty when never met.
+    public string boss = "";
     public List<AiDecisionRow> decisions = new();
     // Approval changed by each reason ("liked Kills", "enjoyed the victory"), summed over the run.
     public Dictionary<string, float> approvalByReason = new();
@@ -157,15 +201,17 @@ public static class AiReportFormatter
     {
         int wins = runs.Count(r => r.Won);
         md.Append("## Summary across runs\n\n");
+        string location = runs[0].location;
+        if (!string.IsNullOrEmpty(location)) md.Append($"- Location: {location}\n");
         md.Append($"- Victories: {wins} of {runs.Count} ({100f * wins / runs.Count:0}%)\n");
         md.Append($"- Average matches fought: {F((float)runs.Average(r => r.FoughtMatches.Count()))}\n");
         md.Append($"- Average waves cleared: {F((float)runs.Average(r => r.WavesCleared))}\n");
         md.Append($"- Average kills / leaks / casualties: {F((float)runs.Average(r => r.Kills))} / {F((float)runs.Average(r => r.Leaks))} / {F((float)runs.Average(r => r.Casualties))}\n");
         md.Append($"- Average final health: {F((float)runs.Average(r => r.finalHealth))}\n\n");
 
-        md.Append("| Run | Seed | Result | Matches | Waves cleared | Final health | Final Gold |\n|---|---|---|---|---|---|---|\n");
+        md.Append("| Run | Seed | Result | Matches | Waves cleared | Final health | Final Gold | Boss |\n|---|---|---|---|---|---|---|---|\n");
         foreach (AiRunRecord run in runs)
-            md.Append($"| {run.index} | {run.seed} | {run.result} | {run.FoughtMatches.Count()} | {run.WavesCleared} | {run.finalHealth}/{run.maxHealth} | {run.finalGold} |\n");
+            md.Append($"| {run.index} | {run.seed} | {run.result} | {run.FoughtMatches.Count()} | {run.WavesCleared} | {run.finalHealth}/{run.maxHealth} | {run.finalGold} | {run.boss} |\n");
         md.Append('\n');
 
         var lostAt = runs.Where(r => r.result == "Defeat").Select(r => r.FoughtMatches.LastOrDefault())
@@ -189,12 +235,64 @@ public static class AiReportFormatter
             foreach (var g in perElement) md.Append($"| {g.Key} | {F(g.Sum(p => p.Value))} |\n");
             md.Append('\n');
         }
+        AppendTuning(md, runs);
+    }
+
+    static string Share(float part, float whole) => whole > 0f ? (100f * part / whole).ToString("0", CultureInfo.InvariantCulture) + "%" : "-";
+
+    // Damage by type, matchup hits, soldier deaths and the Gold ledger, summed (or averaged per
+    // run) over the runs given.
+    static void AppendTuning(StringBuilder md, IReadOnlyList<AiRunRecord> runs)
+    {
+        var byType = runs.SelectMany(r => r.damageByType).GroupBy(p => p.Key).OrderByDescending(g => g.Sum(p => p.Value)).ToList();
+        float total = byType.Sum(g => g.Sum(p => p.Value));
+        if (byType.Count > 0)
+        {
+            md.Append("### Damage by damage type\n\n| Type | Damage | Share |\n|---|---|---|\n");
+            foreach (var g in byType) md.Append($"| {g.Key} | {F(g.Sum(p => p.Value))} | {Share(g.Sum(p => p.Value), total)} |\n");
+            md.Append('\n');
+        }
+
+        var party = new AiMatchupCounts();
+        var enemy = new AiMatchupCounts();
+        foreach (AiRunRecord run in runs)
+        {
+            party.Add(run.partyHits);
+            enemy.Add(run.enemyHits);
+        }
+        if (party.hits + enemy.hits > 0)
+        {
+            md.Append("### Matchup hits\n\n| Hits by | Hits | Type advantage | Type disadvantage | Element advantage | Element disadvantage |\n|---|---|---|---|---|---|\n");
+            foreach (var (name, c) in new[] { ("Party", party), ("Enemies", enemy) })
+                md.Append($"| {name} | {c.hits} | {Share(c.typeAdvantage, c.hits)} | {Share(c.typeDisadvantage, c.hits)} | {Share(c.elementAdvantage, c.hits)} | {Share(c.elementDisadvantage, c.hits)} |\n");
+            md.Append('\n');
+        }
+
+        var deaths = runs.SelectMany(r => r.soldierDeathsByClass).GroupBy(p => p.Key).OrderByDescending(g => g.Sum(p => p.Value)).ToList();
+        if (deaths.Count > 0)
+        {
+            md.Append("### Soldier deaths\n\n| Class | Deaths | Per run |\n|---|---|---|\n");
+            foreach (var g in deaths) md.Append($"| {g.Key} | {g.Sum(p => p.Value)} | {F((float)g.Sum(p => p.Value) / runs.Count)} |\n");
+            md.Append('\n');
+        }
+
+        var goldIn = runs.SelectMany(r => r.goldIn).GroupBy(p => p.Key).ToList();
+        var goldOut = runs.SelectMany(r => r.goldOut).GroupBy(p => p.Key).ToList();
+        if (goldIn.Count + goldOut.Count > 0)
+        {
+            md.Append($"### Gold per run (average of {runs.Count})\n\n| Flow | Source | Gold |\n|---|---|---|\n");
+            md.Append($"| Start | | {F((float)runs.Average(r => r.startGold))} |\n");
+            foreach (var g in goldIn.OrderByDescending(g => g.Sum(p => p.Value))) md.Append($"| In | {g.Key} | {F((float)g.Sum(p => p.Value) / runs.Count)} |\n");
+            foreach (var g in goldOut.OrderByDescending(g => g.Sum(p => p.Value))) md.Append($"| Out | {g.Key} | {F((float)g.Sum(p => p.Value) / runs.Count)} |\n");
+            md.Append($"| End | | {F((float)runs.Average(r => r.finalGold))} |\n\n");
+        }
     }
 
     static void AppendRun(StringBuilder md, AiRunRecord run)
     {
         md.Append($"## Run {run.index}: {run.result}\n\n");
         md.Append($"- Seed: {run.seed}\n");
+        if (!string.IsNullOrEmpty(run.location)) md.Append($"- Location: {run.location}\n");
         if (!string.IsNullOrEmpty(run.note)) md.Append($"- Note: {run.note}\n");
         md.Append($"- Starting party: {string.Join(", ", run.startParty)}\n");
         md.Append($"- Route: {(run.route.Count > 0 ? string.Join(" > ", run.route) : "none")}\n");
@@ -224,6 +322,8 @@ public static class AiReportFormatter
             foreach (var pair in run.damageByElement.OrderByDescending(p => p.Value)) md.Append($"| {pair.Key} | {F(pair.Value)} |\n");
             md.Append('\n');
         }
+
+        AppendTuning(md, new[] { run });
 
         if (run.approvalByReason.Count > 0)
         {

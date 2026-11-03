@@ -7,7 +7,7 @@ using UnityEngine.UI;
 // ends it becomes the "report ready" screen. Lives on the AiPlayer so it survives scene loads.
 public class AiOverlay
 {
-    static readonly float[] Speeds = { 1f, 2f, 4f, 8f };
+    static readonly float[] Speeds = { 1f, 2f, 4f, 8f, 16f, 32f };
     const float PanelWidth = 250f;
 
     readonly Canvas canvas;

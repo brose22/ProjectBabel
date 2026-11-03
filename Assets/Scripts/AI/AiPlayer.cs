@@ -14,6 +14,9 @@ public class AiOptions
     // Otherwise (-1) each run is a whole run with a party the AI picks.
     public int layout = -1;
     public int layer;
+    // The location index whole runs are played at (opened in the AI's profile); -1 plays the
+    // furthest one open, which is the first on a new profile.
+    public int location = -1;
     // How many captains the party fields; 0 keeps the game's party size.
     public int captains;
     // The bond rank (0 = D to 4 = S) every captain in the party starts the run at.
@@ -82,7 +85,7 @@ public class AiPlayer : MonoBehaviour
     {
         Instance = this;
         options = chosen;
-        speed = Mathf.Clamp(chosen.speed, 1f, MatchManager.MaxGameSpeed);
+        speed = Mathf.Clamp(chosen.speed, 1f, MatchManager.MaxAiGameSpeed);
         runIndex = 1;
         runSeed = SeedFor(1);
 
@@ -105,7 +108,7 @@ public class AiPlayer : MonoBehaviour
 
     void SetSpeed(float value)
     {
-        speed = Mathf.Clamp(value, 1f, MatchManager.MaxGameSpeed);
+        speed = Mathf.Clamp(value, 1f, MatchManager.MaxAiGameSpeed);
         if (match != null) match.SetGameSpeed(speed);
     }
 
@@ -166,7 +169,8 @@ public class AiPlayer : MonoBehaviour
 
         thinkTimer -= Time.unscaledDeltaTime;
         if (thinkTimer > 0f) return;
-        thinkTimer = match.State == MatchState.WaveActive ? WaveThinkSeconds : ThinkSeconds;
+        // Above 8x the AI thinks more often in real time, so it decides as often in game time as at 8x.
+        thinkTimer = (match.State == MatchState.WaveActive ? WaveThinkSeconds : ThinkSeconds) * Mathf.Min(1f, MatchManager.MaxGameSpeed / speed);
 
         try
         {
@@ -247,6 +251,7 @@ public class AiPlayer : MonoBehaviour
             pendingLoad = true;
             return;
         }
+        if (options.location >= 0) match.SetupAtLocation(options.location);
         int partySize = options.captains > 0 ? options.captains : match.Data.partySize;
         // The setup screen offers the roster; top it up further when the party is bigger than that.
         match.SetupOfferMinimum = partySize;
@@ -254,7 +259,7 @@ public class AiPlayer : MonoBehaviour
         List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), partySize);
         var party = picks.ConvertAll(i => roster[i]);
         PrepareParty(party);
-        recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds);
+        recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds, match.Location != null ? match.Location.displayName : "");
         Decide("Setup", $"party {string.Join(", ", party.Select(c => c.displayName))}: strongest mix with a support");
         match.BeginRun(party);
     }
@@ -316,7 +321,9 @@ public class AiPlayer : MonoBehaviour
                 if (pick < 0) { Leave("no event choice could be taken"); break; }
                 EventChoice choice = stopEvent.choices[pick];
                 LogStop($"event '{stopEvent.title}': {choice.label} ({choice.Describe()})");
+                int goldBefore = run.Gold;
                 match.TakeEventChoice(choice);
+                recorder.NoteGold(run.Gold > goldBefore, "Events", System.Math.Abs(run.Gold - goldBefore));
                 // A recruit for a full roster: the AI keeps the roster it has.
                 if (match.PendingRecruit != null) match.ReleaseForRecruit(match.PendingRecruit);
                 break;
@@ -493,7 +500,9 @@ public class AiPlayer : MonoBehaviour
             if (!match.CanRestore(tower)) continue;
             int cost = match.RestoreCost(tower);
             if (!AiPlacementScorer.ShouldRestore(cost, RunState.Current.Gold, Tower.All.Count)) continue;
-            if (match.TryRestoreTower(tower)) Decide("Restore", $"{tower.Captain.displayName} back on the field for {cost} Gold");
+            if (!match.TryRestoreTower(tower)) continue;
+            recorder.NoteGold(false, "Restores", cost);
+            Decide("Restore", $"{tower.Captain.displayName} back on the field for {cost} Gold");
         }
     }
 
@@ -517,7 +526,9 @@ public class AiPlayer : MonoBehaviour
                     if (match.CanMoveTo(tower, new Vector2Int(x, y))) cells.Add(new Vector2Int(x, y));
             int pick = AiPlacementScorer.PickCell(cells.ConvertAll(c => (c.x, c.y)), tower.Range, road, support, covered, out float best);
             if (pick < 0 || !AiPlacementScorer.ShouldMove(current, best, RunState.Current.Gold, match.MoveCost(tower))) continue;
+            int moveCost = match.MoveCost(tower);
             if (!match.MoveTower(tower, cells[pick])) continue;
+            recorder.NoteGold(false, "Moves", moveCost);
             Decide("Move", $"{tower.Captain.displayName} to {cells[pick].x},{cells[pick].y}: coverage {current:0.#} rose to {best:0.#}");
             return;
         }

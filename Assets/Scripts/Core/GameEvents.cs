@@ -20,6 +20,12 @@ public static class GameEvents
     // Damage an enemy took, after weakness: the tower whose soldier, ability or burn dealt it (null
     // when none did), the amount actually taken and the element it came as, if any.
     public static event Action<Tower, float, Element?> DamageDealt;
+    // A hit with a damage type, either way: true when the party landed it (on an enemy), false when
+    // an enemy did (on a soldier or tower); the attacker's damage type, the damage before Defense,
+    // and the damage-type and element multipliers it got. For tuning reports.
+    public static event Action<bool, DamageType, float, float, float> MatchupHit;
+    // A dead soldier came back, paying this much from its tower's reserve.
+    public static event Action<Soldier, int> SoldierRespawned;
     public static event Action<Tower> DrawRateChanged;
     public static event Action<int> WaveStarted;
     public static event Action<int> WaveEnded;
@@ -44,6 +50,9 @@ public static class GameEvents
     public static void RaiseBossDamaged(Tower tower) => BossDamaged?.Invoke(tower);
     public static void RaiseGoldSpent() => GoldSpent?.Invoke();
     public static void RaiseDamageDealt(Tower source, float amount, Element? element) => DamageDealt?.Invoke(source, amount, element);
+    public static void RaiseMatchupHit(bool byParty, DamageType type, float amount, float typeMultiplier, float elementMultiplier) =>
+        MatchupHit?.Invoke(byParty, type, amount, typeMultiplier, elementMultiplier);
+    public static void RaiseSoldierRespawned(Soldier soldier, int cost) => SoldierRespawned?.Invoke(soldier, cost);
     public static void RaiseDrawRateChanged(Tower tower) => DrawRateChanged?.Invoke(tower);
     public static void RaiseWaveStarted(int waveNumber) => WaveStarted?.Invoke(waveNumber);
     public static void RaiseWaveEnded(int waveNumber) => WaveEnded?.Invoke(waveNumber);
@@ -69,6 +78,8 @@ public static class GameEvents
         BossDamaged = null;
         GoldSpent = null;
         DamageDealt = null;
+        MatchupHit = null;
+        SoldierRespawned = null;
         DrawRateChanged = null;
         WaveStarted = null;
         WaveEnded = null;

@@ -161,7 +161,7 @@ public class Enemy : MonoBehaviour
         if (attackTimer > 0f) return;
         Soldier target = Soldier.FindDeployedNear(transform.position, Data.rangedAttackRange);
         if (target == null) return;
-        target.TakeDamage(Data.attackDamage * MatchupAgainst(target.Class.damageType, target.Tower.Captain.element));
+        target.TakeDamage(HitOn(Data.attackDamage, target.Class.damageType, target.Tower.Captain.element));
         attackTimer = Data.attackInterval * AttackIntervalMultiplier;
 
         Vector2 shot = target.transform.position - transform.position;
@@ -196,7 +196,7 @@ public class Enemy : MonoBehaviour
             attackTimer -= Time.deltaTime;
             if (attackTimer <= 0f)
             {
-                blocker.TakeDamage(Data.attackDamage * MatchupAgainst(blocker.Class.damageType, blocker.Tower.Captain.element));
+                blocker.TakeDamage(HitOn(Data.attackDamage, blocker.Class.damageType, blocker.Tower.Captain.element));
                 attackTimer = Data.attackInterval * AttackIntervalMultiplier;
             }
             ShowWalkPose(false);
@@ -298,7 +298,7 @@ public class Enemy : MonoBehaviour
         if (towerAttackTimer > 0f) return;
         Tower tower = Tower.FindClosestActive(transform.position, Data.towerAttackRange);
         if (tower == null) return;
-        tower.TakeDamage(Data.towerDamage * MatchupAgainst(tower.Captain.damageType, tower.Captain.element));
+        tower.TakeDamage(HitOn(Data.towerDamage, tower.Captain.damageType, tower.Captain.element));
         towerAttackTimer = Mathf.Max(0.1f, Data.towerAttackInterval) * AttackIntervalMultiplier;
     }
 
@@ -315,6 +315,10 @@ public class Enemy : MonoBehaviour
         Element? element = source != null ? source.Captain.element : numberElement;
         float counter = MatchupMultiplier(damageType, element);
         amount *= counter;
+        if (damageType.HasValue)
+            GameEvents.RaiseMatchupHit(true, damageType.Value, Mathf.Min(amount, Health),
+                DamageTypeRules.DamageMultiplier(damageType.Value, Data.damageType),
+                ElementRules.DamageMultiplier(element.HasValue ? (int)element.Value : -1, (int)Element));
         GameEvents.RaiseDamageDealt(source, Mathf.Min(amount, Health), element);
         if (IsBoss && source != null) GameEvents.RaiseBossDamaged(source);
         if (source != null && !overTime) source.AddFightCharge(FightCharge(amount));
@@ -358,9 +362,16 @@ public class Enemy : MonoBehaviour
                 Data.damageType, (int)Element)
             : 1f;
 
-    // Damage multiplier for this enemy's attacks on a soldier or tower with the given damage type and element.
-    float MatchupAgainst(DamageType targetType, Element targetElement) =>
-        DamageTypeRules.CombinedMultiplier(Data.damageType, (int)Element, targetType, (int)targetElement);
+    // This enemy's hit on a soldier or tower with the given damage type and element, after the
+    // matchups (Defense comes off later).
+    float HitOn(float damage, DamageType targetType, Element targetElement)
+    {
+        float typeMultiplier = DamageTypeRules.DamageMultiplier(Data.damageType, targetType);
+        float elementMultiplier = ElementRules.DamageMultiplier((int)Element, (int)targetElement);
+        damage *= typeMultiplier * elementMultiplier;
+        GameEvents.RaiseMatchupHit(false, Data.damageType, damage, typeMultiplier, elementMultiplier);
+        return damage;
+    }
 
     Color NumberColor(Element? element, bool resisted = false) =>
         resisted ? ResistedNumberColor

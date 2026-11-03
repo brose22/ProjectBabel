@@ -73,7 +73,7 @@ public class MainMenu : MonoBehaviour
 
     // ---------- AI Run ----------
 
-    static readonly float[] AiSpeeds = { 1f, 2f, 4f, 8f };
+    static readonly float[] AiSpeeds = { 1f, 2f, 4f, 8f, 16f, 32f };
     int aiRuns = 1;
     float aiSpeed = 4f;
 
@@ -84,6 +84,8 @@ public class MainMenu : MonoBehaviour
     // The picked layout, or -1 for a full run.
     static int aiMap = -1;
     static int aiLayer;
+    // The location a full run is played at, or -1 for the furthest open (the first, on the AI's new profile).
+    static int aiLocation = -1;
     // How many captains the AI fields; 0 until first shown, then the game's party size.
     static int aiCaptains;
     // The bond rank the AI's captains start at, 0 (D) to 4 (S).
@@ -104,6 +106,8 @@ public class MainMenu : MonoBehaviour
         });
         if (aiCaptains <= 0) aiCaptains = data.partySize;
         if (aiMap >= 0) BuildAiMatchRows(column);
+        else SettingRow(column, "Location", () => aiLocation >= 0 ? data.locations[aiLocation].displayName : "First",
+            step => aiLocation = Wrap(aiLocation + 1 + step, data.locations.Count + 1) - 1);
         SettingRow(column, "Captains", () => aiCaptains.ToString(),
             step => aiCaptains = Mathf.Clamp(aiCaptains + step, 1, data.maxTowers));
         SettingRow(column, "Bond", () => BondMath.RankName(aiBond),
@@ -133,7 +137,7 @@ public class MainMenu : MonoBehaviour
     void StartAiRun()
     {
         int captains = aiCaptains > 0 ? aiCaptains : data.partySize;
-        var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer, captains = captains, bondRank = aiBond };
+        var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer, location = aiLocation, captains = captains, bondRank = aiBond };
         if (aiMap >= 0)
         {
             // The picked roles first, then every role in turn to fill a bigger party; a smaller one drops the last.
