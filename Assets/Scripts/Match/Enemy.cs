@@ -16,6 +16,8 @@ public class Enemy : MonoBehaviour
     [SerializeField] HealthBar healthBar;
 
     public EnemyData Data { get; private set; }
+    // The element it fights with: its own, or the one its location gave it.
+    public Element Element { get; private set; }
     // True for the enemy base's boss, set by the match once it has walked on.
     public bool IsBoss { get; private set; }
     public float Health { get; private set; }
@@ -86,9 +88,10 @@ public class Enemy : MonoBehaviour
     // Gold paid into the shared pool when this enemy dies, after the run's per-layer growth.
     public int GoldReward { get; private set; }
 
-    public void Init(EnemyData data, Vector3[] pathPoints, float healthMultiplier, float goldMultiplier = 1f)
+    public void Init(EnemyData data, Vector3[] pathPoints, float healthMultiplier, float goldMultiplier = 1f, Element? element = null)
     {
         Data = data;
+        Element = element ?? data.element;
         GoldReward = Mathf.RoundToInt(data.goldReward * goldMultiplier);
         path = pathPoints;
         nextPoint = 1;
@@ -145,7 +148,7 @@ public class Enemy : MonoBehaviour
         marker.transform.localScale = Vector3.one * ElementMarkerSize;
         var renderer = marker.AddComponent<SpriteRenderer>();
         renderer.sprite = SpriteUtil.Square;
-        renderer.color = UIKit.ElementColor(Data.element);
+        renderer.color = UIKit.ElementColor(Element);
         renderer.sortingOrder = body.sortingOrder + 1;
     }
 
@@ -352,12 +355,12 @@ public class Enemy : MonoBehaviour
     float MatchupMultiplier(DamageType? damageType, Element? element) =>
         damageType.HasValue
             ? DamageTypeRules.CombinedMultiplier(damageType.Value, element.HasValue ? (int)element.Value : -1,
-                Data.damageType, (int)Data.element)
+                Data.damageType, (int)Element)
             : 1f;
 
     // Damage multiplier for this enemy's attacks on a soldier or tower with the given damage type and element.
     float MatchupAgainst(DamageType targetType, Element targetElement) =>
-        DamageTypeRules.CombinedMultiplier(Data.damageType, (int)Data.element, targetType, (int)targetElement);
+        DamageTypeRules.CombinedMultiplier(Data.damageType, (int)Element, targetType, (int)targetElement);
 
     Color NumberColor(Element? element, bool resisted = false) =>
         resisted ? ResistedNumberColor

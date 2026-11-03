@@ -11,7 +11,8 @@ using UnityEngine;
 public static class RunSave
 {
     // Saves from other versions are ignored rather than migrated.
-    const int Version = 1;
+    // 2: the location is an id instead of an index.
+    const int Version = 2;
 
     [Serializable]
     class CaptainApproval
@@ -38,7 +39,7 @@ public static class RunSave
     class SaveFile
     {
         public int version;
-        public int location;
+        public string location;
         public int health;
         public int maxHealth;
         public int matchesPlayed;
