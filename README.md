@@ -8,7 +8,7 @@ You claim cities on a world map, defend them in wave-based matches, and use the 
 
 - **Runs:** about 30 matches on a tactics-style overworld. Global health lasts the whole run; enemies that leak through reduce it, and at zero the run is lost.
 - **Matches:** 10 waves, 5–10 minutes. Place up to 5 towers, answer captains' requests yes or no (they pause the match while they wait), and relocate towers mid-match for Gold; moves are free until the first wave starts. The final match has double the waves and a very slow boss.
-- **Captains:** 12 unique captains (8 per run), each with an element (Water, Fire, Ice, Grass), a role (Attacker, Buffer, Healer), one special ability, and 3 likes and 3 dislikes. The role decides what the special does: an Attacker's hits enemies, a Healer's restores a share of health to every tower and soldier, and a Buffer's boosts every tower and soldier for the rest of the wave. The special's meter fills mainly from the captain's soldiers fighting (damage dealt, weakness hits, hits on afflicted enemies, knockbacks and kills, capped per wave), plus a slow trickle over time.
+- **Captains:** rolled from 5 captain templates (`Assets/Data/Captains`), one per role: Knight, Mage, Rogue, Archer, Healer. A rolled captain gets a name, portrait, element (Water, Fire, Ice, Grass), damage type, stats within the template's ranges, one special ability from its pool, 3 likes and 3 dislikes, and liked and disliked gifts. The damage type is usually the role's (Knight and Rogue Melee, Mage and Healer Magic, Archer Range); about 15% roll a special class such as a Magic Knight. The special decides whether the captain fights or supports: most hit enemies, a heal restores a share of health to every tower and soldier, and a boost helps every tower and soldier for the rest of the wave. The special's meter fills mainly from the captain's soldiers fighting (damage dealt, weakness hits, hits on afflicted enemies, knockbacks and kills, capped per wave), plus a slow trickle over time.
 - **Relationships:** captains judge your play style (leaks, casualties, selling, ability use, stable or moving placement) and soldier mix. Their approval and bond rank (D → S) carry over between runs and boost their tower.
 - **Soldiers:** Knights, Archers, Mages and Rogues leave their tower to attack the closest enemy, then return. A Knight's hit has a 25% chance to knock the enemy back along the road. Every act and respawn costs Gold. Each class picks its own home tile near the tower, previewed while you place or move it.
 - **Economy:** one shared Gold pool, earned from kills, wave clears and a win bonus, and carried between matches. Kills and wins pay more further into the run. Towers draw from the pool into their own reserve at Low, Normal or High rates, set through captain requests, and unspent reserves return to the pool when a match is won.
@@ -31,7 +31,7 @@ Next up: the remaining content (toward the ~30-match run), polish, and release p
 
 ### How a run plays (M7)
 
-1. **Setup:** pick 3 captains from the roster of 12.
+1. **Setup:** pick 3 captains from a freshly rolled offer (every role once before any repeats).
 2. **World map:** pick a stop on the next layer. Every road leads to the enemy base in the last layer. You only see the roads your intel has revealed; each stop reveals the next 2 layers beyond it. Besides plain cities, the middle layers hold:
    - **Elite cities:** play 2 layers tougher, pay double Gold for kills, and offer one extra captain to recruit.
    - **Rests:** restore 30% of max health.
@@ -87,7 +87,7 @@ The run is saved to `run.json` in the persistent data path whenever you're on th
 
 The AI picks a party and route, then places towers, answers requests and fires specials by itself. An overlay shows what it is doing, with a speed pick and **Stop and write report**. A batch ends when its runs are done or you stop it.
 
-- **Saves:** it uses its own `run.json` and `bonds.json` in an `ai` folder under the persistent data path, reset at the start of each batch, so your run and captain bonds are untouched. It writes no match CSVs to `stats/`.
+- **Saves:** it uses its own `run.json` in an `ai` folder under the persistent data path, reset at the start of each batch, so your run is untouched. It writes no match CSVs to `stats/`.
 - **Report:** a Markdown report and a per-wave CSV go to `Reports/` in the project folder, named `AiRun_<date>_<time>.md` and `AiRun_<date>_<time>_waves.csv`.
 - **Code:** the decisions (`AiRoutePicker`, `AiPartyPicker`, `AiStopChoice`, `AiPlacementScorer`, `AiAbilityRules`) and `AiReportFormatter` are plain classes in `Assets/Scripts/Core/Pure` with EditMode tests. `AiPlayer` in `Assets/Scripts/AI` drives the game with them.
 
@@ -171,7 +171,7 @@ EditMode tests live in `Assets/Tests/EditMode` and run from Unity's Test Runner.
 
 ### Art and stats
 
-- `py -I Tools/pixel_art.py [preview.png]` regenerates the placeholder pixel art in `Assets/Art/Sprites` from the character grids in the script (optionally writing an enlarged preview sheet). The scene builder assigns art by name to any captain, soldier class or enemy without a sprite.
+- `py -I Tools/pixel_art.py [preview.png]` regenerates the placeholder pixel art in `Assets/Art/Sprites` from the character grids in the script (optionally writing an enlarged preview sheet). The scene builder assigns art by name to any soldier class or enemy without a sprite, and the shared generic sprite to captain templates. **Babel → Build Data Assets Only** rebuilds the data assets (templates included) without regenerating the scene.
 - Enemy walk frames (`enemy_*_walk1.png`, `enemy_*_walk2.png`) are hand-made in Aseprite and `pixel_art.py` doesn't write them, so redo them if an enemy's palette or body changes.
 - Every match logs per-wave stats to the Console and writes a CSV to `stats/` under Unity's persistent data path (`%USERPROFILE%/AppData/LocalLow/DefaultCompany/ProjectBabel` on Windows). AI Run batches report to `Reports/` instead.
-- **Babel → Reset Captain Bonds** clears saved approval and bonds, and **Babel → Reveal Bonds Save File** opens its folder.
+- Approval and bond rank live on each rolled captain and are saved with the run, so a new run starts every captain at 0.

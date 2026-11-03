@@ -79,7 +79,7 @@ public static class CaptainRoller
 
     public static CaptainRoll Roll(CaptainRollSpec spec, int seed)
     {
-        var random = new Random(seed);
+        var random = new Random(Scramble(seed));
         var bytes = new byte[16];
         random.NextBytes(bytes);
         var roll = new CaptainRoll
@@ -107,6 +107,21 @@ public static class CaptainRoller
         roll.neutralLine = Index(spec.neutralLineCount, random);
         roll.dislikedLine = Index(spec.dislikedLineCount, random);
         return roll;
+    }
+
+    // System.Random streams from neighbouring seeds start out alike, so seeds are hashed first.
+    static int Scramble(int seed)
+    {
+        unchecked
+        {
+            uint x = (uint)seed;
+            x ^= x >> 16;
+            x *= 0x7feb352d;
+            x ^= x >> 15;
+            x *= 0x846ca68b;
+            x ^= x >> 16;
+            return (int)(x & int.MaxValue);
+        }
     }
 
     // Rounded to two decimals so stats read cleanly in menus.

@@ -18,7 +18,7 @@ public class CaptainRollerTests
         portraitElements = new[] { 0, 3, 3 },
         abilityCount = 3,
         likePool = new[] { 0, 1, 2, 3, 6, 10 },
-        dislikePool = new[] { 0, 2, 4, 6, 11 },
+        dislikePool = new[] { 0, 2, 4, 5, 6, 7, 11 },
         likedGiftPool = new[] { 0, 1, 2, 3 },
         dislikedGiftPool = new[] { 3, 4, 5 },
         greetingCount = 2,
@@ -44,6 +44,21 @@ public class CaptainRollerTests
     [Test]
     public void Roll_DifferentSeedsGiveDifferentIds() =>
         Assert.That(Enumerable.Range(0, 200).Select(seed => CaptainRoller.Roll(Spec(), seed).id), Is.Unique);
+
+    [Test]
+    public void Roll_NeighbouringSeedsSpreadOverElementsAndNames()
+    {
+        var elements = new int[ElementRules.ElementCount];
+        var names = new int[6];
+        for (int seed = 0; seed < 400; seed++)
+        {
+            CaptainRoll roll = CaptainRoller.Roll(Spec(), seed);
+            elements[roll.element]++;
+            names[roll.nameIndex]++;
+        }
+        Assert.That(elements, Has.All.InRange(60, 140));
+        Assert.That(names, Has.All.InRange(35, 100));
+    }
 
     [Test]
     public void Roll_StatsStayInTheirRanges()
