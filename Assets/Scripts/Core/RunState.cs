@@ -122,6 +122,41 @@ public class RunState
         RecruitOffer.Clear();
     }
 
+    // A captain an event recruited while the roster was full, waiting for the player to release
+    // either them or a captain already in the roster. Not saved: quitting first loses the newcomer.
+    public Captain PendingRecruit { get; private set; }
+
+    // A captain joins from an event: into the roster, and the party while it has room. With a full
+    // roster they wait as the pending recruit until ReleaseFor picks who goes. Returns whether they
+    // joined now.
+    public bool RecruitFromEvent(Captain captain, int maxPartySize)
+    {
+        if (captain == null) return false;
+        if (RosterRules.NeedsRelease(Profile.Roster.Count, Profile.MaxRoster))
+        {
+            PendingRecruit = captain;
+            return false;
+        }
+        return JoinFromEvent(captain, null, maxPartySize);
+    }
+
+    // Settles the pending recruit: released leaves the roster for good (the newcomer, or a captain
+    // already there, who also leaves the party), and the newcomer joins when there's room.
+    public bool ReleaseFor(Captain released, int maxPartySize)
+    {
+        Captain newcomer = PendingRecruit;
+        PendingRecruit = null;
+        return newcomer != null && JoinFromEvent(newcomer, released, maxPartySize);
+    }
+
+    bool JoinFromEvent(Captain newcomer, Captain released, int maxPartySize)
+    {
+        bool joined = Profile.Join(newcomer, released);
+        if (released != null && !Profile.Owns(released)) Party.Remove(released);
+        if (joined && ActivePartyCount < maxPartySize) Party.Add(newcomer);
+        return joined;
+    }
+
     // The run's world map, made when the run begins.
     public WorldMap Map { get; private set; }
 

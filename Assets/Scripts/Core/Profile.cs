@@ -66,6 +66,33 @@ public class Profile
         Soldiers.UnequipAll(captain.id);
     }
 
+    // A captain joining during a run. With a full roster, released (the newcomer or a captain
+    // already here) goes first, and their soldiers go back to the inventory. Returns whether the
+    // newcomer joined.
+    public bool Join(Captain newcomer, Captain released)
+    {
+        bool releasing = released != null && released != newcomer && Owns(released);
+        bool joined = RosterRules.Join(Roster, newcomer, released, MaxRoster);
+        if (releasing && !Owns(released)) Soldiers.UnequipAll(released.id);
+        return joined;
+    }
+
+    // A lost run: a share of the Gold goes, and so does every party captain still in the roster,
+    // with the soldiers equipped to them. Returns the captains lost.
+    public List<Captain> LoseRun(IEnumerable<Captain> party, out int goldLost, out int soldiersLost)
+    {
+        goldLost = RunEndRules.GoldLost(Gold);
+        Gold -= goldLost;
+        soldiersLost = 0;
+        List<Captain> lost = RunEndRules.CaptainsLost(party, Roster);
+        foreach (Captain captain in lost)
+        {
+            Roster.Remove(captain);
+            soldiersLost += Soldiers.RemoveEquippedTo(captain.id);
+        }
+        return lost;
+    }
+
     // The captain's soldiers in slot order.
     public List<SoldierItem> SoldiersOf(Captain captain) =>
         captain != null ? Soldiers.EquippedTo(captain.id) : new List<SoldierItem>();

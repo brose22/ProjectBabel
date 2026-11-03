@@ -762,39 +762,40 @@ public static class GreyBoxMatchBuilder
 
     // ---------- World map events ----------
 
-    // (asset name, title, text, choices as (label, gold, health, xp, approval))
-    static readonly (string name, string title, string text, (string label, int gold, int health, int xp, float approval)[] choices)[] Events =
+    // (asset name, title, text, choices as (label, gold, health, xp, approval, recruit))
+    static readonly (string name, string title, string text, (string label, int gold, int health, int xp, float approval, bool recruit)[] choices)[] Events =
     {
         ("AbandonedArmory", "Abandoned Armory", "Racks of old weapons sit in a burned-out outpost.", new[]
         {
-            ("Sell the scrap", 120, 0, 0, 0f),
-            ("Drill with the old gear", 0, 0, 50, 0f),
+            ("Sell the scrap", 120, 0, 0, 0f, false),
+            ("Drill with the old gear", 0, 0, 50, 0f, false),
         }),
         ("Refugees", "Refugees on the Road", "Families fleeing the enemy ask the army for food.", new[]
         {
-            ("Share the supplies", -80, 0, 0, 6f),
-            ("Turn them away", 0, 0, 0, -4f),
+            ("Share the supplies", -80, 0, 0, 6f, false),
+            ("Turn them away", 0, 0, 0, -4f, false),
         }),
         ("FieldSurgeon", "Field Surgeon", "A travelling surgeon offers to patch up the wounded, for a price.", new[]
         {
-            ("Pay for treatment", -100, 5, 0, 0f),
-            ("Decline", 0, 0, 0, 0f),
+            ("Pay for treatment", -100, 5, 0, 0f, false),
+            ("Decline", 0, 0, 0, 0f, false),
         }),
         ("TrainingGrounds", "Training Grounds", "An empty fort with a good practice yard.", new[]
         {
-            ("Drill hard", 0, -2, 80, 0f),
-            ("Take it easy", 0, 2, 0, 0f),
+            ("Drill hard", 0, -2, 80, 0f, false),
+            ("Take it easy", 0, 2, 0, 0f, false),
         }),
         ("Tavern", "Roadside Tavern", "The captains eye the tavern hopefully.", new[]
         {
-            ("Buy a round", -60, 0, 0, 8f),
-            ("March on", 0, 0, 0, -2f),
+            ("Buy a round", -60, 0, 0, 8f, false),
+            ("Hire the sellsword at the bar", -150, 0, 0, 0f, true),
+            ("March on", 0, 0, 0, -2f, false),
         }),
         ("Ambush", "Ambush", "Bandits block the pass and demand a toll.", new[]
         {
-            ("Pay the toll", -70, 0, 0, 0f),
-            ("Fight through", 40, -3, 40, 0f),
-            ("Take the long way round", 0, -1, 0, -3f),
+            ("Pay the toll", -70, 0, 0, 0f, false),
+            ("Fight through", 40, -3, 40, 0f, false),
+            ("Take the long way round", 0, -1, 0, -3f, false),
         }),
     };
 
@@ -804,14 +805,14 @@ public static class GreyBoxMatchBuilder
     {
         EnsureFolder(DataFolder + "/Events");
         var events = new List<EventData>();
-        foreach ((string name, string title, string text, (string label, int gold, int health, int xp, float approval)[] choices) in Events)
+        foreach ((string name, string title, string text, (string label, int gold, int health, int xp, float approval, bool recruit)[] choices) in Events)
         {
             events.Add(LoadOrCreate<EventData>($"{DataFolder}/Events/{name}.asset", e =>
             {
                 e.title = title;
                 e.text = text;
-                foreach ((string label, int gold, int health, int xp, float approval) in choices)
-                    e.choices.Add(new EventChoice { label = label, gold = gold, health = health, xp = xp, approval = approval });
+                foreach ((string label, int gold, int health, int xp, float approval, bool recruit) in choices)
+                    e.choices.Add(new EventChoice { label = label, gold = gold, health = health, xp = xp, approval = approval, recruit = recruit });
             }));
         }
         if (match.events.Count > 0) return;

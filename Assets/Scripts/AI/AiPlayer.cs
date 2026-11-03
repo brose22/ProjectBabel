@@ -317,6 +317,8 @@ public class AiPlayer : MonoBehaviour
                 EventChoice choice = stopEvent.choices[pick];
                 LogStop($"event '{stopEvent.title}': {choice.label} ({choice.Describe()})");
                 match.TakeEventChoice(choice);
+                // A recruit for a full roster: the AI keeps the roster it has.
+                if (match.PendingRecruit != null) match.ReleaseForRecruit(match.PendingRecruit);
                 break;
         }
         pendingLoad = match.State == MatchState.Stop && stopHandled;
