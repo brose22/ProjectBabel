@@ -178,7 +178,7 @@ public class CaptainRequests : MonoBehaviour
             closestDistance = distance;
         }
         if (closest == null) return;
-        TryAsk(closest, RequestKind.UseSpecial, $"{reason}. Let me use {closest.Captain.ability.displayName} now?");
+        TryAsk(closest, RequestKind.UseSpecial, $"{reason}. Let me use {closest.Captain.Ability.displayName} now?");
     }
 
     // The working captain nearest a fallen tower that has a spot to cover it from asks to move in.
@@ -223,11 +223,11 @@ public class CaptainRequests : MonoBehaviour
 
             bool ready = tower.IsSpecialReady;
             if (ready && !watch.SpecialWasReady)
-                TryAsk(tower, RequestKind.UseSpecial, $"{tower.Captain.ability.displayName} is charged. Use it now?");
+                TryAsk(tower, RequestKind.UseSpecial, $"{tower.Captain.Ability.displayName} is charged. Use it now?");
             watch.SpecialWasReady = ready;
 
             // A reserve that stays full is Gold doing nothing.
-            if (tower.Reserve < tower.Captain.resourceCapacity) watch.ReserveFullSince = -1f;
+            if (tower.Reserve < tower.Captain.ResourceCapacity) watch.ReserveFullSince = -1f;
             else if (watch.ReserveFullSince < 0f) watch.ReserveFullSince = Time.time;
             else if (Time.time - watch.ReserveFullSince >= FullReserveSeconds && tower.DrawRate != DrawRate.Low)
                 TryAsk(tower, RequestKind.LowerDraw, "My reserve is overflowing. Ease off my draw?");

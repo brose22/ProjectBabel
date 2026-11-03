@@ -146,7 +146,7 @@ public class PlacementController : MonoBehaviour
         hoverMarker.color = Color.white;
     }
 
-    void ShowGhosts(Vector2Int cell, CaptainData captain, IReadOnlyList<SoldierClassData> classes, Tower moving = null) =>
+    void ShowGhosts(Vector2Int cell, Captain captain, IReadOnlyList<SoldierClassData> classes, Tower moving = null) =>
         ghosts.Show(grid, cell, captain, Tower.PickHomes(grid, cell, classes, moving), classes);
 
     void HandleKeys()

@@ -104,7 +104,7 @@ public class ApprovalToasts
 
         RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
-        UIKit.Icon(frame, notice.captain.portrait, PortraitSize);
+        UIKit.Icon(frame, notice.captain.Portrait, PortraitSize);
 
         RectTransform info = UIKit.Group(card, "Info");
         UIKit.Layout<VerticalLayoutGroup>(info, 0, 1);
@@ -146,7 +146,7 @@ public class ApprovalToasts
 
     void AddLevelCard(LevelNotice notice)
     {
-        CaptainData captain = notice.captain;
+        Captain captain = notice.captain;
         RectTransform card = UIKit.Box(stack, captain.displayName + " level up", UIKit.PanelColor, blocksClicks: false);
         UIKit.Place(card, new Vector2(1f, 1f), Vector2.zero, new Vector2(CardWidth, LevelHeight));
         UIKit.Layout<HorizontalLayoutGroup>(card, 5, 6);
@@ -154,7 +154,7 @@ public class ApprovalToasts
 
         RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
-        UIKit.Icon(frame, captain.portrait, PortraitSize);
+        UIKit.Icon(frame, captain.Portrait, PortraitSize);
 
         RectTransform info = UIKit.Group(card, "Info");
         UIKit.Layout<VerticalLayoutGroup>(info, 0, 1);

@@ -16,7 +16,7 @@ public class Tower : MonoBehaviour
     // Optional until the prefab builder adds it.
     [SerializeField] HealthBar healthBar;
 
-    public CaptainData Captain { get; private set; }
+    public Captain Captain { get; private set; }
     public Vector2Int Cell { get; private set; }
     public DrawRate DrawRate { get; private set; } = DrawRate.Normal;
     public int Reserve { get; private set; }
@@ -108,13 +108,13 @@ public class Tower : MonoBehaviour
     float fightChargeWaveStart = -1f;
     bool casting;
 
-    public bool HasAbility => Captain.ability != null;
+    public bool HasAbility => Captain.Ability != null;
     public bool IsSpecialReady => HasAbility && SpecialCharge >= 1f;
-    public float AbilityRange => Range * (HasAbility ? Captain.ability.rangeMultiplier : 1f);
-    public bool IsSupportAbility => HasAbility && Captain.ability.shape == AbilityData.Shape.Support;
+    public float AbilityRange => Range * (HasAbility ? Captain.Ability.rangeMultiplier : 1f);
+    public bool IsSupportAbility => HasAbility && Captain.Ability.shape == AbilityData.Shape.Support;
     // A boost lasts only until the wave ends, so a Buffer's special waits for a wave to be running.
     public bool CanUseAbility => IsSpecialReady && !IsDisabled && !IsWalking &&
-        (IsSupportAbility ? IsWaveRunning || !Captain.ability.HasBuff : FindAbilityTarget() != null);
+        (IsSupportAbility ? IsWaveRunning || !Captain.Ability.HasBuff : FindAbilityTarget() != null);
 
     public int LivingSoldiers
     {
@@ -135,7 +135,7 @@ public class Tower : MonoBehaviour
     };
 
     // One soldier per entry in slotClasses; the soldier list index is the slot index.
-    public void Init(MatchManager owner, GridMap map, CaptainData captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
+    public void Init(MatchManager owner, GridMap map, Captain captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
     {
         match = owner;
         grid = map;
@@ -263,7 +263,7 @@ public class Tower : MonoBehaviour
 
     void Update()
     {
-        int capacity = Captain.resourceCapacity;
+        int capacity = Captain.ResourceCapacity;
         if (Reserve >= capacity || IsDisabled)
         {
             drawProgress = 0f;
@@ -271,7 +271,7 @@ public class Tower : MonoBehaviour
         else
         {
             // Draw whole coins from the pool as the regen accumulates.
-            drawProgress += Captain.resourceRegen * DrawMultiplier(DrawRate) * Time.deltaTime;
+            drawProgress += Captain.ResourceRegen * DrawMultiplier(DrawRate) * Time.deltaTime;
             while (drawProgress >= 1f && Reserve < capacity && RunState.Current.TrySpendGold(1))
             {
                 Reserve++;
@@ -388,7 +388,7 @@ public class Tower : MonoBehaviour
     void ChargeSpecial()
     {
         if (!HasAbility || IsDisabled || Enemy.Active.Count == 0) return;
-        float perSecond = Captain.specialChargeRate * BondMath.ChargeRateMultiplier(Approval) / Mathf.Max(1f, Captain.ability.chargeSeconds);
+        float perSecond = Captain.SpecialChargeRate * BondMath.ChargeRateMultiplier(Approval) / Mathf.Max(1f, Captain.Ability.chargeSeconds);
         SpecialCharge = Mathf.Min(1f, SpecialCharge + perSecond * ChargeMath.TrickleMultiplier * Time.deltaTime);
     }
 
@@ -403,7 +403,7 @@ public class Tower : MonoBehaviour
             fightChargeWaveStart = match.WaveStartTime;
             fightChargeThisWave = 0f;
         }
-        amount *= Captain.specialChargeRate * BondMath.ChargeRateMultiplier(Approval);
+        amount *= Captain.SpecialChargeRate * BondMath.ChargeRateMultiplier(Approval);
         amount = Mathf.Min(amount, ChargeMath.WaveCap - fightChargeThisWave);
         if (amount <= 0f) return;
         fightChargeThisWave += amount;
@@ -411,16 +411,16 @@ public class Tower : MonoBehaviour
     }
 
     // Drawn captain art replaces the placeholder square at full tile size.
-    void ApplyArt(CaptainData captain)
+    void ApplyArt(Captain captain)
     {
-        if (captain.sprite == null)
+        if (captain.Sprite == null)
         {
-            baseColor = captain.color;
+            baseColor = captain.Color;
             return;
         }
-        body.sprite = captain.sprite;
+        body.sprite = captain.Sprite;
         body.transform.localScale = Vector3.one;
-        baseColor = captain.tintSprite ? captain.color : Color.white;
+        baseColor = captain.TintSprite ? captain.Color : Color.white;
     }
 
     // Disabled towers are dimmed; a ready special makes the tower pulse toward white.
@@ -471,7 +471,7 @@ public class Tower : MonoBehaviour
         if (IsSupportAbility)
         {
             float healed = AbilityCaster.CastSupport(this, rangeIndicator.sprite);
-            int boosted = Captain.ability.HasBuff ? All.FindAll(t => !t.IsDisabled).Count : 0;
+            int boosted = Captain.Ability.HasBuff ? All.FindAll(t => !t.IsDisabled).Count : 0;
             GainSupportXp(healed * SupportXpPerHealthHealed + boosted * SupportXpPerTowerBoosted);
         }
         else AbilityCaster.Cast(this, FindAbilityTarget(), SpriteUtil.Square, rangeIndicator.sprite);

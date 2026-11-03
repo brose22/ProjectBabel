@@ -72,7 +72,7 @@ public class RunScreens : MonoBehaviour
     RectTransform screen;
     UIFocusScope screenFocus;
     readonly List<Action> refreshers = new();
-    readonly List<CaptainData> picked = new();
+    readonly List<Captain> picked = new();
     MatchState shownFor = (MatchState)(-1);
     bool shownRecruiting;
 
@@ -132,11 +132,11 @@ public class RunScreens : MonoBehaviour
 
     // ---------- Setup ----------
 
-    List<CaptainData> Available
+    List<Captain> Available
     {
         get
         {
-            return new List<CaptainData>(match.SetupOffer);
+            return new List<Captain>(match.SetupOffer);
         }
     }
 
@@ -198,7 +198,7 @@ public class RunScreens : MonoBehaviour
 
     // An empty slot is an inset placeholder; a filled one is the captain's party card, which
     // removes them when clicked.
-    void BuildSlot(Transform slots, CaptainData captain, int index)
+    void BuildSlot(Transform slots, Captain captain, int index)
     {
         if (captain == null)
         {
@@ -230,7 +230,7 @@ public class RunScreens : MonoBehaviour
 
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        List<CaptainData> available = Available;
+        List<Captain> available = Available;
         for (int i = 0; i < available.Count; i += RosterColumns)
         {
             RectTransform row = UIKit.Group(list.content, "Row");
@@ -247,7 +247,7 @@ public class RunScreens : MonoBehaviour
 
     // A party card that adds or removes the captain. Picked cards get a gold ring, name and tag;
     // cards of captains who can't join (the party is full) fade out.
-    void BuildRosterCard(Transform row, CaptainData captain)
+    void BuildRosterCard(Transform row, Captain captain)
     {
         RectTransform card = UIKit.Box(row, captain.displayName, CardColor, blocksClicks: false);
         // No preferred width, so the row splits evenly however long each name is.
@@ -279,7 +279,7 @@ public class RunScreens : MonoBehaviour
     }
 
     // Name (with a tag on the right), element and role with bond, special, likes and dislikes.
-    static void CaptainDetails(Transform card, CaptainData captain, string tagText, out Text name, out Text tag)
+    static void CaptainDetails(Transform card, Captain captain, string tagText, out Text name, out Text tag)
     {
         Transform title = UIKit.Group(card, "Title");
         UIKit.Layout<HorizontalLayoutGroup>(title, 0, 4);
@@ -291,9 +291,9 @@ public class RunScreens : MonoBehaviour
 
         int rank = ApprovalStore.RankOf(captain);
         string muted = UIKit.Hex(UIKit.MutedTextColor);
-        UIKit.Label(card, $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{captain.element}</color> {captain.role}" +
+        UIKit.Label(card, $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{captain.element}</color> {captain.ClassName}" +
                           $"   <color={muted}>Bond</color> {BondMath.RankName(rank)} <color={muted}>({ApprovalStore.ApprovalOf(captain):0})</color>", 12);
-        UIKit.Label(card, captain.ability != null ? $"<color={muted}>Special</color>  {captain.ability.displayName}" : "No special", 12);
+        UIKit.Label(card, captain.Ability != null ? $"<color={muted}>Special</color>  {captain.Ability.displayName}" : "No special", 12);
         UIKit.Label(card, $"<color={UIKit.Hex(UIKit.GoodColor)}>Likes</color>  {string.Join(", ", captain.likes)}", 11,
             color: UIKit.MutedTextColor);
         UIKit.Label(card, $"<color={UIKit.Hex(UIKit.BadColor)}>Dislikes</color>  {string.Join(", ", captain.dislikes)}", 11,
@@ -301,7 +301,7 @@ public class RunScreens : MonoBehaviour
     }
 
     // Picked cards keep their dark face, so the text stays readable, and get a gold ring and name.
-    void BuildCaptainCard(Transform parent, CaptainData captain, Action onClick, Func<bool> selected)
+    void BuildCaptainCard(Transform parent, Captain captain, Action onClick, Func<bool> selected)
     {
         Button card = UIKit.Button(parent, "", onClick);
         UIKit.Clear(card.transform);
@@ -322,7 +322,7 @@ public class RunScreens : MonoBehaviour
         });
     }
 
-    void TogglePick(CaptainData captain)
+    void TogglePick(Captain captain)
     {
         if (picked.Remove(captain)) return;
         if (picked.Count < PartySize) picked.Add(captain);
@@ -333,7 +333,7 @@ public class RunScreens : MonoBehaviour
     void BuildRecruit()
     {
         RunState run = RunState.Current;
-        CaptainData chosen = null;
+        Captain chosen = null;
 
         RectTransform root = NewScreen("Recruit");
         RectTransform column = UIKit.Group(root, "Column");
@@ -354,7 +354,7 @@ public class RunScreens : MonoBehaviour
         rowLayout.childAlignment = TextAnchor.UpperCenter;
         int count = run.RecruitOffer.Count;
         UIKit.Size(row, count * 205f + (count - 1) * 8f, CardHeight);
-        foreach (CaptainData captain in run.RecruitOffer)
+        foreach (Captain captain in run.RecruitOffer)
             BuildCaptainCard(row, captain, () => chosen = captain, () => chosen == captain);
 
         RectTransform buttons = UIKit.Group(column, "Buttons");
@@ -437,7 +437,7 @@ public class RunScreens : MonoBehaviour
             $"PARTY   <color={UIKit.Hex(UIKit.MutedTextColor)}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>",
             list =>
             {
-                foreach (CaptainData captain in run.Party)
+                foreach (Captain captain in run.Party)
                     PartyCard(list.content, run, captain);
             });
         BuildDrawer(root, "Inventory", "INVENTORY", -(DrawerTabSize.y + UIKit.Gap), "INVENTORY",
@@ -555,7 +555,7 @@ public class RunScreens : MonoBehaviour
 
     // A captain in the party drawer: the usual details, tagged with their level, or faded with a
     // note when they've walked out.
-    void PartyCard(Transform list, RunState run, CaptainData captain)
+    void PartyCard(Transform list, RunState run, Captain captain)
     {
         bool departed = run.HasDeparted(captain);
         RectTransform card = UIKit.Box(list, captain.displayName, departed ? UIKit.InsetColor : CardColor, blocksClicks: false);
@@ -570,7 +570,7 @@ public class RunScreens : MonoBehaviour
     // and role icons, bond, and special on the right.
     // With live, the bond follows approval changes; only for cards built with the screen, since
     // setup rebuilds its cards from inside a refresher, which can't add to the list it is running.
-    void PartyCardBody(RectTransform card, CaptainData captain, string tagText, Color tagColor, out Text name, out Text tag, bool live = false)
+    void PartyCardBody(RectTransform card, Captain captain, string tagText, Color tagColor, out Text name, out Text tag, bool live = false)
     {
         HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(card, 6, 8);
         layout.childAlignment = TextAnchor.UpperLeft;
@@ -578,7 +578,7 @@ public class RunScreens : MonoBehaviour
         // The 32 px portraits at 2x, inset like a picture frame.
         RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
-        UIKit.Icon(frame, captain.portrait, PortraitSize);
+        UIKit.Icon(frame, captain.Portrait, PortraitSize);
 
         RectTransform info = UIKit.Group(card, "Info");
         UIKit.Layout<VerticalLayoutGroup>(info, 0, 2);
@@ -599,7 +599,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Label(tags, element != null ? element.displayName : captain.element.ToString(), 12, color: UIKit.ElementColor(captain.element));
         UIKit.Size(UIKit.Group(tags, "Gap"), 6f);
         UIKit.Icon(tags, match.Data.RoleIcon(captain.role), IconSize);
-        UIKit.Label(tags, captain.role.ToString(), 12);
+        UIKit.Label(tags, captain.ClassName, 12);
 
         string muted = UIKit.Hex(UIKit.MutedTextColor);
         string Bond() => $"<color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))} " +
@@ -613,13 +613,13 @@ public class RunScreens : MonoBehaviour
                 () => "", BondBarColor, refreshers, 6f);
         Transform special = UIKit.Group(info, "Special");
         UIKit.Layout<HorizontalLayoutGroup>(special, 0, 4);
-        UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, IconSize);
-        UIKit.Label(special, captain.ability != null ? captain.ability.displayName : "No special", 12);
+        UIKit.Icon(special, captain.Ability != null ? captain.Ability.icon : null, IconSize);
+        UIKit.Label(special, captain.Ability != null ? captain.Ability.displayName : "No special", 12);
     }
 
     // A window over the map with everything about one captain. A click beside it, or Close,
     // dismisses it; rebuilding the screen does too.
-    void ShowCaptainDetails(RunState run, CaptainData captain)
+    void ShowCaptainDetails(RunState run, Captain captain)
     {
         RectTransform overlay = UIKit.Stretch(UIKit.Panel(screen, "Captain Details", new Color(0f, 0f, 0f, 0.55f)));
         var dismiss = overlay.gameObject.AddComponent<Button>();
@@ -649,17 +649,17 @@ public class RunScreens : MonoBehaviour
         Stat(stats, "HEALTH", $"{captain.health}", PartyRank(run, captain, c => c.health));
         Stat(stats, "DEFENSE", $"{DefenseMath.AtLevel(captain.defense, captain.defensePerLevel, level):0.#}",
             level > 1 ? $"base {captain.defense:0.#}" : PartyRank(run, captain, c => c.defense));
-        Stat(stats, "RESERVE", $"{captain.resourceCapacity}", PartyRank(run, captain, c => c.resourceCapacity));
-        Stat(stats, "DRAW", $"{captain.resourceRegen:0.#}/s", PartyRank(run, captain, c => c.resourceRegen));
+        Stat(stats, "RESERVE", $"{captain.ResourceCapacity}", PartyRank(run, captain, c => c.ResourceCapacity));
+        Stat(stats, "DRAW", $"{captain.ResourceRegen:0.#}/s", PartyRank(run, captain, c => c.ResourceRegen));
 
         UIKit.Size(UIKit.Header(window, "Special"), flexibleWidth: 1f);
         Transform special = UIKit.Group(window, "Special");
         UIKit.Layout<HorizontalLayoutGroup>(special, 0, 6);
-        UIKit.Icon(special, captain.ability != null ? captain.ability.icon : null, 32f);
-        Text specialName = UIKit.Label(special, captain.ability != null ? captain.ability.displayName : "No special ability", 14);
+        UIKit.Icon(special, captain.Ability != null ? captain.Ability.icon : null, 32f);
+        Text specialName = UIKit.Label(special, captain.Ability != null ? captain.Ability.displayName : "No special ability", 14);
         specialName.fontStyle = FontStyle.Bold;
-        if (captain.ability != null && !string.IsNullOrEmpty(captain.ability.description))
-            UIKit.Label(window, captain.ability.description, 12, color: UIKit.MutedTextColor);
+        if (captain.Ability != null && !string.IsNullOrEmpty(captain.Ability.description))
+            UIKit.Label(window, captain.Ability.description, 12, color: UIKit.MutedTextColor);
 
         UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
         TagLine(window, "Likes", captain.likes, UIKit.GoodColor);
@@ -701,7 +701,7 @@ public class RunScreens : MonoBehaviour
 
     // The window for giving a captain a gift: their portrait, what they say, and the items you
     // carry, each marked liked, disliked or neutral. onGiven runs after each gift.
-    void ShowGiftWindow(RunState run, CaptainData captain, Action onGiven)
+    void ShowGiftWindow(RunState run, Captain captain, Action onGiven)
     {
         // Beside the captain window, not over it, and no second dimming layer.
         RectTransform window = OpenWindow("Gift", GiftWindowWidth, new Vector2(1f, 0.5f),
@@ -713,7 +713,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(top, flexibleWidth: 1f);
         RectTransform frame = UIKit.Box(top, "Portrait", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
-        UIKit.Icon(frame, captain.portrait, DetailsPortraitSize);
+        UIKit.Icon(frame, captain.Portrait, DetailsPortraitSize);
 
         RectTransform info = UIKit.Group(top, "Info");
         UIKit.Layout<VerticalLayoutGroup>(info, 0, 4);
@@ -747,7 +747,7 @@ public class RunScreens : MonoBehaviour
 
     // One row per item carried. With a captain, each row says how they feel about the item and has
     // a Give button; without one, the rows are just a list.
-    void BuildGiftRows(Transform list, RunState run, CaptainData captain, Action<GiftData> give)
+    void BuildGiftRows(Transform list, RunState run, Captain captain, Action<GiftData> give)
     {
         UIKit.Clear(list);
         bool any = false;
@@ -785,14 +785,14 @@ public class RunScreens : MonoBehaviour
     }
 
     // Portrait, then name, level and XP, element (with its status), role and bond.
-    void DetailsHeader(Transform window, RunState run, CaptainData captain, int level, List<Action> detailRefreshers)
+    void DetailsHeader(Transform window, RunState run, Captain captain, int level, List<Action> detailRefreshers)
     {
         RectTransform top = UIKit.Group(window, "Top");
         UIKit.Layout<HorizontalLayoutGroup>(top, 0, 12).childAlignment = TextAnchor.UpperLeft;
         UIKit.Size(top, flexibleWidth: 1f);
         RectTransform frame = UIKit.Box(top, "Portrait", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
-        UIKit.Icon(frame, captain.portrait, DetailsPortraitSize);
+        UIKit.Icon(frame, captain.Portrait, DetailsPortraitSize);
 
         RectTransform info = UIKit.Group(top, "Info");
         UIKit.Layout<VerticalLayoutGroup>(info, 0, 3);
@@ -825,7 +825,7 @@ public class RunScreens : MonoBehaviour
             UIKit.Label(elementRow, $"inflicts {element.statusName}", 12, color: UIKit.MutedTextColor);
         UIKit.Size(UIKit.Group(elementRow, "Gap"), 6f);
         UIKit.Icon(elementRow, match.Data.RoleIcon(captain.role), IconSize);
-        UIKit.Label(elementRow, captain.role.ToString(), 12);
+        UIKit.Label(elementRow, captain.ClassName, 12);
 
         UIKit.LiveBar(info, () => (ApprovalStore.ApprovalOf(captain) - BondMath.MinApproval) / (BondMath.MaxApproval - BondMath.MinApproval),
             () => $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {ApprovalStore.ApprovalOf(captain):0}", BondBarColor, drawOnce);
@@ -834,7 +834,7 @@ public class RunScreens : MonoBehaviour
     }
 
     // What the next bond rank takes and gives, e.g. "Next: B at 65 (opens Slot 4)".
-    static string NextRankLine(CaptainData captain)
+    static string NextRankLine(Captain captain)
     {
         int rank = ApprovalStore.RankOf(captain);
         if (rank >= BondMath.MaxRank) return "Bond is at its highest rank";
@@ -858,7 +858,7 @@ public class RunScreens : MonoBehaviour
     // The soldier class for each slot, saved with the run and used when the captain's tower is
     // placed. Slots the captain's bond hasn't opened yet say when they open. Class names are
     // green or red when the captain likes or dislikes that class.
-    void BuildLoadout(Transform window, RunState run, CaptainData captain, Action onChanged = null)
+    void BuildLoadout(Transform window, RunState run, Captain captain, Action onChanged = null)
     {
         UIKit.Size(UIKit.Header(window, "Soldiers"), flexibleWidth: 1f);
         // The class names are coloured by taste; spell it out so colour isn't the only cue.
@@ -919,7 +919,7 @@ public class RunScreens : MonoBehaviour
         return BondMath.MaxRank;
     }
 
-    static Color TasteColor(CaptainData captain, SoldierClassData soldierClass)
+    static Color TasteColor(Captain captain, SoldierClassData soldierClass)
     {
         if (!Relationships.TryGetClassTag(soldierClass, out CaptainTag tag)) return UIKit.TextColor;
         if (Array.IndexOf(captain.likes, tag) >= 0) return UIKit.GoodColor;
@@ -1286,9 +1286,9 @@ public class RunScreens : MonoBehaviour
     }
 
     // "#2/4": where the captain stands among the party still with the run on a stat, 1 being highest.
-    static string PartyRank(RunState run, CaptainData captain, Func<CaptainData, float> stat)
+    static string PartyRank(RunState run, Captain captain, Func<Captain, float> stat)
     {
-        List<CaptainData> present = run.Party.FindAll(c => c != null && !run.HasDeparted(c));
+        List<Captain> present = run.Party.FindAll(c => c != null && !run.HasDeparted(c));
         if (!present.Contains(captain) || present.Count < 2) return null;
         float mine = stat(captain);
         int rank = 1 + present.FindAll(c => stat(c) > mine + 0.001f).Count;
@@ -1316,7 +1316,7 @@ public class RunScreens : MonoBehaviour
     }
 
     // One table row per captain, with any walkout noted after the name.
-    void CaptainResultRow(Transform panel, RunState run, CaptainData captain, bool shaded)
+    void CaptainResultRow(Transform panel, RunState run, Captain captain, bool shaded)
     {
         Tower tower = Tower.All.Find(t => t.Captain == captain);
         float change = relationships != null ? relationships.ApprovalChangeThisMatch(captain) : 0f;

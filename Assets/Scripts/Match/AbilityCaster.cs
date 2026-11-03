@@ -20,7 +20,7 @@ public static class AbilityCaster
     // it too). Returns the total health restored.
     public static float CastSupport(Tower caster, Sprite discSprite)
     {
-        AbilityData ability = caster.Captain.ability;
+        AbilityData ability = caster.Captain.Ability;
         if (ability.HasBuff) Tower.AddWaveBoost(ability.buffEffect, ability.buffAmount);
 
         float healed = 0f;
@@ -37,7 +37,7 @@ public static class AbilityCaster
 
     public static void Cast(Tower tower, Enemy target, Sprite squareSprite, Sprite discSprite)
     {
-        AbilityData ability = tower.Captain.ability;
+        AbilityData ability = tower.Captain.Ability;
         float damage = tower.SoldierPower * ability.damageMultiplier;
         Vector3 origin = tower.transform.position;
         Vector3 at = target.transform.position;
@@ -88,10 +88,10 @@ public static class AbilityCaster
     // Flash first, so an enemy this hit kills is still flashing and stays on screen for the hit-stop.
     static void Hit(Tower tower, Enemy enemy, float damage)
     {
-        enemy.FlashHit(tower.Captain.ability.hitStopSeconds);
+        enemy.FlashHit(tower.Captain.Ability.hitStopSeconds);
         enemy.TakeDamage(damage, tower, damageType: tower.Captain.damageType);
         if (!enemy.IsTargetable) return;
-        enemy.Knockback(tower.Captain.ability.knockbackDistance);
+        enemy.Knockback(tower.Captain.Ability.knockbackDistance);
         TryApplyStatus(tower, enemy);
     }
 
@@ -99,7 +99,7 @@ public static class AbilityCaster
     static void TryApplyStatus(Tower tower, Enemy enemy)
     {
         // The flat chance rises with bond rank (GDD).
-        float chance = tower.Captain.ability.statusChance + BondMath.StatusChanceBonus(tower.BondRank);
+        float chance = tower.Captain.Ability.statusChance + BondMath.StatusChanceBonus(tower.BondRank);
         if (Random.value < chance)
             enemy.ApplyStatus(StatusRules.ForElement(tower.Captain.element), tower.SoldierPower, tower);
     }

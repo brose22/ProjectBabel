@@ -158,11 +158,11 @@ public class AbilityEditorWindow : DataEditorWindow<AbilityData>
         if (a.shape == AbilityData.Shape.Zone && a.zoneDuration <= 0f) yield return "Zone duration is 0.";
     }
 
-    // The captains that fire this ability, as buttons that open them.
+    // The captain templates that can roll this ability, as buttons that open them.
     void DrawUsers()
     {
         captains = DataToolsGUI.LoadAll(captains);
         DataToolsGUI.Section("Used by");
-        DataToolsGUI.AssetButtons("Captains", captains.Where(c => c != null && c.ability == Selected), CaptainEditorWindow.OpenFor, "Nobody");
+        DataToolsGUI.AssetButtons("Templates", captains.Where(c => c != null && c.abilities.Contains(Selected)), CaptainEditorWindow.OpenFor, "Nobody");
     }
 }

@@ -24,10 +24,10 @@ public class PlacementGhosts
         captainGhost = MakeGhost("Captain Ghost");
     }
 
-    public void Show(GridMap grid, Vector2Int cell, CaptainData captain, IReadOnlyList<Vector2Int> homes, IReadOnlyList<SoldierClassData> classes)
+    public void Show(GridMap grid, Vector2Int cell, Captain captain, IReadOnlyList<Vector2Int> homes, IReadOnlyList<SoldierClassData> classes)
     {
-        Color captainColor = captain.sprite == null || captain.tintSprite ? captain.color : Color.white;
-        Draw(captainGhost, captain.sprite, captainColor, grid.CellCenter(cell), CaptainSquareScale);
+        Color captainColor = captain.Sprite == null || captain.TintSprite ? captain.Color : Color.white;
+        Draw(captainGhost, captain.Sprite, captainColor, grid.CellCenter(cell), CaptainSquareScale);
 
         while (soldierGhosts.Count < homes.Count) soldierGhosts.Add(MakeGhost("Soldier Ghost"));
         for (int i = 0; i < soldierGhosts.Count; i++)

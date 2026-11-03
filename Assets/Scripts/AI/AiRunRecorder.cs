@@ -107,7 +107,7 @@ public class AiRunRecorder
         Run.requestAnswers[key] = Run.requestAnswers.TryGetValue(key, out int count) ? count + 1 : 1;
     }
 
-    public void BeginRun(int index, int seed, IEnumerable<CaptainData> party, float realNow, float gameNow)
+    public void BeginRun(int index, int seed, IEnumerable<Captain> party, float realNow, float gameNow)
     {
         Run = new AiRunRecord { index = index, seed = seed };
         damageByCaptain.Clear();
@@ -115,7 +115,7 @@ public class AiRunRecorder
         approvalStartByCaptain.Clear();
         approvalGainedByCaptain.Clear();
         approvalLostByCaptain.Clear();
-        foreach (CaptainData captain in party)
+        foreach (Captain captain in party)
         {
             Run.startParty.Add(captain.displayName);
             approvalStartByCaptain[captain.displayName] = ApprovalStore.ApprovalOf(captain);
@@ -225,7 +225,7 @@ public class AiRunRecorder
             Run.finalHealth = run.Health;
             Run.maxHealth = run.MaxHealth;
             Run.finalGold = run.Gold;
-            foreach (CaptainData captain in run.Party)
+            foreach (Captain captain in run.Party)
             {
                 int kills = 0;
                 foreach (AiMatchRow match in Run.matches)
@@ -236,7 +236,7 @@ public class AiRunRecorder
                 {
                     name = captain.displayName,
                     element = captain.element.ToString(),
-                    role = captain.role.ToString(),
+                    role = captain.ClassName,
                     kills = kills,
                     damage = damageByCaptain.TryGetValue(captain.displayName, out float damage) ? damage : 0f,
                     abilities = abilitiesByCaptain.TryGetValue(captain.displayName, out int abilities) ? abilities : 0,

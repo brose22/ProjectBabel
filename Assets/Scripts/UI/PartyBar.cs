@@ -26,7 +26,7 @@ public class PartyBar
     readonly RectTransform bar;
     readonly List<Action> refreshers = new();
     string key;
-    CaptainData highlighted;
+    Captain highlighted;
     float tipUntil;
 
     public PartyBar(Transform parent, MatchManager match, PlacementController placement)
@@ -48,7 +48,7 @@ public class PartyBar
             key = newKey;
             refreshers.Clear();
             UIKit.Clear(bar);
-            foreach (CaptainData captain in run.Party)
+            foreach (Captain captain in run.Party)
                 if (!run.HasDeparted(captain)) Card(captain, TowerOf(captain));
             // The shoulder buttons step along the bar, so they sit at its ends.
             UIKit.PadBadge(bar, PadGlyph.LeftShoulder, () => GameInput.PadInMatch, new Vector2(0f, 0.5f), Vector2.left * BadgeGap);
@@ -70,7 +70,7 @@ public class PartyBar
     // The first step starts from the captain up next.
     void StepHighlight(RunState run, int step)
     {
-        List<CaptainData> present = run.Party.FindAll(captain => captain != null && !run.HasDeparted(captain));
+        List<Captain> present = run.Party.FindAll(captain => captain != null && !run.HasDeparted(captain));
         if (present.Count == 0) return;
         int index = present.IndexOf(highlighted != null ? highlighted : match.NextCaptain);
         highlighted = present[(Mathf.Max(index, 0) + step + present.Count) % present.Count];
@@ -81,20 +81,20 @@ public class PartyBar
         else match.ChooseNextCaptain(highlighted);
     }
 
-    static Tower TowerOf(CaptainData captain) => Tower.All.Find(t => t.Captain == captain);
+    static Tower TowerOf(Captain captain) => Tower.All.Find(t => t.Captain == captain);
 
     // Who is with the run and which of them are on the field.
     static string Key(RunState run)
     {
         var parts = new List<string>();
-        foreach (CaptainData captain in run.Party)
+        foreach (Captain captain in run.Party)
             parts.Add($"{captain.displayName}:{run.HasDeparted(captain)}:{TowerOf(captain)?.GetHashCode()}");
         return string.Join("|", parts);
     }
 
     // Portrait, name, then the special's meter once placed or "Up next" until then. The gold ring
     // marks the card a click acts on now: the next captain to place, or a special ready to fire.
-    void Card(CaptainData captain, Tower tower)
+    void Card(Captain captain, Tower tower)
     {
         RectTransform card = UIKit.Box(bar, captain.displayName, CardColor, blocksClicks: false);
         UIKit.Size(card, CardWidth, Height);
@@ -104,7 +104,7 @@ public class PartyBar
 
         RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
-        UIKit.Icon(frame, captain.portrait, PortraitSize);
+        UIKit.Icon(frame, captain.Portrait, PortraitSize);
 
         RectTransform info = UIKit.Group(card, "Info");
         UIKit.Layout<VerticalLayoutGroup>(info, 0, 2);
@@ -133,7 +133,7 @@ public class PartyBar
             actionable = () => false;
         }
 
-        RectTransform tip = captain.ability != null ? UIKit.HoverTip(card, captain.ability.displayName, captain.ability.description, TipWidth) : null;
+        RectTransform tip = captain.Ability != null ? UIKit.HoverTip(card, captain.Ability.displayName, captain.Ability.description, TipWidth) : null;
 
         Image ring = UIKit.Outline(card, UIKit.AccentColor);
         ring.rectTransform.offsetMin = new Vector2(2f, 2f);

@@ -1,219 +1,131 @@
-using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-// Edits captains: a sprite preview beside the identity fields, stats, likes and dislikes as tag
-// pickers, and the captain's ability editable in place.
+// Edits captain templates: the role, the pools a captain is rolled from, the stat ranges, and a
+// few sample rolls to see what the template makes.
 public class CaptainEditorWindow : DataEditorWindow<CaptainData>
 {
-    const string Title = "Captains";
+    const string Title = "Captain Templates";
+    const int SampleCount = 4;
 
     protected override string WindowTitle => Title;
     const float PreviewSize = 96f;
 
-    [SerializeField] bool abilityExpanded = true;
-    SerializedObject abilityObject;
-    List<CaptainData> captains;
+    [SerializeField] int sampleSeed = 1;
 
-    [MenuItem("Babel/Data/Captains", priority = 21)]
+    [MenuItem("Babel/Data/Captain Templates", priority = 21)]
     static void ShowWindow() => Open<CaptainEditorWindow>(Title);
 
-    public static void OpenFor(CaptainData captain) => Open<CaptainEditorWindow>(Title, captain);
+    public static void OpenFor(CaptainData template) => Open<CaptainEditorWindow>(Title, template);
 
     protected override string DefaultFolder => "Assets/Data/Captains";
 
     protected override string[] TableColumns => new[]
     {
-        nameof(CaptainData.element), nameof(CaptainData.role), nameof(CaptainData.color), nameof(CaptainData.power),
-        nameof(CaptainData.range), nameof(CaptainData.speed), nameof(CaptainData.health), nameof(CaptainData.defense),
+        nameof(CaptainData.role), nameof(CaptainData.specialClassChance), nameof(CaptainData.power), nameof(CaptainData.speed),
+        nameof(CaptainData.health), nameof(CaptainData.defense), nameof(CaptainData.defensePerLevel), nameof(CaptainData.refusalTemper),
         nameof(CaptainData.resourceCapacity), nameof(CaptainData.resourceRegen), nameof(CaptainData.specialChargeRate),
-        nameof(CaptainData.level), nameof(CaptainData.refusalTemper), nameof(CaptainData.ability),
     };
 
-    protected override string SearchText(CaptainData captain) =>
-        $"{captain.element} {captain.role} {captain.abilityName} {(captain.ability != null ? captain.ability.name : "")}";
+    protected override string SearchText(CaptainData template) =>
+        $"{template.role} {string.Join(" ", template.names)} {string.Join(" ", template.abilities.Where(a => a != null).Select(a => a.name))}";
 
-    protected override void OnAssetsChanged() => captains = null;
+    // The tower sprite, tinted the way a Water captain's would be.
+    protected override void DrawIcon(Rect rect, CaptainData template) =>
+        DataToolsGUI.DrawSprite(rect, template.sprite, Tint(template, Element.Water));
 
-    protected override void OnCreated(CaptainData captain)
-    {
-        captain.likes = new CaptainTag[0];
-        captain.dislikes = new CaptainTag[0];
-    }
-
-    // Sprites show untinted inside a border in the captain colour; art-less captains are a square in it.
-    protected override void DrawIcon(Rect rect, CaptainData captain)
-    {
-        DataToolsGUI.Frame(rect, captain.color, 1f);
-        DataToolsGUI.DrawSprite(new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f), captain.sprite, Fill(captain));
-    }
-
-    static Color Fill(CaptainData captain) => captain.sprite == null ? captain.color : Color.white;
+    static Color Tint(CaptainData template, Element element) =>
+        template.sprite == null || template.tintSprite ? Captain.TowerColor(element) : Color.white;
 
     protected override void DrawEditor(SerializedObject so)
     {
-        var captain = (CaptainData)so.targetObject;
+        var template = (CaptainData)so.targetObject;
         using (new EditorGUILayout.HorizontalScope())
         {
             using (new EditorGUILayout.VerticalScope(GUILayout.Width(PreviewSize)))
             {
-                DataToolsGUI.SpritePreview(captain.sprite, Fill(captain), PreviewSize, border: captain.color);
-                DataToolsGUI.ChipLayout(captain.element.ToString(), DataToolsGUI.ElementColor(captain.element), PreviewSize);
-                DataToolsGUI.SpritePreview(captain.portrait, Color.white, PreviewSize, border: captain.color);
-                GUILayout.Label("portrait", EditorStyles.centeredGreyMiniLabel, GUILayout.Width(PreviewSize));
+                DataToolsGUI.SpritePreview(template.sprite, Tint(template, Element.Water), PreviewSize);
+                DataToolsGUI.ChipLayout(template.role.ToString(), Color.gray, PreviewSize);
             }
             using (new EditorGUILayout.VerticalScope())
             {
-                DataToolsGUI.Field(so, nameof(CaptainData.displayName));
-                DataToolsGUI.Field(so, nameof(CaptainData.element));
                 DataToolsGUI.Field(so, nameof(CaptainData.role));
-                DataToolsGUI.Field(so, nameof(CaptainData.color));
+                DataToolsGUI.Field(so, nameof(CaptainData.specialClassChance));
+                DataToolsGUI.Note($"Usually {CaptainRoller.UsualDamageType(template.role)}; " +
+                    $"{template.specialClassChance:0%} of captains roll one of the other damage types.");
                 DataToolsGUI.Field(so, nameof(CaptainData.sprite));
                 DataToolsGUI.Field(so, nameof(CaptainData.tintSprite));
-                DataToolsGUI.Field(so, nameof(CaptainData.portrait));
             }
         }
 
+        DataToolsGUI.Section("Stat Ranges");
         DataToolsGUI.Field(so, nameof(CaptainData.power));
         DataToolsGUI.Field(so, nameof(CaptainData.range), "Range Bonus");
         DataToolsGUI.Field(so, nameof(CaptainData.speed));
         DataToolsGUI.Field(so, nameof(CaptainData.health));
         DataToolsGUI.Field(so, nameof(CaptainData.defense));
         DataToolsGUI.Field(so, nameof(CaptainData.defensePerLevel));
+        DataToolsGUI.Note($"{template.power.min * template.speed.min:0.#} to {template.power.max * template.speed.max:0.#} damage per second per soldier, before class and level scaling");
         DataToolsGUI.Field(so, nameof(CaptainData.resourceCapacity));
         DataToolsGUI.Field(so, nameof(CaptainData.resourceRegen));
         DataToolsGUI.Field(so, nameof(CaptainData.specialChargeRate));
-        DataToolsGUI.Field(so, nameof(CaptainData.level));
-        DataToolsGUI.Note($"{captain.power * captain.speed:0.#} damage per second per soldier, before class and level scaling");
 
-        DrawAbility(so, captain);
-        DrawRelationship(so);
-    }
-
-    void DrawAbility(SerializedObject so, CaptainData captain)
-    {
-        DataToolsGUI.Section("Special Ability");
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            DataToolsGUI.Field(so, nameof(CaptainData.ability));
-            if (captain.ability == null)
-            {
-                if (GUILayout.Button("New", GUILayout.Width(50f))) CreateAbility(so, captain);
-            }
-            else if (GUILayout.Button("Open", GUILayout.Width(50f)))
-                AbilityEditorWindow.OpenFor(captain.ability);
-        }
-
-        // The captain carries its own copy of the ability's name and description for the UI.
-        DataToolsGUI.Field(so, nameof(CaptainData.abilityName));
-        DataToolsGUI.Field(so, nameof(CaptainData.abilityDescription));
-        AbilityData ability = captain.ability;
-        if (ability != null && (captain.abilityName != ability.displayName || captain.abilityDescription != ability.description))
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                EditorGUILayout.HelpBox("The name or description differs from the ability's own.", MessageType.Info);
-                if (GUILayout.Button("Copy from\nability", GUILayout.Width(80f), GUILayout.Height(38f)))
-                {
-                    so.FindProperty(nameof(CaptainData.abilityName)).stringValue = ability.displayName;
-                    so.FindProperty(nameof(CaptainData.abilityDescription)).stringValue = ability.description;
-                }
-            }
-        }
-        string mismatch = RoleMismatch(captain);
+        DataToolsGUI.Section("Pools");
+        DataToolsGUI.Field(so, nameof(CaptainData.names));
+        DataToolsGUI.Field(so, nameof(CaptainData.portraits));
+        DataToolsGUI.Field(so, nameof(CaptainData.abilities));
+        string mismatch = RoleMismatch(template);
         if (mismatch != null) EditorGUILayout.HelpBox(mismatch, MessageType.Warning);
-        if (ability == null) return;
+        DataToolsGUI.AssetButtons("Open", template.abilities.Where(a => a != null), AbilityEditorWindow.OpenFor);
 
-        if (abilityObject == null || abilityObject.targetObject != ability)
-        {
-            abilityObject?.Dispose();
-            abilityObject = new SerializedObject(ability);
-        }
-        abilityExpanded = EditorGUILayout.Foldout(abilityExpanded, $"{ability.name} settings", true);
-        if (!abilityExpanded) return;
-        captains = DataToolsGUI.LoadAll(captains);
-        int users = captains.Count(c => c != null && c.ability == ability);
-        if (users > 1)
-            EditorGUILayout.HelpBox($"{users} captains share this ability; changes here affect all of them.", MessageType.Info);
-        using (new EditorGUI.IndentLevelScope())
-        {
-            abilityObject.Update();
-            DataToolsGUI.Field(abilityObject, nameof(AbilityData.displayName));
-            DataToolsGUI.Field(abilityObject, nameof(AbilityData.description));
-            DataToolsGUI.Field(abilityObject, nameof(AbilityData.icon));
-            AbilityEditorWindow.DrawFields(abilityObject);
-            abilityObject.ApplyModifiedProperties();
-        }
+        DrawRelationship(so);
+        DrawSamples(template);
     }
 
-    // A support role whose special doesn't support, or the other way round.
-    static string RoleMismatch(CaptainData captain)
+    // A Healer that can roll a special that doesn't heal, or a template with no special at all.
+    static string RoleMismatch(CaptainData template)
     {
-        AbilityData ability = captain.ability;
-        if (ability == null) return "Without an ability the tower has no special.";
-        bool support = ability.shape == AbilityData.Shape.Support;
-        return captain.role switch
-        {
-            CaptainRole.Attacker when support => "An Attacker with a Support-shape special.",
-            CaptainRole.Healer when !support || ability.healFraction <= 0f => "A Healer whose special doesn't heal.",
-            CaptainRole.Buffer when !support || !ability.HasBuff => "A Buffer whose special gives no boost.",
-            _ => null,
-        };
-    }
-
-    void CreateAbility(SerializedObject so, CaptainData captain)
-    {
-        string folder = AssetDatabase.IsValidFolder("Assets/Data/Abilities") ? "Assets/Data/Abilities" : "Assets";
-        string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{captain.name}Special.asset");
-        var ability = CreateInstance<AbilityData>();
-        ability.displayName = string.IsNullOrEmpty(captain.abilityName) ? $"{captain.displayName}'s Special" : captain.abilityName;
-        ability.description = captain.abilityDescription;
-        if (captain.role != CaptainRole.Attacker)
-        {
-            ability.shape = AbilityData.Shape.Support;
-            ability.statusChance = 0f;
-        }
-        AssetDatabase.CreateAsset(ability, path);
-        AssetDatabase.SaveAssets();
-        so.FindProperty(nameof(CaptainData.ability)).objectReferenceValue = ability;
-        so.ApplyModifiedProperties();
-        // The embedded ability editor appears, so end this pass before the layout disagrees.
-        GUIUtility.ExitGUI();
+        if (template.abilities.All(a => a == null)) return "Without an ability the tower has no special.";
+        if (template.role == CaptainRole.Healer && template.abilities.Any(a => a != null && a.healFraction <= 0f))
+            return "A Healer can roll a special that doesn't heal.";
+        return null;
     }
 
     void DrawRelationship(SerializedObject so)
     {
+        DataToolsGUI.Section("Relationship");
         DataToolsGUI.Field(so, nameof(CaptainData.refusalTemper));
-        SerializedProperty likes = so.FindProperty(nameof(CaptainData.likes));
-        SerializedProperty dislikes = so.FindProperty(nameof(CaptainData.dislikes));
-        // A tag can't be both liked and disliked, so each picker greys out the other's tags.
-        EditorGUILayout.LabelField("Likes", EditorStyles.miniBoldLabel);
-        DataToolsGUI.EnumSetPicker(likes, Tags(dislikes));
-        EditorGUILayout.LabelField("Dislikes", EditorStyles.miniBoldLabel);
-        DataToolsGUI.EnumSetPicker(dislikes, Tags(likes));
+        EditorGUILayout.LabelField("Like pool (3 are rolled)", EditorStyles.miniBoldLabel);
+        DataToolsGUI.EnumSetPicker<CaptainTag>(so.FindProperty(nameof(CaptainData.likePool)));
+        EditorGUILayout.LabelField("Dislike pool (3 are rolled, never one already liked)", EditorStyles.miniBoldLabel);
+        DataToolsGUI.EnumSetPicker<CaptainTag>(so.FindProperty(nameof(CaptainData.dislikePool)));
 
         DataToolsGUI.Section("Gifts");
-        DataToolsGUI.Field(so, nameof(CaptainData.likedGifts));
-        DataToolsGUI.Field(so, nameof(CaptainData.dislikedGifts));
-        DataToolsGUI.Field(so, nameof(CaptainData.giftGreeting));
-        DataToolsGUI.Field(so, nameof(CaptainData.giftLikedLine));
-        DataToolsGUI.Field(so, nameof(CaptainData.giftNeutralLine));
-        DataToolsGUI.Field(so, nameof(CaptainData.giftDislikedLine));
+        DataToolsGUI.Field(so, nameof(CaptainData.likedGiftPool));
+        DataToolsGUI.Field(so, nameof(CaptainData.dislikedGiftPool));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftGreetings));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftLikedLines));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftNeutralLines));
+        DataToolsGUI.Field(so, nameof(CaptainData.giftDislikedLines));
     }
 
-    static HashSet<CaptainTag> Tags(SerializedProperty array)
+    // A few captains rolled from the template as it stands, to check the pools and ranges.
+    void DrawSamples(CaptainData template)
     {
-        var tags = new HashSet<CaptainTag>();
-        for (int i = 0; i < array.arraySize; i++)
-            tags.Add((CaptainTag)array.GetArrayElementAtIndex(i).intValue);
-        return tags;
-    }
-
-    protected override void OnDisable()
-    {
-        base.OnDisable();
-        abilityObject?.Dispose();
-        abilityObject = null;
+        DataToolsGUI.Section("Sample Rolls");
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            sampleSeed = EditorGUILayout.IntField("Seed", sampleSeed);
+            if (GUILayout.Button("Reroll", GUILayout.Width(70f))) sampleSeed = Random.Range(1, 100000);
+        }
+        for (int i = 0; i < SampleCount; i++)
+        {
+            Captain captain = template.Roll(sampleSeed * 31 + i);
+            string ability = captain.Ability != null ? captain.Ability.displayName : "no special";
+            DataToolsGUI.Note($"{captain.displayName}, {captain.element} {captain.ClassName}: power {captain.power:0.##}, speed {captain.speed:0.##}, " +
+                $"health {captain.health}, defense {captain.defense:0.##} (+{captain.defensePerLevel:0.##}/level), {ability}. " +
+                $"Likes {string.Join(", ", captain.likes)}; dislikes {string.Join(", ", captain.dislikes)}.");
+        }
     }
 }

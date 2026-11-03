@@ -18,7 +18,8 @@ public class AiOptions
     public int captains;
     // The bond rank (0 = D to 4 = S) every captain in the party starts the run at.
     public int bondRank;
-    public List<CaptainData> party = new();
+    // The roles of a single match's party, rolled from the templates when the run starts.
+    public List<CaptainRole> partyRoles = new();
 
     public bool IsSingleMatch => layout >= 0;
 }
@@ -88,10 +89,8 @@ public class AiPlayer : MonoBehaviour
         string folder = Path.Combine(Application.persistentDataPath, "ai");
         Directory.CreateDirectory(folder);
         RunSave.PathOverride = Path.Combine(folder, "run.json");
-        ApprovalStore.PathOverride = Path.Combine(folder, "bonds.json");
         MatchStats.WriteCsvEnabled = false;
         RunSave.Delete();
-        ApprovalStore.ResetAll();
         RunState.Clear();
 
         recorder.Subscribe();
@@ -132,7 +131,6 @@ public class AiPlayer : MonoBehaviour
     static void EndIsolation()
     {
         RunSave.PathOverride = null;
-        ApprovalStore.PathOverride = null;
         MatchStats.WriteCsvEnabled = true;
     }
 
@@ -236,11 +234,12 @@ public class AiPlayer : MonoBehaviour
         if (options.IsSingleMatch)
         {
             string map = match.Data.layouts[options.layout].displayName;
-            PrepareParty(options.party);
-            recorder.BeginRun(runIndex, runSeed, options.party, Time.realtimeSinceStartup, gameSeconds);
+            List<Captain> rolled = RollParty(options.partyRoles);
+            PrepareParty(rolled);
+            recorder.BeginRun(runIndex, runSeed, rolled, Time.realtimeSinceStartup, gameSeconds);
             recorder.Run.note = $"One match on {map} at layer {options.layer + 1} of {match.Data.matchesPerRun - 1}, as picked on the AI Run screen.";
-            Decide("Setup", $"chosen party {string.Join(", ", options.party.Select(c => c.displayName))} on {map}");
-            match.BeginSingleMatch(options.party, options.layout, options.layer);
+            Decide("Setup", $"rolled party {string.Join(", ", rolled.Select(c => $"{c.displayName} ({c.ClassName})"))} on {map}");
+            match.BeginSingleMatch(rolled, options.layout, options.layer);
             pendingLoad = true;
             return;
         }
@@ -251,7 +250,7 @@ public class AiPlayer : MonoBehaviour
             RunState.Current.SetupOffer.Clear();
             match.SetupOfferMinimum = partySize;
         }
-        List<CaptainData> roster = match.SetupOffer.ToList();
+        List<Captain> roster = match.SetupOffer.ToList();
         List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), partySize);
         var party = picks.ConvertAll(i => roster[i]);
         PrepareParty(party);
@@ -262,9 +261,9 @@ public class AiPlayer : MonoBehaviour
 
     // Sets the party's starting bond rank and has each captain field the soldier classes they like,
     // spread over the slots; a captain who likes none keeps the default mix.
-    void PrepareParty(IEnumerable<CaptainData> party)
+    void PrepareParty(IEnumerable<Captain> party)
     {
-        foreach (CaptainData captain in party)
+        foreach (Captain captain in party)
         {
             ApprovalStore.SetRank(captain, options.bondRank);
             var liked = new List<SoldierClassData>();
@@ -282,10 +281,10 @@ public class AiPlayer : MonoBehaviour
         RunState run = RunState.Current;
         if (run.RecruitOffer.Count > 0)
         {
-            List<CaptainData> offer = run.RecruitOffer.ToList();
+            List<Captain> offer = run.RecruitOffer.ToList();
             var party = run.Party.FindAll(c => !run.HasDeparted(c)).ConvertAll(Info);
             int pick = AiPartyPicker.PickRecruit(offer.ConvertAll(Info), party);
-            CaptainData recruit = pick >= 0 ? offer[pick] : null;
+            Captain recruit = pick >= 0 ? offer[pick] : null;
             Decide("Recruit", recruit != null ? $"took {recruit.displayName} to fill a gap in roles and elements" : "nobody on offer improved the party");
             match.Recruit(recruit);
             return;
@@ -379,7 +378,7 @@ public class AiPlayer : MonoBehaviour
         foreach (Tower tower in Tower.All.ToArray())
         {
             if (!tower.CanUseAbility || !ShouldFire(tower, out string reason)) continue;
-            if (tower.TryUseAbility()) Decide("Special", $"{tower.Captain.displayName} fired {tower.Captain.ability.displayName}: {reason}");
+            if (tower.TryUseAbility()) Decide("Special", $"{tower.Captain.displayName} fired {tower.Captain.Ability.displayName}: {reason}");
         }
     }
 
@@ -417,18 +416,30 @@ public class AiPlayer : MonoBehaviour
         }
         runIndex++;
         runSeed = SeedFor(runIndex);
-        // Bonds carry between a player's runs, but each AI run starts level so runs compare fairly.
-        ApprovalStore.ResetAll();
         match.RestartRun();
         pendingLoad = true;
     }
 
     // ---------- Setup helpers ----------
 
-    AiCaptainInfo Info(CaptainData captain) => new()
+    // A captain rolled from the template of each role, seeded by the run so a batch can be replayed.
+    List<Captain> RollParty(IEnumerable<CaptainRole> roles)
+    {
+        var party = new List<Captain>();
+        int i = 0;
+        foreach (CaptainRole role in roles)
+        {
+            CaptainData template = match.Data.captainTemplates.Find(t => t != null && t.role == role);
+            if (template != null) party.Add(template.Roll(runSeed + 104729 * ++i));
+        }
+        return party;
+    }
+
+    AiCaptainInfo Info(Captain captain) => new()
     {
         name = captain.displayName,
-        role = (AiRole)(int)captain.role,
+        role = captain.role,
+        support = captain.IsSupport,
         element = (int)captain.element,
         strength = captain.power * captain.speed,
         range = match.RangeFor(captain),
@@ -448,7 +459,7 @@ public class AiPlayer : MonoBehaviour
         return covered;
     }
 
-    static bool IsSupport(CaptainData captain) => captain.role != CaptainRole.Attacker;
+    static bool IsSupport(Captain captain) => captain.IsSupport;
 
     void PlaceTowers()
     {
@@ -458,7 +469,7 @@ public class AiPlayer : MonoBehaviour
         {
             var active = run.Party.FindAll(c => !run.HasDeparted(c));
             List<int> order = AiPartyPicker.FieldOrder(active.ConvertAll(Info));
-            CaptainData captain = order.Select(i => active[i]).FirstOrDefault(c => !Tower.All.Exists(t => t.Captain == c));
+            Captain captain = order.Select(i => active[i]).FirstOrDefault(c => !Tower.All.Exists(t => t.Captain == c));
             if (captain == null) return;
             match.ChooseNextCaptain(captain);
 
@@ -522,7 +533,7 @@ public class AiPlayer : MonoBehaviour
     bool ShouldFire(Tower tower, out string reason)
     {
         reason = "";
-        AbilityData ability = tower.Captain.ability;
+        AbilityData ability = tower.Captain.Ability;
         float weakest = 1f;
         foreach (Tower t in Tower.All)
             if (!t.IsDisabled) weakest = Mathf.Min(weakest, t.Health / t.MaxHealth);

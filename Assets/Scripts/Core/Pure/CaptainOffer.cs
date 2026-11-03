@@ -1,27 +1,30 @@
 using System;
 using System.Collections.Generic;
 
-// Which roster captains a new run offers to pick its party from.
+// Which captains an offer rolls: a template for each one and the seed it's rolled with.
 public static class CaptainOffer
 {
-    // The offer size: the setting, kept between the party size and the roster size.
-    public static int Size(int setting, int partySize, int rosterCount) =>
-        Math.Min(rosterCount, Math.Max(partySize, setting));
+    // The offer size: the setting, but never fewer than a party.
+    public static int Size(int setting, int partySize) => Math.Max(partySize, setting);
 
-    // The roster indices of a random offer of the given size, in roster order. The same seed
+    // The template index and roll seed of each captain in an offer of the given size. Every
+    // template is used once before any repeats, and the offer is in template order. The same seed
     // gives the same offer.
-    public static List<int> Draw(int rosterCount, int size, int seed)
+    public static List<(int template, int seed)> Draw(int templateCount, int size, int seed)
     {
-        var indices = new List<int>(rosterCount);
-        for (int i = 0; i < rosterCount; i++) indices.Add(i);
+        var offer = new List<(int template, int seed)>();
+        if (templateCount <= 0) return offer;
         var random = new Random(seed);
-        for (int i = 0; i < Math.Min(size, rosterCount); i++)
+        var round = new List<int>();
+        for (int i = 0; i < size; i++)
         {
-            int swap = random.Next(i, rosterCount);
-            (indices[i], indices[swap]) = (indices[swap], indices[i]);
+            if (round.Count == 0)
+                for (int t = 0; t < templateCount; t++) round.Add(t);
+            int pick = random.Next(round.Count);
+            offer.Add((round[pick], random.Next()));
+            round.RemoveAt(pick);
         }
-        List<int> offer = indices.GetRange(0, Math.Max(0, Math.Min(size, rosterCount)));
-        offer.Sort();
+        offer.Sort((a, b) => a.template.CompareTo(b.template));
         return offer;
     }
 }

@@ -59,7 +59,7 @@ public class CaptainDebugPanel
 
     void BuildTowerPanel(Tower tower)
     {
-        CaptainData captain = tower.Captain;
+        Captain captain = tower.Captain;
         Transform panel = towerPanel;
 
         parts.Title(panel, tower);

@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 // Edits soldier classes: sprite and portrait previews, only the style fields the damage type uses,
-// hit damage under a chosen captain, and which captains like or dislike the class.
+// hit damage under a chosen captain template, and which templates can like or dislike the class.
 public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
 {
     const string Title = "Soldiers";
@@ -94,18 +94,18 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
         DrawRelationships(soldierClass);
     }
 
-    // Damage per hit is the captain's power times the class multiplier, so show it for a real captain.
+    // Damage per hit is the captain's power times the class multiplier, so show it for a template's power range.
     void DrawDamagePreview(SoldierClassData soldierClass)
     {
         captains = DataToolsGUI.LoadAll(captains);
         if (captains.Count == 0) return;
         previewCaptain = Mathf.Clamp(previewCaptain, 0, captains.Count - 1);
-        previewCaptain = EditorGUILayout.Popup("Under Captain", previewCaptain, captains.Select(c => c.name).ToArray());
-        CaptainData captain = captains[previewCaptain];
-        float hit = captain.power * soldierClass.damageMultiplier;
+        previewCaptain = EditorGUILayout.Popup("Under Template", previewCaptain, captains.Select(c => c.name).ToArray());
+        CaptainData template = captains[previewCaptain];
+        float low = template.power.min * soldierClass.damageMultiplier, high = template.power.max * soldierClass.damageMultiplier;
         string splash = soldierClass.damageType == DamageType.Magic && soldierClass.splashRadius > 0f
             ? $" to every enemy within {soldierClass.splashRadius:0.##} tiles" : "";
-        DataToolsGUI.Note($"{hit:0.#} damage per hit{splash}, at most {hit * captain.speed:0.#} per second before travel time");
+        DataToolsGUI.Note($"{low:0.#} to {high:0.#} damage per hit{splash}, at most {high * template.speed.max:0.#} per second before travel time");
     }
 
     // Captains like or dislike a class through the tag its display name pluralises to.
@@ -119,7 +119,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
             return;
         }
         captains = DataToolsGUI.LoadAll(captains);
-        DataToolsGUI.AssetButtons("Liked By", captains.Where(c => c != null && c.likes != null && c.likes.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
-        DataToolsGUI.AssetButtons("Disliked By", captains.Where(c => c != null && c.dislikes != null && c.dislikes.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
+        DataToolsGUI.AssetButtons("Like Pool Of", captains.Where(c => c != null && c.likePool != null && c.likePool.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
+        DataToolsGUI.AssetButtons("Dislike Pool Of", captains.Where(c => c != null && c.dislikePool != null && c.dislikePool.Contains(tag)), CaptainEditorWindow.OpenFor, "Nobody");
     }
 }
