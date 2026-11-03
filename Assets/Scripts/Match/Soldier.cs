@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Soldiers wait at their tower, pay the act cost to run out and hit the closest enemy,
-// then return home and recover before they can act again. Dead soldiers respawn after
-// a delay once the tower can pay the respawn cost.
+// A fielded soldier item. Soldiers wait at their tower, run out to hit the closest enemy with
+// their class's damage type and their captain's element, then return home and recover before
+// they can act again. Acting is free; dead soldiers respawn after a delay once the tower can pay
+// the respawn cost.
 public class Soldier : MonoBehaviour
 {
     const float RespawnDelay = 3f;
@@ -28,11 +29,12 @@ public class Soldier : MonoBehaviour
     [SerializeField] Sprite projectileSprite;
 
     public SoldierClassData Class { get; private set; }
+    // The owned soldier this is; its rarity and slot.
+    public SoldierItem Item { get; private set; }
     public Tower Tower { get; private set; }
     public bool IsDead => state == State.Dead;
     // Soldier health scales with the captain's level, like their damage.
     public float MaxHealth => Class.maxHealth * LevelMath.StatFactor(Tower.Level);
-    public int ActCost => Tower.ActCostOf(Class);
     public int RespawnCost => Tower.RespawnCostOf(Class);
     bool IsDeployed => state is State.Advancing or State.Returning;
 
@@ -46,9 +48,10 @@ public class Soldier : MonoBehaviour
 
     Vector3 Home => Tower.transform.position + homeOffset;
 
-    public void Init(Tower tower, SoldierClassData soldierClass, Vector3 offset)
+    public void Init(Tower tower, SoldierItem item, SoldierClassData soldierClass, Vector3 offset)
     {
         Tower = tower;
+        Item = item;
         Class = soldierClass;
         homeOffset = offset;
         if (soldierClass.sprite != null)
@@ -100,7 +103,7 @@ public class Soldier : MonoBehaviour
     {
         if (Tower.IsWalking) return;
         Enemy enemy = Tower.FindClosestEnemy(transform.position);
-        if (enemy == null || !Tower.TrySpendReserve(ActCost)) return;
+        if (enemy == null) return;
         target = enemy;
         SetState(State.Advancing);
     }
@@ -109,7 +112,7 @@ public class Soldier : MonoBehaviour
     {
         if (target == null || !target.IsTargetable || !Tower.IsInRange(target.transform.position, LeashSlack))
         {
-            // The act is already paid for, so look for another target before giving up.
+            // Look for another target before giving up.
             target = Tower.FindClosestEnemy(transform.position);
             if (target == null)
             {

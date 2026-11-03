@@ -12,10 +12,9 @@ public static class AiAbilityRules
     // Request kinds, in RequestKind's order.
     public const int RequestMoreDraw = 0;
     public const int RequestRelocate = 1;
-    public const int RequestNewMix = 2;
-    public const int RequestUseSpecial = 3;
-    public const int RequestReinforce = 4;
-    public const int RequestLowerDraw = 5;
+    public const int RequestUseSpecial = 2;
+    public const int RequestReinforce = 3;
+    public const int RequestLowerDraw = 4;
 
     // enemiesInRange counts enemies inside the special's reach. weakestFraction is the lowest
     // health share among towers. enemiesLeft is every enemy still on the field.

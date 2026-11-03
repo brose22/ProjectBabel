@@ -68,15 +68,12 @@ public class MatchData : ScriptableObject
     public int recruitChoices = 3;
     [Tooltip("The captain templates captains are rolled from, one per role.")]
     [FormerlySerializedAs("roster")] public List<CaptainData> captainTemplates = new();
-    [Tooltip("Soldier classes the player can choose from, in display order.")]
+    [Tooltip("The soldier classes, one per SoldierClass, in display order. Soldier items find their art and combat stats here.")]
     public List<SoldierClassData> availableClasses = new();
-    [Tooltip("Class of each soldier slot on a newly placed tower. Slots past the end reuse the last entry; empty uses the first available class.")]
-    public List<SoldierClassData> defaultMix = new();
-    // Legacy single class from before soldier mixes. Kept so assets saved with only this field
-    // still work: it is the last fallback when both lists above are empty.
-    [HideInInspector] public SoldierClassData defaultSoldierClass;
-    [Tooltip("GDD: 2 at bond ranks D and C.")]
+    [Tooltip("Soldier slots open on every captain (GDD: 2 at bond ranks D and C). Higher ranks open more, up to 4.")]
     public int soldiersPerTower = 2;
+    [Tooltip("Random soldiers each captain brings when it joins a run, until the starting captains come with their own.")]
+    public int startingSoldiersPerCaptain = 2;
     [Tooltip("Gold to restore a disabled level 1 tower; scales with the captain's level.")]
     public int restoreBaseCost = 15;
     [Tooltip("Gold taken from the shared pool to relocate a tower mid-match. 0 makes moving free.")]
@@ -143,19 +140,13 @@ public class MatchData : ScriptableObject
 
     public Sprite RoleIcon(CaptainRole role) => roleIcons != null && (int)role < roleIcons.Length ? roleIcons[(int)role] : null;
 
-    public IReadOnlyList<SoldierClassData> ChoosableClasses =>
-        availableClasses.Count > 0 ? availableClasses
-        : defaultSoldierClass != null ? new[] { defaultSoldierClass }
-        : Array.Empty<SoldierClassData>();
+    public IReadOnlyList<SoldierClassData> ChoosableClasses => availableClasses;
 
-    public SoldierClassData DefaultClassForSlot(int slot)
-    {
-        if (defaultMix.Count > 0)
-        {
-            SoldierClassData fromMix = defaultMix[Mathf.Clamp(slot, 0, defaultMix.Count - 1)];
-            if (fromMix != null) return fromMix;
-        }
-        IReadOnlyList<SoldierClassData> choosable = ChoosableClasses;
-        return choosable.Count > 0 && choosable[0] != null ? choosable[0] : defaultSoldierClass;
-    }
+    // The asset for a soldier item's class, or null when the match has none.
+    public SoldierClassData ClassData(SoldierClass soldierClass) =>
+        availableClasses.Find(c => c != null && c.soldierClass == soldierClass);
+
+    // What the soldiers add to one captain stat, from each class's statBonus and their rarity.
+    public float StatBonus(IEnumerable<SoldierItem> soldiers, CaptainStat stat) =>
+        SoldierRules.StatTotal(soldiers, stat, c => ClassData(c) is SoldierClassData data ? data.statBonus : 0f);
 }

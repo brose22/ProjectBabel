@@ -39,6 +39,14 @@ public class CaptainPanelParts
         _ => $"Slot {slot + 1}",
     };
 
+    // "Rare Knight", in the rarity's colour.
+    public static string SoldierName(SoldierItem item, SoldierClassData soldierClass) =>
+        $"<color={UIKit.Hex(UIKit.RarityColor(item.rarity))}>{item.rarity} {(soldierClass != null ? soldierClass.displayName : item.soldierClass.ToString())}</color>";
+
+    // What the soldier adds to its captain, e.g. "+0.75 Defense".
+    public static string SoldierBonus(SoldierItem item, SoldierClassData soldierClass) =>
+        $"+{SoldierRules.Bonus(soldierClass != null ? soldierClass.statBonus : 0f, item.rarity):0.##} {SoldierRules.StatOf(item.soldierClass)}";
+
     // Name and level, then element, role and bond.
     public void Title(Transform panel, Tower tower)
     {
@@ -88,7 +96,7 @@ public class CaptainPanelParts
     public void Stats(Transform panel, Tower tower)
     {
         Captain captain = tower.Captain;
-        UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}    Range {tower.Range:0.#}    Speed {captain.speed:0.##}    Defense {tower.Defense:0.#}", refreshers, 12);
+        UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}    Range {tower.Range:0.#}    Speed {tower.Speed:0.##}    Defense {tower.Defense:0.#}", refreshers, 12);
         Text boosts = UIKit.LiveLabel(panel, () => BoostLabel(tower), refreshers, 12);
         refreshers.Add(() => boosts.color = HasBoosts(tower) ? UIKit.GoodColor : UIKit.MutedTextColor);
     }

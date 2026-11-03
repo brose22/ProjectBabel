@@ -23,7 +23,6 @@ public static class GameEvents
     public static event Action<Tower> DrawRateChanged;
     public static event Action<int> WaveStarted;
     public static event Action<int> WaveEnded;
-    public static event Action<Tower> SoldierMixChanged;
     public static event Action<Tower> TowerDisabled;
     public static event Action<Tower> TowerRestored;
     // The tower and the level it had before.
@@ -48,7 +47,6 @@ public static class GameEvents
     public static void RaiseDrawRateChanged(Tower tower) => DrawRateChanged?.Invoke(tower);
     public static void RaiseWaveStarted(int waveNumber) => WaveStarted?.Invoke(waveNumber);
     public static void RaiseWaveEnded(int waveNumber) => WaveEnded?.Invoke(waveNumber);
-    public static void RaiseSoldierMixChanged(Tower tower) => SoldierMixChanged?.Invoke(tower);
     public static void RaiseTowerDisabled(Tower tower) => TowerDisabled?.Invoke(tower);
     public static void RaiseTowerRestored(Tower tower) => TowerRestored?.Invoke(tower);
     public static void RaiseCaptainLeveledUp(Tower tower, int previousLevel) => CaptainLeveledUp?.Invoke(tower, previousLevel);
@@ -74,7 +72,6 @@ public static class GameEvents
         DrawRateChanged = null;
         WaveStarted = null;
         WaveEnded = null;
-        SoldierMixChanged = null;
         TowerDisabled = null;
         TowerRestored = null;
         CaptainLeveledUp = null;

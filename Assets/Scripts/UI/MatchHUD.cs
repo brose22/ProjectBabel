@@ -531,7 +531,6 @@ public class MatchHUD : MonoBehaviour
         RequestKind.MoreDraw => "draw set to High",
         RequestKind.LowerDraw => "draw set to Low",
         RequestKind.Relocate => "moves closer to the gate, free",
-        RequestKind.NewMix => $"switches to {(request.WantedClass != null ? request.WantedClass.displayName + "s" : "a new mix")}, free",
         RequestKind.UseSpecial => $"uses {request.Tower.Captain.Ability.displayName} now",
         RequestKind.Reinforce => request.Fallen != null ? $"moves in beside {request.Fallen.Captain.displayName}, free" : "moves in to cover, free",
         _ => "granted",

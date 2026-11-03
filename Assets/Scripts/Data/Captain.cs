@@ -111,8 +111,8 @@ public class Captain
     public bool TintSprite => template == null || template.tintSprite;
     public Color Color => TowerColor(element);
 
-    public int ResourceCapacity => template != null ? template.resourceCapacity : 20;
-    public float ResourceRegen => template != null ? template.resourceRegen : 2f;
+    public int ResourceCapacity => template != null ? template.resourceCapacity : 24;
+    public float ResourceRegen => template != null ? template.resourceRegen : 1f;
     public float SpecialChargeRate => template != null ? template.specialChargeRate : 1f;
 
     // The tower tint for each element.

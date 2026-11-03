@@ -19,6 +19,6 @@ public class TowerReachTests
         Assert.That(TowerReach.Range(new[] { 2f, 4f }, 0.5f), Is.EqualTo(3.5f).Within(1e-5f));
 
     [Test]
-    public void Range_WithoutSlotsIsTheBonus() =>
-        Assert.That(TowerReach.Range(new float[0], 1f), Is.EqualTo(1f));
+    public void Range_WithoutSoldiersIsTheUnarmedReachPlusTheBonus() =>
+        Assert.That(TowerReach.Range(new float[0], 1f), Is.EqualTo(TowerReach.UnarmedReach + 1f));
 }

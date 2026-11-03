@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // New kinds go at the end: AiAbilityRules mirrors this order.
-public enum RequestKind { MoreDraw, Relocate, NewMix, UseSpecial, Reinforce, LowerDraw }
+public enum RequestKind { MoreDraw, Relocate, UseSpecial, Reinforce, LowerDraw }
 
 public enum RequestAnswer { No, Yes }
 
@@ -11,7 +11,6 @@ public enum RequestAnswer { No, Yes }
 //   MoreDraw   - a soldier fell and the reserve can't pay to bring it back.
 //   Relocate   - nothing has come within the captain's range for a while. The captain moves
 //                themselves, free, 10% closer to the enemy gate along the road.
-//   NewMix     - the captain levelled up and a class they like isn't in every slot.
 //   UseSpecial - an elite or the boss walked on, an enemy leaked, or the special just finished
 //                charging. The captain fires it by themselves, as soon as it can be used.
 //   Reinforce  - another captain fell. The captain walks to the free spot nearest the fallen tower
@@ -29,8 +28,6 @@ public class CaptainRequests : MonoBehaviour
     {
         public Tower Tower;
         public RequestKind Kind;
-        // The soldier class asked for, for NewMix.
-        public SoldierClassData WantedClass;
         // The tower that fell, for Reinforce.
         public Tower Fallen;
         // What the captain says; names the reason they are asking.
@@ -93,7 +90,6 @@ public class CaptainRequests : MonoBehaviour
         GameEvents.WaveEnded += OnWaveEnded;
         GameEvents.TowerSold += OnTowerSold;
         GameEvents.SoldierDied += OnSoldierDied;
-        GameEvents.CaptainLeveledUp += OnCaptainLeveledUp;
         GameEvents.EnemyArrived += OnEnemyArrived;
         GameEvents.EnemyLeaked += OnEnemyLeaked;
         GameEvents.TowerDisabled += OnTowerDisabled;
@@ -105,7 +101,6 @@ public class CaptainRequests : MonoBehaviour
         GameEvents.WaveEnded -= OnWaveEnded;
         GameEvents.TowerSold -= OnTowerSold;
         GameEvents.SoldierDied -= OnSoldierDied;
-        GameEvents.CaptainLeveledUp -= OnCaptainLeveledUp;
         GameEvents.EnemyArrived -= OnEnemyArrived;
         GameEvents.EnemyLeaked -= OnEnemyLeaked;
         GameEvents.TowerDisabled -= OnTowerDisabled;
@@ -147,14 +142,6 @@ public class CaptainRequests : MonoBehaviour
         Tower tower = soldier.Tower;
         if (tower == null || tower.DrawRate == DrawRate.High || tower.Reserve >= soldier.RespawnCost) return;
         TryAsk(tower, RequestKind.MoreDraw, "My soldiers fell and I can't afford to bring them back. Turn my draw up to High?");
-    }
-
-    // A level-up is when a captain asks for the soldiers they like.
-    void OnCaptainLeveledUp(Tower tower, int previousLevel)
-    {
-        SoldierClassData wanted = LikedClassMissingFrom(tower);
-        if (wanted == null) return;
-        TryAsk(tower, RequestKind.NewMix, $"I've grown stronger. Give me {wanted.displayName}s?", wanted);
     }
 
     // The ready captain closest to an elite or the boss asks to unleash their special on it.
@@ -251,7 +238,7 @@ public class CaptainRequests : MonoBehaviour
 
     // Shows the request unless one is already up (nothing is queued behind it), the wave is out of
     // requests, or the captain asked for the same thing too recently.
-    void TryAsk(Tower tower, RequestKind kind, string text, SoldierClassData wanted = null, Tower fallen = null)
+    void TryAsk(Tower tower, RequestKind kind, string text, Tower fallen = null)
     {
         if (match.State != MatchState.WaveActive || match.IsOver || tower.IsDisabled) return;
         if (askedThisWave >= MaxRequestsPerWave || pending.Count > 0) return;
@@ -259,7 +246,7 @@ public class CaptainRequests : MonoBehaviour
 
         lastAsked[(tower, kind)] = wave;
         askedThisWave++;
-        pending.Add(new Request { Tower = tower, Kind = kind, Text = text, WantedClass = wanted, Fallen = fallen });
+        pending.Add(new Request { Tower = tower, Kind = kind, Text = text, Fallen = fallen });
         ShowNext();
     }
 
@@ -344,19 +331,6 @@ public class CaptainRequests : MonoBehaviour
         if (!match.MoveTower(tower, cell.Value)) tower.ClearMoveDiscount();
     }
 
-    // A soldier class the captain likes that isn't in every slot yet, or null.
-    SoldierClassData LikedClassMissingFrom(Tower tower)
-    {
-        foreach (SoldierClassData soldierClass in match.Data.ChoosableClasses)
-        {
-            if (soldierClass == null || !Relationships.TryGetClassTag(soldierClass, out CaptainTag tag)) continue;
-            if (Array.IndexOf(tower.Captain.likes, tag) < 0) continue;
-            foreach (Soldier soldier in tower.Soldiers)
-                if (soldier.Class != soldierClass) return soldierClass;
-        }
-        return null;
-    }
-
     public void Answer(Request request, RequestAnswer answer)
     {
         if (!pending.Remove(request)) return;
@@ -385,7 +359,6 @@ public class CaptainRequests : MonoBehaviour
     static float RefusalWeight(RequestKind kind) => kind switch
     {
         RequestKind.Relocate => 0.75f,
-        RequestKind.NewMix => 1.25f,
         _ => 1f,
     };
 
@@ -399,11 +372,6 @@ public class CaptainRequests : MonoBehaviour
                 break;
             case RequestKind.Relocate:
                 MoveTowardSpawner(tower);
-                break;
-            case RequestKind.NewMix:
-                // All slots switch for free.
-                for (int slot = 0; slot < tower.Soldiers.Count; slot++)
-                    tower.SetSlotClass(slot, request.WantedClass, free: true);
                 break;
             case RequestKind.UseSpecial:
                 // Fires now, or the moment it can if nothing is in reach yet.

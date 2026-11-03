@@ -259,21 +259,11 @@ public class AiPlayer : MonoBehaviour
         match.BeginRun(party);
     }
 
-    // Sets the party's starting bond rank and has each captain field the soldier classes they like,
-    // spread over the slots; a captain who likes none keeps the default mix.
+    // Sets the party's starting bond rank. The captains field the soldiers they join the run with.
     void PrepareParty(IEnumerable<Captain> party)
     {
         foreach (Captain captain in party)
-        {
             ApprovalStore.SetRank(captain, options.bondRank);
-            var liked = new List<SoldierClassData>();
-            foreach (SoldierClassData soldierClass in match.Data.ChoosableClasses)
-                if (soldierClass != null && Relationships.TryGetClassTag(soldierClass, out CaptainTag tag) && Array.IndexOf(captain.likes, tag) >= 0)
-                    liked.Add(soldierClass);
-            if (liked.Count == 0) continue;
-            for (int slot = 0; slot < RunState.MaxSoldierSlots; slot++)
-                RunState.Current.SetLoadoutClass(captain, slot, liked[slot % liked.Count]);
-        }
     }
 
     void ThinkMap()

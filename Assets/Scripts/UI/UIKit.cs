@@ -47,6 +47,16 @@ public static class UIKit
         _ => new Color(0.7f, 0.92f, 1f, 1f),
     };
 
+    // Common white, Uncommon green, Rare purple, Epic red, Legendary gold.
+    public static Color RarityColor(SoldierRarity rarity) => rarity switch
+    {
+        SoldierRarity.Uncommon => new Color(0.42f, 0.88f, 0.42f, 1f),
+        SoldierRarity.Rare => new Color(0.74f, 0.52f, 1f, 1f),
+        SoldierRarity.Epic => new Color(1f, 0.4f, 0.36f, 1f),
+        SoldierRarity.Legendary => new Color(1f, 0.82f, 0.26f, 1f),
+        _ => new Color(0.95f, 0.95f, 0.95f, 1f),
+    };
+
     // Rich-text colour tag for a colour, for mixing colours inside one label.
     public static string Hex(Color color) => "#" + ColorUtility.ToHtmlStringRGB(color);
 

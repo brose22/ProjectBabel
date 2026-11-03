@@ -14,14 +14,14 @@ public class RunState
     readonly Dictionary<Captain, int> startRanks = new();
     // Captains who have walked out; they sit out the rest of this run only (GDD).
     readonly HashSet<Captain> departed = new();
-    // The soldier class the player picked for each captain's slots, from the party's details
-    // window. A slot with no pick uses the match's default mix.
-    readonly Dictionary<Captain, SoldierClassData[]> loadouts = new();
-
     // Gifts bought this run and not yet given. They don't carry over to the next run.
     readonly Dictionary<GiftData, int> gifts = new();
 
-    public const int MaxSoldierSlots = 4;
+    public const int MaxSoldierSlots = SoldierInventory.SlotsPerCaptain;
+
+    // The soldiers the player owns and the captains they're equipped to. Lives in the run until
+    // the profile holds it (#29).
+    public SoldierInventory Soldiers { get; private set; } = new();
 
     public int Health { get; private set; }
     public int MaxHealth { get; private set; }
@@ -139,19 +139,11 @@ public class RunState
     // ahead, but it isn't a match.
     public void CompleteStop(int intelDepth) => Map?.ClearTarget(intelDepth);
 
-    public IEnumerable<KeyValuePair<Captain, SoldierClassData[]>> AllLoadouts => loadouts;
+    public void SetSoldiers(SoldierInventory inventory) => Soldiers = inventory ?? new SoldierInventory();
 
-    // The class picked for a captain's slot, or null when the slot keeps the default.
-    public SoldierClassData LoadoutClass(Captain captain, int slot) =>
-        slot >= 0 && slot < MaxSoldierSlots && loadouts.TryGetValue(captain, out SoldierClassData[] classes) ? classes[slot] : null;
-
-    public void SetLoadoutClass(Captain captain, int slot, SoldierClassData soldierClass)
-    {
-        if (captain == null || slot < 0 || slot >= MaxSoldierSlots) return;
-        if (!loadouts.TryGetValue(captain, out SoldierClassData[] classes))
-            loadouts[captain] = classes = new SoldierClassData[MaxSoldierSlots];
-        classes[slot] = soldierClass;
-    }
+    // The captain's soldiers in slot order.
+    public List<SoldierItem> SoldiersOf(Captain captain) =>
+        captain != null ? Soldiers.EquippedTo(captain.id) : new List<SoldierItem>();
 
     public IEnumerable<KeyValuePair<GiftData, int>> AllGifts => gifts;
 
@@ -173,7 +165,12 @@ public class RunState
 
     public bool HasDeparted(Captain captain) => departed.Contains(captain);
 
-    public void Depart(Captain captain) => departed.Add(captain);
+    // A captain who walks out leaves their soldiers behind in the inventory.
+    public void Depart(Captain captain)
+    {
+        departed.Add(captain);
+        if (captain != null) Soldiers.UnequipAll(captain.id);
+    }
 
     // Forgets the run in memory, so the match scene loads the saved one (or starts afresh) next.
     public static void Clear() => Current = null;
