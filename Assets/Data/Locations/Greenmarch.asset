@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97822ac287cc47468364055005d546ab, type: 3}
+  m_Name: Greenmarch
+  m_EditorClassIdentifier: Assembly-CSharp::LocationData
+  id: greenmarch
+  displayName: Greenmarch
+  description: Farmland on the border. Raiders and grunts burn the fields; no siege
+    engines yet.
+  map:
+    matchesPerRun: 7
+    minCitiesPerLayer: 2
+    maxCitiesPerLayer: 3
+    doubleGateFirstLayer: 2
+    tripleGateFirstLayer: 5
+    nodeOdds:
+      elite: 0.15
+      rest: 0.12
+      event: 0.15
+  enemies:
+  - {fileID: 11400000, guid: 62ac6c0d46d438349b5aa363a66fcf29, type: 2}
+  - {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+  - {fileID: 11400000, guid: c1b3ef62bc27ecb4f953ebc24bfdece2, type: 2}
+  - {fileID: 11400000, guid: 02f20f6add697a8468a680c661b1f9f6, type: 2}
+  elements: 0300000001000000
+  boss: {fileID: 0}

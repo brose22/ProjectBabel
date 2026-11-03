@@ -26,7 +26,7 @@ public static class AudioEvents
 
     static void PlaySceneMusic(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == MainMenu.SceneName) AudioManager.PlayMusic(AudioKeys.MusicMenu);
+        if (scene.name is MainMenu.SceneName or CastleScreen.SceneName) AudioManager.PlayMusic(AudioKeys.MusicMenu);
         else if (scene.name == MainMenu.MatchSceneName) AudioManager.PlayMusic(AudioKeys.MusicMatch);
     }
 }

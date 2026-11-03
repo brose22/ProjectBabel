@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97822ac287cc47468364055005d546ab, type: 3}
+  m_Name: Cinderpeak
+  m_EditorClassIdentifier: Assembly-CSharp::LocationData
+  id: cinderpeak
+  displayName: Cinderpeak
+  description: The enemy's mountain road. Raiders, brutes and bombards, and more
+    gates sooner.
+  map:
+    matchesPerRun: 11
+    minCitiesPerLayer: 2
+    maxCitiesPerLayer: 4
+    doubleGateFirstLayer: 1
+    tripleGateFirstLayer: 4
+    nodeOdds:
+      elite: 0.22
+      rest: 0.1
+      event: 0.15
+  enemies:
+  - {fileID: 11400000, guid: 03f003592543e044c9707a4604635c84, type: 2}
+  - {fileID: 11400000, guid: c1b3ef62bc27ecb4f953ebc24bfdece2, type: 2}
+  - {fileID: 11400000, guid: 02f20f6add697a8468a680c661b1f9f6, type: 2}
+  - {fileID: 11400000, guid: d01ae25dec5ea0747905fb81fb184935, type: 2}
+  elements: 0100000002000000
+  boss: {fileID: 0}

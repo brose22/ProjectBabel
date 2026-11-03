@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// The title screen the game starts on: start or resume a run, start a new game, change settings, or quit. Built in
+// The title screen the game starts on: go to the Castle or resume a run, start a new game, change settings, or quit. Built in
 // uGUI at runtime like the run screens; the menu scene only holds a camera and this component.
 public class MainMenu : MonoBehaviour
 {
@@ -63,7 +63,7 @@ public class MainMenu : MonoBehaviour
         UIKit.Label(column, "A roguelite tower defense", 14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         UIKit.Size(UIKit.Group(column, "Gap"), height: 16f);
 
-        UIKit.Button(column, "Start run", () => { if (RunSave.Exists) BuildConfirmNewRun(); else StartRun(); }, 240f, 34f);
+        UIKit.Button(column, "Castle", () => { if (RunSave.Exists) BuildConfirmNewRun(); else GoToCastle(); }, 240f, 34f);
         UIKit.LiveButton(column, () => "Resume run", ResumeRun, refreshers, () => RunSave.Exists, width: 240f, height: 34f);
         UIKit.Button(column, "New game", () => { if (ProfileSave.Exists) BuildConfirmNewGame(); else NewGame(); }, 240f, 34f);
         UIKit.Button(column, "AI Run", BuildAiRun, 240f, 34f);
@@ -148,12 +148,12 @@ public class MainMenu : MonoBehaviour
     void BuildConfirmNewRun()
     {
         RectTransform column = NewScreen("Confirm", 460f);
-        UIKit.Label(column, "START A NEW RUN?", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, "Your run in progress will be lost. Your captains, soldiers and Gold stay.", 14,
+        UIKit.Label(column, "GIVE UP THIS RUN?", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, "Going back to the Castle ends your run in progress. Your captains, soldiers and Gold stay.", 14,
             TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Button(buttons, "Start new run", StartRun, 180f, 32f);
+        UIKit.Button(buttons, "Go to the Castle", GoToCastle, 180f, 32f);
         UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f), PadGlyph.East);
     }
 
@@ -169,20 +169,21 @@ public class MainMenu : MonoBehaviour
         UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f), PadGlyph.East);
     }
 
-    // A new run on the saved profile; a new profile is made if there is none.
-    static void StartRun()
+    // Home to the Castle on the saved profile, giving up any run in progress; the Castle makes a new
+    // profile if there is none.
+    static void GoToCastle()
     {
         RunSave.Delete();
         RunState.Clear();
-        SceneManager.LoadScene(MatchSceneName);
+        CastleScreen.Open();
     }
 
-    // Throws the profile away with the run, so the next run starts a new one.
+    // Throws the profile away with the run, so the Castle starts a new one.
     static void NewGame()
     {
         ProfileSave.Delete();
         Profile.Clear();
-        StartRun();
+        GoToCastle();
     }
 
     static void ResumeRun()

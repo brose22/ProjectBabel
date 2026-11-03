@@ -424,7 +424,7 @@ public class RunScreens : MonoBehaviour
         // Abandoning loses the run, so it takes a second press.
         Button abandon = UIKit.Button(buttons, abandonArmed ? "Press again to abandon" : "Abandon run", () =>
         {
-            if (abandonArmed) { match.RestartRun(); return; }
+            if (abandonArmed) { match.ReturnToCastle(); return; }
             this.abandonArmed = true;
             shownFor = (MatchState)(-1);
         }, 160f, 24f);
@@ -1302,8 +1302,8 @@ public class RunScreens : MonoBehaviour
         if (won && !runWon) UIKit.Primary(UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f), refreshers);
         RectTransform buttons = UIKit.Group(panel, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 8, fitContent: true);
-        Button newRun = UIKit.Button(buttons, "New run", () => match.RestartRun(), 150f, 28f);
-        if (!won || runWon) UIKit.Primary(newRun, refreshers);
+        // A lost or finished run goes home to the Castle.
+        if (!won || runWon) UIKit.Primary(UIKit.Button(buttons, "Back to the Castle", match.ReturnToCastle, 170f, 28f), refreshers);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 150f, 28f);
     }
 

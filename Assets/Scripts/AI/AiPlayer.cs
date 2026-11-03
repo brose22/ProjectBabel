@@ -147,8 +147,8 @@ public class AiPlayer : MonoBehaviour
         if (phase == Phase.Done) return;
         gameSeconds += Time.deltaTime;
 
-        // Leaving the match for the menu by hand ends the batch where it stands.
-        if (SceneManager.GetActiveScene().name == MainMenu.SceneName)
+        // Leaving the match for the menu or the Castle by hand ends the batch where it stands.
+        if (SceneManager.GetActiveScene().name is MainMenu.SceneName or CastleScreen.SceneName)
         {
             Finish("Stopped", showScreen: false);
             Destroy(gameObject);
