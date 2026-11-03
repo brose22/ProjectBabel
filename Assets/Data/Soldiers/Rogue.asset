@@ -19,8 +19,8 @@ MonoBehaviour:
   portrait: {fileID: 21300000, guid: 7497f42c4738ea1418de8098b4288cf6, type: 3}
   statBonus: 0.1
   respawnCost: 4
-  maxHealth: 20
-  damageMultiplier: 1
+  maxHealth: 26
+  damageMultiplier: 1.2
   attackRange: 0.4
   reach: 1.5
   moveSpeed: 4

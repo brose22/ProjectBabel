@@ -31,4 +31,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 02f20f6add697a8468a680c661b1f9f6, type: 2}
   - {fileID: 11400000, guid: d01ae25dec5ea0747905fb81fb184935, type: 2}
   elements: 0000000002000000
-  boss: {fileID: 0}
+  boss: {fileID: 11400000, guid: 353d6f5e682783c4d9bef6c2eb629de2, type: 2}

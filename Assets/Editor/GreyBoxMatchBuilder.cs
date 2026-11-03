@@ -138,6 +138,7 @@ public static class GreyBoxMatchBuilder
         MatchData matchData = CreateData();
         ApplyArt();
         AssignPresentation(matchData);
+        AssignBoss(matchData);
         AssetDatabase.SaveAssets();
         Debug.Log("Data assets built.");
     }
@@ -150,6 +151,7 @@ public static class GreyBoxMatchBuilder
         {
             e.displayName = "Grunt";
             e.color = new Color(0.85f, 0.2f, 0.25f);
+            e.goldReward = 1;
             e.damageType = DamageType.Melee;
             e.element = Element.Grass;
         });
@@ -164,7 +166,7 @@ public static class GreyBoxMatchBuilder
             e.size = 0.5f;
             e.maxHealth = 35f;
             e.moveSpeed = 1.3f;
-            e.goldReward = 9;
+            e.goldReward = 1;
             e.leakDamage = 1;
             e.attackDamage = 4f;
             e.towerDamage = 7.5f;
@@ -179,7 +181,7 @@ public static class GreyBoxMatchBuilder
             e.size = 0.5f;
             e.maxHealth = 25f;
             e.moveSpeed = 1.3f;
-            e.goldReward = 8;
+            e.goldReward = 1;
             e.xpReward = 10;
             e.leakDamage = 1;
             e.attackDamage = 4f;
@@ -196,7 +198,7 @@ public static class GreyBoxMatchBuilder
             e.size = 0.85f;
             e.maxHealth = 120f;
             e.moveSpeed = 0.8f;
-            e.goldReward = 15;
+            e.goldReward = 2;
             e.xpReward = 25;
             e.leakDamage = 2;
             e.attackDamage = 10f;
@@ -212,7 +214,7 @@ public static class GreyBoxMatchBuilder
             e.size = 0.8f;
             e.maxHealth = 90f;
             e.moveSpeed = 0.8f;
-            e.goldReward = 15;
+            e.goldReward = 2;
             e.xpReward = 25;
             e.leakDamage = 2;
             e.attackDamage = 8f;
@@ -229,15 +231,15 @@ public static class GreyBoxMatchBuilder
         // The stat bonus is what a Common soldier adds to its captain: Knight Defense, Archer Range
         // in tiles, Mage Power, Rogue acts per second.
         SoldierClassData knight = SoldierClassAsset("Knight", SoldierClass.Knight, new Color(0.4f, 0.55f, 1f), DamageType.Melee, statBonus: 0.5f,
-            respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, reach: 1.5f, knockback: 0.5f);
+            respawnCost: 8, maxHealth: 50f, damage: 1.25f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, reach: 1.5f, knockback: 0.5f);
         // Archers shoot from further than they reach, so they step out a little for far targets.
         SoldierClassData archer = SoldierClassAsset("Archer", SoldierClass.Archer, new Color(0.45f, 0.85f, 0.35f), DamageType.Range, statBonus: 0.25f,
-            respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad, reach: 2.5f);
+            respawnCost: 4, maxHealth: 15f, damage: 1.45f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad, reach: 2.5f);
         SoldierClassData rogue = SoldierClassAsset("Rogue", SoldierClass.Rogue, new Color(0.9f, 0.9f, 0.75f), DamageType.Melee, statBonus: 0.1f,
-            respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road, reach: 1.5f);
+            respawnCost: 4, maxHealth: 26f, damage: 1.2f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road, reach: 1.5f);
         // Weak against lone enemies, strong against the bunched-up late waves.
         SoldierClassData mage = SoldierClassAsset("Mage", SoldierClass.Mage, new Color(1f, 0.45f, 0.75f), DamageType.Magic, statBonus: 1f,
-            respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, reach: 3f, splash: 1f);
+            respawnCost: 12, maxHealth: 18f, damage: 1.4f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, reach: 3f, splash: 0.8f);
         var classes = new List<SoldierClassData> { knight, archer, rogue, mage };
 
         AbilityData flareVolley = Ability("FlareVolley", "Flare Volley", "Burst area damage", AbilityData.Shape.Area,
@@ -732,32 +734,54 @@ public static class GreyBoxMatchBuilder
 
     // The very slow boss that walks the whole enemy base match (GDD). It borrows the Brute's art at
     // twice the size, and its leak damage ends the run. A boss already set on the match is kept.
+    // The Warlord is the match's boss and Cinderpeak's; the first two locations get lighter ones so
+    // the bases ramp up with the locations.
     static void AssignBoss(MatchData match)
     {
-        EnemyData boss = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Warlord.asset", e =>
+        EnemyData boss = Boss("Warlord", new Color(0.35f, 0.05f, 0.1f), health: 6000f, damage: 30f, towerDamage: 12f, gold: 60, xp: 300);
+        AssignLocationBoss(match, 0, Boss("BanditChief", "Bandit Chief", new Color(0.45f, 0.3f, 0.1f), health: 2600f, damage: 15f, towerDamage: 8f, gold: 30, xp: 150));
+        AssignLocationBoss(match, 1, Boss("TideWarden", "Tide Warden", new Color(0.1f, 0.25f, 0.4f), health: 4500f, damage: 22f, towerDamage: 10f, gold: 45, xp: 225));
+        AssignLocationBoss(match, 2, boss);
+        if (match.boss != null) return;
+        match.boss = boss;
+        EditorUtility.SetDirty(match);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with the enemy base boss.");
+    }
+
+    static EnemyData Boss(string asset, Color color, float health, float damage, float towerDamage, int gold, int xp) =>
+        Boss(asset, asset, color, health, damage, towerDamage, gold, xp);
+
+    static EnemyData Boss(string asset, string displayName, Color color, float health, float damage, float towerDamage, int gold, int xp)
+    {
+        return LoadOrCreate<EnemyData>($"{DataFolder}/Enemies/{asset}.asset", e =>
         {
-            e.displayName = "Warlord";
-            e.color = new Color(0.35f, 0.05f, 0.1f);
+            e.displayName = displayName;
+            e.color = color;
             e.sprite = ArtSprite("enemy_brute");
             e.size = 1.5f;
-            e.maxHealth = 6000f;
-            e.moveSpeed = 0.05f;
-            e.goldReward = 200;
-            e.xpReward = 300;
+            e.maxHealth = health;
+            e.moveSpeed = 0.045f;
+            e.goldReward = gold;
+            e.xpReward = xp;
             e.leakDamage = 999;
-            e.attackDamage = 30f;
+            e.attackDamage = damage;
             e.attackRange = 0.9f;
             e.attackInterval = 1.5f;
-            e.towerDamage = 12f;
+            e.towerDamage = towerDamage;
             e.towerAttackRange = 1.75f;
             e.towerAttackInterval = 1.5f;
             e.damageType = DamageType.Melee;
             e.element = Element.Water;
         });
-        if (match.boss != null) return;
-        match.boss = boss;
-        EditorUtility.SetDirty(match);
-        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with the enemy base boss.");
+    }
+
+    // Gives the location at this index its own boss, unless it already has one.
+    static void AssignLocationBoss(MatchData match, int index, EnemyData boss)
+    {
+        if (index >= match.locations.Count || match.locations[index] == null || match.locations[index].boss != null) return;
+        match.locations[index].boss = boss;
+        EditorUtility.SetDirty(match.locations[index]);
+        Debug.Log($"Gave {match.locations[index].displayName} the boss {boss.displayName}.");
     }
 
     // ---------- World map events ----------

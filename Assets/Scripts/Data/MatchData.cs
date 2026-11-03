@@ -49,11 +49,11 @@ public class MatchData : ScriptableObject
     [Tooltip("Soldiers on the Castle shop's Soldier Recruit tab, rolled anew after each run.")]
     public int castleSoldierStock = 6;
     [Tooltip("What a soldier costs at the Castle by rarity: Common, Uncommon, Rare, Epic, Legendary.")]
-    public int[] soldierPrices = { 60, 100, 160, 240, 400 };
+    public int[] soldierPrices = { 100, 160, 250, 360, 550 };
     [Tooltip("Captains on the Castle shop's Captain Recruit tab, rolled anew after each run.")]
     public int castleCaptainStock = 3;
     [Tooltip("What a captain costs at the Castle.")]
-    public int captainPrice = 250;
+    public int captainPrice = 400;
 
     // The least a gift costs, used by the AI to judge whether a shop is worth visiting.
     public int GiftCost
@@ -120,14 +120,14 @@ public class MatchData : ScriptableObject
     public NodeOdds nodeOdds = new(0.15f, 0.12f, 0.15f);
     [Tooltip("Extra enemy health per match into the run (0.12 = +12% per layer).")]
     public float enemyHealthGrowthPerMatch = 0.12f;
-    [Tooltip("Extra Gold per kill and per win further into the run (0.07 = +7% per layer).")]
-    public float goldGrowthPerMatch = 0.07f;
+    [Tooltip("Extra Gold per kill and per win further into the run (0.04 = +4% per layer).")]
+    public float goldGrowthPerMatch = 0.04f;
     [Tooltip("Flat Gold for winning a match, before the per-layer growth.")]
-    public int winGold = 50;
+    public int winGold = 40;
     [Tooltip("Gold for clearing a wave, before the per-wave step and per-layer growth.")]
-    public int waveClearGold = 5;
+    public int waveClearGold = 1;
     [Tooltip("Extra Gold per wave number cleared (wave 10 pays waveClearGold + 10 x this).")]
-    public int waveClearGoldPerWave = 2;
+    public int waveClearGoldPerWave = 1;
     [Tooltip("Share of each tower's unspent reserve returned to the Gold pool when a match is won.")]
     [Range(0f, 1f)] public float reserveRefundFraction = 1f;
     [Tooltip("Extra enemies per match into the run (0.08 = +8% per layer, rounded).")]

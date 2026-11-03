@@ -28,6 +28,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c79cb3c70f6766c49adb4c55a5c68e6a, type: 2}
   - {fileID: 11400000, guid: c6d96a7a9a1a5054da9b3e1080180468, type: 2}
   shopSize: 6
+  castleSoldierStock: 6
+  soldierPrices: 64000000a0000000fa0000006801000026020000
+  castleCaptainStock: 3
+  captainPrice: 400
   events:
   - {fileID: 11400000, guid: e8fb9179c30445f787ca4e29fc612e14, type: 2}
   - {fileID: 11400000, guid: d919d17c362c48c88fff1241c2da6467, type: 2}
@@ -78,10 +82,10 @@ MonoBehaviour:
     rest: 0.12
     event: 0.15
   enemyHealthGrowthPerMatch: 0.12
-  goldGrowthPerMatch: 0.07
-  winGold: 50
-  waveClearGold: 5
-  waveClearGoldPerWave: 2
+  goldGrowthPerMatch: 0.04
+  winGold: 40
+  waveClearGold: 1
+  waveClearGoldPerWave: 1
   reserveRefundFraction: 1
   enemyCountGrowthPerMatch: 0.08
   eliteLayerBonus: 2

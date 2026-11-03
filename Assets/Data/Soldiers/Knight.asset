@@ -20,7 +20,7 @@ MonoBehaviour:
   statBonus: 0.5
   respawnCost: 8
   maxHealth: 50
-  damageMultiplier: 1.1
+  damageMultiplier: 1.25
   attackRange: 0.4
   reach: 1.5
   moveSpeed: 3
