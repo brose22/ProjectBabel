@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -75,6 +76,7 @@ public class RunScreens : MonoBehaviour
     readonly List<Captain> picked = new();
     MatchState shownFor = (MatchState)(-1);
     bool shownRecruiting;
+    bool shownReleasing;
 
     void Awake()
     {
@@ -90,16 +92,20 @@ public class RunScreens : MonoBehaviour
         MatchState wanted = match.IsBetweenMatches || match.IsOver ? match.State : MatchState.Preparing;
         // The map screen shows recruiting first while captains are on offer.
         bool recruiting = wanted == MatchState.Map && RunState.Current.RecruitOffer.Count > 0;
-        if (wanted != shownFor || recruiting != shownRecruiting)
+        // An event's recruit for a full roster asks who to release before the stop is left.
+        bool releasing = wanted == MatchState.Stop && match.PendingRecruit != null;
+        if (wanted != shownFor || recruiting != shownRecruiting || releasing != shownReleasing)
         {
             shownFor = wanted;
             shownRecruiting = recruiting;
+            shownReleasing = releasing;
             refreshers.Clear();
             if (screen != null) Destroy(screen.gameObject);
             screen = null;
             if (wanted == MatchState.Setup) BuildSetup();
             else if (recruiting) BuildRecruit();
             else if (wanted == MatchState.Map) BuildMap();
+            else if (releasing) BuildReleaseChoice();
             else if (wanted == MatchState.Stop) BuildStop();
             else if (match.IsOver) BuildResults();
         }
@@ -1260,6 +1266,42 @@ public class RunScreens : MonoBehaviour
         }
     }
 
+    // The roster is full and an event brought a newcomer: release the newcomer or a roster captain.
+    // Whoever goes leaves for good, and their soldiers go back to the inventory.
+    void BuildReleaseChoice()
+    {
+        RunState run = RunState.Current;
+        Captain newcomer = match.PendingRecruit;
+        Captain chosen = null;
+
+        RectTransform root = NewScreen("Release");
+        RectTransform panel = UIKit.Box(root, "Panel");
+        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 0f));
+        VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(panel, 16, 8, fitContent: true);
+        layout.childAlignment = TextAnchor.UpperCenter;
+
+        UIKit.Label(panel, "THE ROSTER IS FULL", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(panel, $"{newcomer.displayName} wants to join, but the roster holds {Profile.MaxRoster}. Release the newcomer or " +
+                           "a captain from the roster. They leave for good, and their soldiers go back to the inventory.",
+            13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+
+        ScrollRect list = UIKit.ScrollList(panel, "Captains", UIKit.Gap);
+        UIKit.Size(list, height: 260f, flexibleWidth: 1f);
+        foreach (Captain captain in new[] { newcomer }.Concat(run.Profile.Roster))
+        {
+            Captain each = captain;
+            string note = each == newcomer ? "NEW" : run.Party.Contains(each) ? "in the party" : "";
+            int level = Mathf.Max(each.level, LevelMath.LevelForXp(each.xp));
+            string label = $"{each.displayName}   <color={UIKit.Hex(UIKit.MutedTextColor)}>LV {level}  {each.ClassName}  " +
+                           $"{run.SoldiersOf(each).Count} soldiers  {note}</color>";
+            UIKit.Size(UIKit.LiveButton(list.content, () => label, () => chosen = each, refreshers, selected: () => chosen == each,
+                height: 28f), flexibleWidth: 1f);
+        }
+
+        UIKit.Primary(UIKit.LiveButton(panel, () => chosen != null ? $"Release {chosen.displayName}" : "Pick a captain to release",
+            () => match.ReleaseForRecruit(chosen), refreshers, () => chosen != null, width: 260f, height: 32f), refreshers);
+    }
+
     // ---------- Results ----------
 
     void BuildResults()
@@ -1292,6 +1334,15 @@ public class RunScreens : MonoBehaviour
             UIKit.Label(panel, $"+{match.WinGoldEarned} Gold for the win, +{match.ReserveRefunded} returned from reserves", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
         if (match.HealthRestored > 0)
             UIKit.Label(panel, $"+{match.HealthRestored} health for the win", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
+        if (match.LocationUnlocked != null)
+            UIKit.Label(panel, $"{match.LocationUnlocked.displayName} is open", 13, TextAnchor.MiddleCenter, UIKit.GoodColor);
+        if (!won)
+        {
+            UIKit.Label(panel, $"-{match.GoldLost} Gold lost with the run", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
+            if (match.CaptainsLost.Count > 0)
+                UIKit.Label(panel, $"Lost with the party: {string.Join(", ", match.CaptainsLost.Select(c => c.displayName))}" +
+                                   $" and {match.SoldiersLost} soldier{(match.SoldiersLost == 1 ? "" : "s")}", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
+        }
 
         UIKit.Size(UIKit.Header(panel, "Captains"), flexibleWidth: 1f);
         ResultColumns(ResultRow(panel, false), "", "LEVEL", "BOND", "APPROVAL", "CHANGE", 9, UIKit.MutedTextColor).preferredHeight = 14f;

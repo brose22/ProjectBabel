@@ -46,6 +46,12 @@ public class MatchManager : MonoBehaviour
     // Gold the win paid into the pool: the flat bonus plus the towers' unspent reserves.
     public int WinGoldEarned { get; private set; }
     public int ReserveRefunded { get; private set; }
+    // What a lost run cost the profile: Gold, and the party captains with their soldiers.
+    public int GoldLost { get; private set; }
+    public List<Captain> CaptainsLost { get; private set; } = new();
+    public int SoldiersLost { get; private set; }
+    // The location a won run opened, or null.
+    public LocationData LocationUnlocked { get; private set; }
     // Gold the wave just cleared paid out.
     public int LastWaveClearGold { get; private set; }
 
@@ -666,7 +672,10 @@ public class MatchManager : MonoBehaviour
         State == MatchState.Stop && City.kind == NodeKind.Event && data.events.Count > 0 ? data.events[City.seed % data.events.Count] : null;
 
     public bool CanTakeEventChoice(EventChoice choice) =>
-        StopEvent != null && choice != null && choice.CanTake(RunState.Current.Gold, RunState.Current.Health);
+        StopEvent != null && choice != null && PendingRecruit == null && choice.CanTake(RunState.Current.Gold, RunState.Current.Health);
+
+    // A captain an event recruited into a full roster, waiting on ReleaseForRecruit.
+    public Captain PendingRecruit => RunState.Current?.PendingRecruit;
 
     // Applies an event choice to the run and moves on.
     public void TakeEventChoice(EventChoice choice)
@@ -683,6 +692,27 @@ public class MatchManager : MonoBehaviour
             run.AddXp(captain, choice.xp);
             if (choice.approval != 0f) ApprovalStore.Change(captain, choice.approval);
         }
+        // A newcomer for a full roster stays on the stop until the player picks who to release.
+        if (choice.recruit && !RecruitFromEvent()) return;
+        LeaveStop();
+    }
+
+    // Rolls a captain for an event to recruit. Returns false while they wait on a full roster.
+    bool RecruitFromEvent()
+    {
+        RunState run = RunState.Current;
+        Captain captain = RollCaptains(1, Random.Range(int.MinValue, int.MaxValue)).FirstOrDefault();
+        if (run.RecruitFromEvent(captain, data.maxPartySize)) GiveStartingSoldiers(new[] { captain });
+        return run.PendingRecruit == null;
+    }
+
+    // Settles the pending recruit by releasing either them or a captain from the roster, whose
+    // soldiers go back to the inventory, then moves on from the event.
+    public void ReleaseForRecruit(Captain released)
+    {
+        Captain newcomer = PendingRecruit;
+        if (newcomer == null || released == null) return;
+        if (RunState.Current.ReleaseFor(released, data.maxPartySize)) GiveStartingSoldiers(new[] { newcomer });
         LeaveStop();
     }
 
@@ -836,10 +866,30 @@ public class MatchManager : MonoBehaviour
         else
         {
             // The run is over; the profile it leaves behind is kept. Winning it opens the next location.
-            if (won) LocationSelect.RecordWin(data, RunState.Current.Profile, RunState.Current.Location);
+            if (won) RecordRunWon();
+            else LoseRun();
             ProfileSave.Save(RunState.Current.Profile);
             RunSave.Delete();
         }
+    }
+
+    // A won run opens the next location; the party keeps its levels and bonds.
+    void RecordRunWon()
+    {
+        Profile profile = RunState.Current.Profile;
+        int before = profile.LocationsUnlocked;
+        LocationSelect.RecordWin(data, profile, RunState.Current.Location);
+        if (profile.LocationsUnlocked > before && profile.LocationsUnlocked <= data.locations.Count)
+            LocationUnlocked = data.locations[profile.LocationsUnlocked - 1];
+    }
+
+    // A lost run costs a share of the Gold and every party captain, with their soldiers.
+    void LoseRun()
+    {
+        RunState run = RunState.Current;
+        CaptainsLost = run.Profile.LoseRun(run.Party, out int goldLost, out int soldiersLost);
+        GoldLost = goldLost;
+        SoldiersLost = soldiersLost;
     }
 
     // The tower that landed the killing blow earns the XP; a destroyed (sold) tower earns nothing.

@@ -20,8 +20,16 @@ MonoBehaviour:
     health: 0
     xp: 0
     approval: 8
+    recruit: 0
+  - label: Hire the sellsword at the bar
+    gold: -150
+    health: 0
+    xp: 0
+    approval: 0
+    recruit: 1
   - label: March on
     gold: 0
     health: 0
     xp: 0
     approval: -2
+    recruit: 0
