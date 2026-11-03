@@ -50,11 +50,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ab2d5a4fc8edeb24993b3bb754908b4d, type: 2}
   - {fileID: 11400000, guid: ed0e11508e550bf4bb2962b86b14060e, type: 2}
   - {fileID: 11400000, guid: e6c07f0f9c3429d4295c91683af11a3e, type: 2}
-  defaultMix:
-  - {fileID: 11400000, guid: 092649eb89d26e54bbc80ef4355c8dee, type: 2}
-  - {fileID: 11400000, guid: ab2d5a4fc8edeb24993b3bb754908b4d, type: 2}
-  defaultSoldierClass: {fileID: 11400000, guid: ed0e11508e550bf4bb2962b86b14060e, type: 2}
   soldiersPerTower: 2
+  startingSoldiersPerCaptain: 2
   restoreBaseCost: 15
   relocationCost: 25
   layouts:
@@ -66,6 +63,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3f7a9d2e6b1c48d5a0e4c7b92d5f1e36, type: 2}
   - {fileID: 11400000, guid: a1c3e5f7092b4d6e8f1a3c5e7092b4d6, type: 2}
   - {fileID: 11400000, guid: b2d4f6081a3c4e5f9b2d4f6081a3c4e5, type: 2}
+  locations:
+  - {fileID: 11400000, guid: 3497cd4c1fb1deb41828701d46a3352b, type: 2}
+  - {fileID: 11400000, guid: a0e512c7deeca8a4fba881c49cb5494a, type: 2}
+  - {fileID: 11400000, guid: aad3fa0b2c4c24c4e9717eab7e0b9927, type: 2}
   matchesPerRun: 7
   minCitiesPerLayer: 2
   maxCitiesPerLayer: 3
