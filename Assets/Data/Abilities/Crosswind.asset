@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Crosswind
   m_EditorClassIdentifier: Assembly-CSharp::AbilityData
   displayName: Crosswind
-  description: Pushes enemies back, applies Dizzy
+  description: Pushes enemies back, applies Freeze
   icon: {fileID: 21300000, guid: f8e03f3f0fc2d33458dbbe18a2586d6f, type: 3}
   chargeSeconds: 20
   shape: 0

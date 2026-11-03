@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Zephyr
   m_EditorClassIdentifier: Assembly-CSharp::CaptainData
   displayName: Zephyr
-  element: 3
+  element: 2
   role: 0
   color: {r: 0.6, g: 0.9, b: 0.9, a: 1}
   abilityName: Gale Strike

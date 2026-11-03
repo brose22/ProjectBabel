@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 561c2e3a60064894bb67233dbc3234b8, type: 3}
-  m_Name: Air
+  m_Name: Ice
   m_EditorClassIdentifier: Assembly-CSharp::ElementData
-  element: 3
-  displayName: Air
-  color: {r: 0.85, g: 0.95, b: 1, a: 1}
+  element: 2
+  displayName: Ice
+  color: {r: 0.75, g: 0.95, b: 1, a: 1}
   icon: {fileID: 21300000, guid: 7338e22aea14bba4f96b4e40f4579ded, type: 3}
-  statusName: Dizzy
-  description: Air captains make enemies dizzy for 1.5 seconds, so they walk the
-    wrong way along the path.
+  statusName: Freeze
+  description: Ice captains freeze enemies in place for 1.5 seconds, so they neither
+    walk nor attack.

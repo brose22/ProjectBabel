@@ -4,7 +4,7 @@ using System.Collections.Generic;
 // Mirrors CaptainRole in the game assembly, so this stays free of game types.
 public enum AiRole { Attacker, Buffer, Healer }
 
-// A roster captain as the AI sees it. Element is the Element enum's value (Water, Fire, Earth, Air).
+// A roster captain as the AI sees it. Element is the Element enum's value (Water, Fire, Ice, Grass).
 public struct AiCaptainInfo
 {
     public string name;
