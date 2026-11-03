@@ -64,7 +64,11 @@ public partial class CastleScreen : MonoBehaviour
         else BuildHome();
     }
 
-    void LateUpdate() => UIKit.Refresh(refreshers);
+    void LateUpdate()
+    {
+        UIKit.Refresh(refreshers);
+        ShopFeedback();
+    }
 
     // A full-screen page with a centred column; the gamepad's cancel button runs back.
     RectTransform NewScreen(string name, float width, Action back)
@@ -103,13 +107,26 @@ public partial class CastleScreen : MonoBehaviour
     {
         RectTransform column = NewScreen("Castle", 400f, null);
         Title(column, "THE CASTLE");
-        UIKit.Label(column, Summary(), 14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        RectTransform chips = Row(column, "Stats", 8);
+        StatChip(chips, "Gold", profile.Gold.ToString(), UIKit.AccentColor);
+        StatChip(chips, "Captains", $"{profile.Roster.Count}/{Profile.MaxRoster}", UIKit.TextColor);
+        StatChip(chips, "Soldiers", profile.Soldiers.Items.Count.ToString(), UIKit.TextColor);
         UIKit.Size(UIKit.Group(column, "Gap"), height: 16f);
 
-        UIKit.Primary(UIKit.Button(column, "Set out", BuildParty, 240f, 34f), refreshers);
+        UIKit.Primary(UIKit.Button(column, "Set out", BuildParty, 260f, 44f), refreshers);
         UIKit.Button(column, "Shop", BuildShop, 240f, 34f);
         UIKit.Button(column, "Inventory", () => { pickingSlot = -1; BuildInventory(); }, 240f, 34f);
         UIKit.Button(column, "Main menu", MainMenu.Open, 240f, 34f);
+    }
+
+    // A small inset tile: the figure large, its name under it.
+    static void StatChip(Transform parent, string name, string value, Color color)
+    {
+        RectTransform chip = UIKit.Box(parent, name, UIKit.InsetColor, blocksClicks: false);
+        UIKit.Layout<VerticalLayoutGroup>(chip, 6, 0).childAlignment = TextAnchor.MiddleCenter;
+        UIKit.Size(chip, 100f, 52f);
+        UIKit.Label(chip, value, UIKit.TitleSize, TextAnchor.MiddleCenter, color);
+        UIKit.Label(chip, name, UIKit.CaptionSize, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
     }
 
     // ---------- Inventory ----------
@@ -148,7 +165,7 @@ public partial class CastleScreen : MonoBehaviour
         RectTransform panel = UIKit.Box(body, "Roster");
         UIKit.Size(panel, CaptainListWidth, InventoryBodyHeight, flexibleWidth: 0f);
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
-        Header(panel, $"CAPTAINS   <color={UIKit.Hex(UIKit.MutedTextColor)}>{profile.Roster.Count}/{Profile.MaxRoster}</color>");
+        Header(panel, $"CAPTAINS", $"{profile.Roster.Count}/{Profile.MaxRoster}");
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         foreach (Captain captain in profile.Roster)
@@ -175,7 +192,7 @@ public partial class CastleScreen : MonoBehaviour
     // The captain's 4 slots, each a button that opens the soldier picker, and Release.
     void BuildLoadout(Transform side, Captain captain)
     {
-        Header(side, $"{captain.displayName.ToUpperInvariant()}   <color={UIKit.Hex(UIKit.MutedTextColor)}>LV {Level(captain)}  {captain.ClassName}</color>");
+        Header(side, $"{captain.displayName.ToUpperInvariant()}", $"LV {Level(captain)}  {captain.ClassName}");
         UIKit.Label(side, "Soldiers take this captain's element and add a stat by class: Knight Defense, Archer Range, " +
                           "Mage Power, Rogue Speed. A slot fights once the captain's bond opens it.", 11, color: UIKit.MutedTextColor);
         int open = MatchManager.SoldierCountFor(data, captain);
@@ -207,7 +224,7 @@ public partial class CastleScreen : MonoBehaviour
     // moving it from another captain if it was theirs; Remove sends the slot's soldier back.
     void BuildSoldierPicker(Transform side, Captain captain, int slot)
     {
-        Header(side, $"{captain.displayName.ToUpperInvariant()}   <color={UIKit.Hex(UIKit.MutedTextColor)}>{CaptainPanelParts.SlotLabel(slot)}</color>");
+        Header(side, $"{captain.displayName.ToUpperInvariant()}", $"{CaptainPanelParts.SlotLabel(slot)}");
         void Change(Action change)
         {
             change();
@@ -240,7 +257,7 @@ public partial class CastleScreen : MonoBehaviour
         UIKit.Size(panel, height: InventoryBodyHeight, flexibleWidth: 1f);
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
         int free = profile.Soldiers.Unequipped.Count;
-        Header(panel, $"SOLDIERS   <color={UIKit.Hex(UIKit.MutedTextColor)}>{profile.Soldiers.Items.Count} owned, {free} in the inventory</color>");
+        Header(panel, $"SOLDIERS", $"{profile.Soldiers.Items.Count} owned, {free} in the inventory");
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         foreach (SoldierItem soldier in SortedSoldiers())
@@ -423,7 +440,7 @@ public partial class CastleScreen : MonoBehaviour
 
     // ---------- Cards ----------
 
-    static void Header(Transform parent, string text) => UIKit.Label(parent, text, 10, color: UIKit.AccentColor).fontStyle = FontStyle.Bold;
+    static void Header(Transform parent, string title, string hint = null, bool below = false) => UIKit.Header(parent, title, hint, below);
 
     RectTransform CaptainCard(Transform parent, Captain captain, string tagText, Action onClick, bool highlighted) =>
         CaptainCard(parent, captain, tagText, onClick, highlighted, out _, out _);
@@ -449,7 +466,7 @@ public partial class CastleScreen : MonoBehaviour
         name = UIKit.Label(title, captain.displayName, 14, color: highlighted ? UIKit.AccentColor : UIKit.TextColor);
         name.fontStyle = FontStyle.Bold;
         UIKit.Size(name, flexibleWidth: 1f);
-        tag = UIKit.Label(title, tagText, 9, TextAnchor.MiddleRight, UIKit.AccentColor);
+        tag = UIKit.Label(title, tagText, UIKit.CaptionSize, TextAnchor.MiddleRight, UIKit.AccentColor);
         tag.fontStyle = FontStyle.Bold;
 
         ElementData element = data.ElementInfo(captain.element);

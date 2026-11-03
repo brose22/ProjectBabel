@@ -14,6 +14,12 @@ public static class UIKit
     public const float ReferenceHeight = 540f;
 
     // Spacing scale, in reference pixels: gaps between widgets, and padding inside panels.
+    // The type scale: nothing below Caption, which stays readable on a Steam Deck.
+    public const int CaptionSize = 11;
+    public const int BodySize = 13;
+    public const int HeadingSize = 14;
+    public const int TitleSize = 24;
+    public const int DisplaySize = 30;
     public const int Gap = 4;
     public const int Pad = 8;
 
@@ -275,15 +281,18 @@ public static class UIKit
         return graphic;
     }
 
-    // A section title in small accent capitals with a rule running to the right edge.
-    public static RectTransform Header(Transform parent, string text)
+    // A section title in accent capitals with a rule running to the right edge. The hint, if any,
+    // sits muted after the title, or on a line of its own under the rule when below is set.
+    public static RectTransform Header(Transform parent, string title, string hint = null, bool below = false)
     {
         RectTransform row = Group(parent, "Header");
         HorizontalLayoutGroup layout = Layout<HorizontalLayoutGroup>(row, 0, 6);
         layout.padding.top = Gap;
-        Label(row, text.ToUpperInvariant(), 10, color: AccentColor).fontStyle = FontStyle.Bold;
+        Label(row, title.ToUpperInvariant(), HeadingSize, color: AccentColor).fontStyle = FontStyle.Bold;
+        if (hint != null && !below) Label(row, hint, CaptionSize, color: MutedTextColor);
         RectTransform rule = Panel(row, "Rule", RuleColor, blocksClicks: false);
         Size(rule, height: TexelSize, flexibleWidth: 1f);
+        if (hint != null && below) Label(parent, hint, CaptionSize, color: MutedTextColor);
         return row;
     }
 
