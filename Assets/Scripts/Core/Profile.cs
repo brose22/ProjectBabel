@@ -16,11 +16,20 @@ public class Profile
     // Locations unlock in order, so the count says which: the first LocationsUnlocked of them.
     public int LocationsUnlocked { get; private set; } = 1;
 
+    // The Castle shop's stock is rolled from this seed (see CastleShop); it changes after each run.
+    public int ShopSeed { get; private set; }
+    // The shelves sold this stock, by shelf index, so a bought item doesn't come back until it changes.
+    public List<int> SoldSoldiers { get; } = new();
+    public List<int> SoldCaptains { get; } = new();
+    // Gifts bought at the Castle, by asset name, waiting to go with the party on the next run.
+    public Dictionary<string, int> PackedGifts { get; } = new();
+
     public bool RosterFull => Roster.Count >= MaxRoster;
 
     public static Profile StartNew(int gold)
     {
         Current = new Profile { Gold = Mathf.Max(0, gold) };
+        Current.RestockShop(Random.Range(int.MinValue, int.MaxValue));
         return Current;
     }
 
@@ -42,6 +51,22 @@ public class Profile
         Gold -= amount;
         return true;
     }
+
+    // New stock for the Castle shop, with every shelf full again.
+    public void RestockShop(int seed)
+    {
+        ShopSeed = seed;
+        SoldSoldiers.Clear();
+        SoldCaptains.Clear();
+    }
+
+    public void PackGift(string giftName, int count = 1)
+    {
+        if (string.IsNullOrEmpty(giftName) || count <= 0) return;
+        PackedGifts[giftName] = PackedGift(giftName) + count;
+    }
+
+    public int PackedGift(string giftName) => giftName != null && PackedGifts.TryGetValue(giftName, out int count) ? count : 0;
 
     public void UnlockLocations(int count) => LocationsUnlocked = Mathf.Max(LocationsUnlocked, count);
 
