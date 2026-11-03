@@ -316,13 +316,6 @@ public class MainMenu : MonoBehaviour
         FlagRow(column, "Leak edge flash", "edgeFlash");
         FlagRow(column, "Elite / boss banner", "threatBanner");
 
-        UIKit.Label(column, "Run setup", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-        SettingRow(column, "Captains to choose from", () => GameSettings.CaptainsOffered.ToString(),
-            step => GameSettings.SetCaptainsOffered(GameSettings.MinCaptainsOffered + Wrap(
-                GameSettings.CaptainsOffered - GameSettings.MinCaptainsOffered + step,
-                GameSettings.MaxCaptainsOffered - GameSettings.MinCaptainsOffered + 1)));
-        SettingsNote(column, "A new run offers this many random roster captains to pick the party from. Never fewer than the party size or more than the roster.");
-
         UIKit.Label(column, "Towers", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         SettingRow(column, "Disabled for", () => GameSettings.TowerDisabledWaves switch
             {
