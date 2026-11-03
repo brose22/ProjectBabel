@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -64,15 +65,15 @@ public class MatchManager : MonoBehaviour
 
     // The captain the next placed tower gets: the chosen one, or the next one after it who
     // isn't already on the field.
-    public CaptainData NextCaptain
+    public Captain NextCaptain
     {
         get
         {
-            List<CaptainData> party = RunState.Current.Party;
+            List<Captain> party = RunState.Current.Party;
             int count = party.Count;
             for (int i = 0; i < count; i++)
             {
-                CaptainData captain = party[(nextCaptainIndex + i) % count];
+                Captain captain = party[(nextCaptainIndex + i) % count];
                 if (captain != null && !Tower.All.Exists(t => t.Captain == captain) && !RunState.Current.HasDeparted(captain))
                     return captain;
             }
@@ -81,7 +82,7 @@ public class MatchManager : MonoBehaviour
     }
 
     // Makes this captain the next one placed, if they aren't on the field already.
-    public void ChooseNextCaptain(CaptainData captain)
+    public void ChooseNextCaptain(Captain captain)
     {
         int index = RunState.Current.Party.IndexOf(captain);
         if (index >= 0) nextCaptainIndex = index;
@@ -97,7 +98,7 @@ public class MatchManager : MonoBehaviour
     void Awake()
     {
         // Pick up a saved run if there is one, otherwise start fresh.
-        if (RunState.Current == null && !RunSave.TryResume(data.roster, data.availableClasses, data.shopGifts))
+        if (RunState.Current == null && !RunSave.TryResume(data.captainTemplates, data.availableClasses, data.shopGifts))
             RunState.StartNewRun(data.startingHealth, data.startingGold);
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
@@ -205,20 +206,20 @@ public class MatchManager : MonoBehaviour
     }
 
     // Bond rank sets how many soldiers a captain fields (GDD); soldiersPerTower is the floor.
-    public int SoldierCountFor(CaptainData captain) =>
+    public int SoldierCountFor(Captain captain) =>
         Mathf.Max(data.soldiersPerTower, BondMath.SoldierCount(ApprovalStore.RankOf(captain)));
 
-    void OnBondRankUp(CaptainData captain)
+    void OnBondRankUp(Captain captain)
     {
         Tower tower = Tower.All.Find(t => t.Captain == captain);
         if (tower != null) tower.GrowSoldierSlots(SoldierCountFor(captain), slot => ClassForSlot(captain, slot));
     }
 
     // The class the player picked for this slot on the world map, or the match's default.
-    public SoldierClassData ClassForSlot(CaptainData captain, int slot) =>
+    public SoldierClassData ClassForSlot(Captain captain, int slot) =>
         RunState.Current.LoadoutClass(captain, slot) ?? data.DefaultClassForSlot(slot);
 
-    public SoldierClassData[] SlotClassesFor(CaptainData captain)
+    public SoldierClassData[] SlotClassesFor(Captain captain)
     {
         var slotClasses = new SoldierClassData[SoldierCountFor(captain)];
         for (int i = 0; i < slotClasses.Length; i++)
@@ -228,7 +229,7 @@ public class MatchManager : MonoBehaviour
 
     // The range a captain would have with the soldier classes it would field now: what a new
     // tower of theirs reaches, for placement checks before it exists.
-    public float RangeFor(CaptainData captain)
+    public float RangeFor(Captain captain)
     {
         var reaches = new List<float>();
         foreach (SoldierClassData soldierClass in SlotClassesFor(captain)) reaches.Add(soldierClass.reach);
@@ -244,7 +245,7 @@ public class MatchManager : MonoBehaviour
     {
         if (!CanPlaceOn(cell)) return null;
         Tower tower = Instantiate(towerPrefab, grid.CellCenter(cell), Quaternion.identity);
-        CaptainData captain = NextCaptain;
+        Captain captain = NextCaptain;
         tower.Init(this, grid, captain, SlotClassesFor(captain), cell);
         grid.SetOccupant(cell, tower);
         GameEvents.RaiseTowerPlaced(tower);
@@ -393,20 +394,38 @@ public class MatchManager : MonoBehaviour
     // At least this many captains are offered, for an AI run that fields a bigger party than usual.
     public int SetupOfferMinimum { get; set; }
 
-    // The captains the setup screen offers: a random subset of the roster, drawn once per run.
-    public IReadOnlyList<CaptainData> SetupOffer
+    // The captains the setup screen offers: rolled from the templates once per run.
+    public IReadOnlyList<Captain> SetupOffer
     {
         get
         {
-            List<CaptainData> offer = RunState.Current.SetupOffer;
+            List<Captain> offer = RunState.Current.SetupOffer;
             if (offer.Count > 0) return offer;
-            List<CaptainData> roster = data.roster.FindAll(c => c != null);
-            int size = CaptainOffer.Size(Mathf.Max(GameSettings.CaptainsOffered, SetupOfferMinimum), data.partySize, roster.Count);
-            foreach (int index in CaptainOffer.Draw(roster.Count, size, Random.Range(int.MinValue, int.MaxValue)))
-                offer.Add(roster[index]);
+            int size = CaptainOffer.Size(Mathf.Max(GameSettings.CaptainsOffered, SetupOfferMinimum), data.partySize);
+            offer.AddRange(RollCaptains(size, Random.Range(int.MinValue, int.MaxValue)));
             return offer;
         }
     }
+
+    // Rolls count captains from the templates, every template once before any repeats. Names
+    // already in the run are rerolled where the template has others, so names tell captains apart.
+    public List<Captain> RollCaptains(int count, int seed)
+    {
+        List<CaptainData> templates = data.captainTemplates.FindAll(t => t != null);
+        var taken = new HashSet<string>(RunState.Current.Party.Concat(RunState.Current.SetupOffer).Select(c => c.displayName));
+        var rolled = new List<Captain>();
+        foreach ((int template, int rollSeed) in CaptainOffer.Draw(templates.Count, count, seed))
+        {
+            Captain captain = templates[template].Roll(rollSeed);
+            for (int retry = 1; retry <= MaxNameRerolls && taken.Contains(captain.displayName); retry++)
+                captain = templates[template].Roll(rollSeed + retry);
+            taken.Add(captain.displayName);
+            rolled.Add(captain);
+        }
+        return rolled;
+    }
+
+    const int MaxNameRerolls = 20;
 
     // How many gates each layout has, by layout index; a missing layout counts as one.
     List<int> LayoutGateCounts()
@@ -418,7 +437,7 @@ public class MatchManager : MonoBehaviour
     }
 
     // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
-    public void BeginRun(IEnumerable<CaptainData> party)
+    public void BeginRun(IEnumerable<Captain> party)
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
@@ -432,7 +451,7 @@ public class MatchManager : MonoBehaviour
 
     // Starts a run that is one match on the given layout, with no world map to cross. Layer sets
     // the difficulty; called by the AI run, which ends the run when the match does.
-    public void BeginSingleMatch(IEnumerable<CaptainData> party, int layout, int layer)
+    public void BeginSingleMatch(IEnumerable<Captain> party, int layout, int layer)
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
@@ -443,28 +462,20 @@ public class MatchManager : MonoBehaviour
     }
 
     // Takes an offered captain into the party (or none, for null) and saves the choice.
-    public void Recruit(CaptainData captain)
+    public void Recruit(Captain captain)
     {
         RunState.Current.Recruit(captain);
         RunSave.Save(RunState.Current);
     }
 
-    // A won city offers a few captains from outside the party to join, while there's room.
-    // Elite cities offer a wider choice.
+    // A won city offers a few newly rolled captains to join, while there's room. Elite cities
+    // offer a wider choice.
     void OfferRecruits()
     {
         RunState run = RunState.Current;
         if (run.ActivePartyCount >= data.maxPartySize) return;
-        var candidates = data.roster.FindAll(c => c != null && !run.Party.Contains(c));
-        var offer = new List<CaptainData>();
         int choices = data.recruitChoices + (IsEliteMatch ? Mathf.Max(0, data.eliteExtraRecruitChoices) : 0);
-        while (offer.Count < choices && candidates.Count > 0)
-        {
-            int pick = Random.Range(0, candidates.Count);
-            offer.Add(candidates[pick]);
-            candidates.RemoveAt(pick);
-        }
-        run.OfferRecruits(offer);
+        run.OfferRecruits(RollCaptains(choices, Random.Range(int.MinValue, int.MaxValue)));
     }
 
     // Plays the picked city: reloads the scene, which lays out that city's map and waves.
@@ -519,18 +530,17 @@ public class MatchManager : MonoBehaviour
 
     // Whether a captain can be given an item from the inventory: they're in the party, still here,
     // and the player has one.
-    public bool CanGiveGift(CaptainData captain, GiftData gift) =>
+    public bool CanGiveGift(Captain captain, GiftData gift) =>
         captain != null && gift != null && RunState.Current.Party.Contains(captain)
         && !RunState.Current.HasDeparted(captain) && RunState.Current.GiftCount(gift) > 0;
 
     // Gives a captain one item, changing their approval by how they feel about it. Returns the
     // reaction, or null when the gift couldn't be given.
-    public GiftReaction? GiveGift(CaptainData captain, GiftData gift)
+    public GiftReaction? GiveGift(Captain captain, GiftData gift)
     {
         if (!CanGiveGift(captain, gift) || !RunState.Current.TryRemoveGift(gift)) return null;
         GiftReaction reaction = captain.ReactionTo(gift);
         ApprovalStore.Change(captain, gift.ApprovalFor(reaction));
-        ApprovalStore.Save();
         RunSave.Save(RunState.Current);
         return reaction;
     }
@@ -551,13 +561,12 @@ public class MatchManager : MonoBehaviour
         else run.TrySpendGold(-choice.gold);
         if (choice.health >= 0) run.Heal(choice.health);
         else run.TakeDamage(-choice.health);
-        foreach (CaptainData captain in run.Party)
+        foreach (Captain captain in run.Party)
         {
             if (run.HasDeparted(captain)) continue;
             run.AddXp(captain, choice.xp);
             if (choice.approval != 0f) ApprovalStore.Change(captain, choice.approval);
         }
-        if (choice.approval != 0f) ApprovalStore.Save();
         LeaveStop();
     }
 
@@ -653,7 +662,7 @@ public class MatchManager : MonoBehaviour
     // Overlapping abilities extend the freeze to the longest one rather than stacking.
     void OnAbilityUsed(Tower tower)
     {
-        AbilityData ability = tower.Captain.ability;
+        AbilityData ability = tower.Captain.Ability;
         if (cameraShake != null) cameraShake.Shake(ability.cameraShake, ability.cameraShakeSeconds);
 
         float seconds = ability.hitStopSeconds;

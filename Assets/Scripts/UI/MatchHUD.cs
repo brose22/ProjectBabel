@@ -497,8 +497,8 @@ public class MatchHUD : MonoBehaviour
         // Who is asking and what: a portrait beside the name and the quote.
         RectTransform ask = UIKit.Group(card, "Ask");
         UIKit.Layout<HorizontalLayoutGroup>(ask, 0, UIKit.Pad).childAlignment = TextAnchor.UpperLeft;
-        CaptainData captain = request.Tower.Captain;
-        UIKit.Icon(ask, captain.portrait != null ? captain.portrait : captain.sprite, 48f);
+        Captain captain = request.Tower.Captain;
+        UIKit.Icon(ask, captain.Portrait != null ? captain.Portrait : captain.Sprite, 48f);
         RectTransform words = UIKit.Group(ask, "Words");
         UIKit.Size(words, flexibleWidth: 1f);
         UIKit.Layout<VerticalLayoutGroup>(words, 0, 2);
@@ -532,7 +532,7 @@ public class MatchHUD : MonoBehaviour
         RequestKind.LowerDraw => "draw set to Low",
         RequestKind.Relocate => "moves closer to the gate, free",
         RequestKind.NewMix => $"switches to {(request.WantedClass != null ? request.WantedClass.displayName + "s" : "a new mix")}, free",
-        RequestKind.UseSpecial => $"uses {request.Tower.Captain.ability.displayName} now",
+        RequestKind.UseSpecial => $"uses {request.Tower.Captain.Ability.displayName} now",
         RequestKind.Reinforce => request.Fallen != null ? $"moves in beside {request.Fallen.Captain.displayName}, free" : "moves in to cover, free",
         _ => "granted",
     };

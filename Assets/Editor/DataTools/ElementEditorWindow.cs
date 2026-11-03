@@ -120,6 +120,6 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
     {
         DataToolsGUI.Section("Used by");
         captains = DataToolsGUI.LoadAll(captains);
-        DataToolsGUI.AssetButtons("Captains", captains.Where(c => c != null && c.element == element.element), CaptainEditorWindow.OpenFor);
+        DataToolsGUI.AssetButtons("Portraits in", captains.Where(c => c != null && c.portraits.Any(p => p.element == element.element)), CaptainEditorWindow.OpenFor);
     }
 }

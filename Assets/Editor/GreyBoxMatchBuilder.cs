@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -24,7 +25,6 @@ public static class GreyBoxMatchBuilder
 
     static readonly Vector2Int MapSize = new(24, 12);
 
-    static readonly string[] SliceCaptains = { "Cinder", "Marin", "Ember" };
     const float WaveHealthGrowth = 0.06f;
 
     // City layouts, slice city first. Waypoint cells; the first and last sit just off the map so
@@ -126,6 +126,20 @@ public static class GreyBoxMatchBuilder
         PopulateScene(scene, square, groundTile, pathTile, groundAccentTile, matchData, enemyPrefab, towerPrefab);
         AssetDatabase.SaveAssets();
         Debug.Log($"Grey-box match built at {ScenePath}. Press Play to try it.");
+    }
+
+    // Creates and upgrades the data assets (captain templates, abilities, enemies, the match) the
+    // way Build does, without regenerating the scene or prefabs.
+    [MenuItem("Babel/Build Data Assets Only")]
+    public static void BuildData()
+    {
+        foreach (string folder in new[] { DataFolder + "/Abilities", DataFolder + "/Captains", DataFolder + "/Enemies", DataFolder + "/Soldiers" })
+            EnsureFolder(folder);
+        MatchData matchData = CreateData();
+        ApplyArt();
+        AssignPresentation(matchData);
+        AssetDatabase.SaveAssets();
+        Debug.Log("Data assets built.");
     }
 
     // ---------- Data ----------
@@ -254,60 +268,74 @@ public static class GreyBoxMatchBuilder
         AbilityData secondWind = SupportAbility("SecondWind", "Second Wind", "Heals all 20%, +15% act speed this wave",
             "Heal plus speed boost", chargeSeconds: 22f, healFraction: 0.2f, buffEffect: SupportEffect.ActSpeed, buffAmount: 0.15f);
 
-        var allCaptains = new List<CaptainData>
+        // One template per role, built from the captains that used to be handmade: their names,
+        // portraits, abilities, stats, likes, gifts and lines become the pools.
+        var templates = new List<CaptainData>
         {
-            Captain("Cinder", Element.Fire, DamageType.Range, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage", flareVolley,
-                new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Boss }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1.25f),
-            Captain("Brine", Element.Water, DamageType.Melee, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back", undertow,
-                new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Boss }, refusalTemper: 1f),
-            Captain("Slate", Element.Grass, DamageType.Melee, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
-                new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Boss }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Spending }, refusalTemper: 1f),
-            Captain("Zephyr", Element.Ice, DamageType.Melee, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
-                new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1f),
-            Captain("Pyre", Element.Fire, DamageType.Magic, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
-                new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Leaks, CaptainTag.Selling }, refusalTemper: 1.5f),
-            Captain("Skye", Element.Ice, DamageType.Range, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Freeze", crosswind,
-                new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Kills }, new[] { CaptainTag.Rogues, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1.25f),
-            Captain("Marin", Element.Water, DamageType.Magic, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", tidalMend.description, tidalMend,
-                new[] { CaptainTag.Knights, CaptainTag.Ability, CaptainTag.Flawless }, new[] { CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties },
-                CaptainRole.Healer, refusalTemper: 0.75f),
-            Captain("Rill", Element.Water, DamageType.Range, new Color(0.35f, 0.6f, 1f), 7f, 2f, 1.1f, "Flow State", flowState.description, flowState,
-                new[] { CaptainTag.Rogues, CaptainTag.Ability, CaptainTag.Spending }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Kills },
-                CaptainRole.Buffer, refusalTemper: 1f),
-            Captain("Ember", Element.Fire, DamageType.Magic, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", kindle.description, kindle,
-                new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Leaks }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Kills },
-                CaptainRole.Buffer, refusalTemper: 1.25f),
-            Captain("Boulder", Element.Grass, DamageType.Melee, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", stoneWard.description, stoneWard,
-                new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Flawless }, new[] { CaptainTag.Mages, CaptainTag.Casualties, CaptainTag.Boss },
-                CaptainRole.Buffer, refusalTemper: 0.75f),
-            Captain("Terra", Element.Grass, DamageType.Magic, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", mendTheLand.description, mendTheLand,
-                new[] { CaptainTag.Knights, CaptainTag.Leaks, CaptainTag.Spending }, new[] { CaptainTag.Rogues, CaptainTag.Casualties, CaptainTag.Boss },
-                CaptainRole.Healer, refusalTemper: 0.75f),
-            Captain("Gust", Element.Ice, DamageType.Magic, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", secondWind.description, secondWind,
-                new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Flawless }, new[] { CaptainTag.Knights, CaptainTag.Casualties, CaptainTag.Boss },
-                CaptainRole.Healer, refusalTemper: 0.75f),
+            Template(CaptainRole.Knight, new[] { "Brine", "Slate", "Boulder", "Garrick", "Hilde", "Roderick" },
+                new[] { ("brine", Element.Water), ("slate", Element.Grass), ("boulder", Element.Grass) },
+                new[] { undertow, rockfall, stoneWard },
+                power: new(7f, 14f), speed: new(0.6f, 1f), health: new(100f, 120f), defense: new(1.5f, 2.5f), defensePerLevel: new(0.3f, 0.4f),
+                refusalTemper: new(0.75f, 1f),
+                likes: new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Rogues, CaptainTag.Flawless, CaptainTag.Kills, CaptainTag.Boss },
+                dislikes: new[] { CaptainTag.Knights, CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Casualties, CaptainTag.Selling, CaptainTag.Spending, CaptainTag.Boss },
+                likedGifts: new[] { "SeaShell", "HerbalTea", "HoneyCake", "PolishedPebble", "IronWhetstone", "AncientBook" },
+                dislikedGifts: new[] { "EmberCharm", "AncientBook", "WindChime", "HoneyCake" },
+                lines: new[] { WaterLines, StoneLines }),
+            Template(CaptainRole.Mage, new[] { "Pyre", "Ember", "Isolde", "Mirela", "Quillon", "Thessaly" },
+                new[] { ("pyre", Element.Fire), ("ember", Element.Fire) },
+                new[] { scorchedEarth, kindle },
+                power: new(8f, 10f), speed: new(0.9f, 1.1f), health: new(90f, 100f), defense: new(0.5f, 1f), defensePerLevel: new(0.2f, 0.25f),
+                refusalTemper: new(1.25f, 1.5f),
+                likes: new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties, CaptainTag.Ability },
+                dislikes: new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Leaks, CaptainTag.Selling, CaptainTag.Kills },
+                likedGifts: new[] { "EmberCharm", "SpicedWine", "AncientBook" },
+                dislikedGifts: new[] { "SeaShell", "HerbalTea", "HoneyCake" },
+                lines: new[] { FireLines }),
+            Template(CaptainRole.Rogue, new[] { "Zephyr", "Rill", "Vex", "Corvin", "Sable", "Nym" },
+                new[] { ("zephyr", Element.Ice), ("rill", Element.Water) },
+                new[] { galeStrike, flowState },
+                power: new(7f, 9f), speed: new(1f, 1.25f), health: new(90f, 100f), defense: new(0.75f, 1.25f), defensePerLevel: new(0.2f, 0.25f),
+                refusalTemper: new(0.9f, 1.1f),
+                likes: new[] { CaptainTag.Archers, CaptainTag.Rogues, CaptainTag.Ability, CaptainTag.Spending, CaptainTag.Kills },
+                dislikes: new[] { CaptainTag.Knights, CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Selling, CaptainTag.Spending, CaptainTag.Kills },
+                likedGifts: new[] { "FeatherQuill", "WindChime", "SeaShell", "HerbalTea" },
+                dislikedGifts: new[] { "PolishedPebble", "SpicedWine", "EmberCharm" },
+                lines: new[] { AirLines, WaterLines }),
+            Template(CaptainRole.Archer, new[] { "Cinder", "Skye", "Wren", "Lark", "Ashby", "Fennick" },
+                new[] { ("cinder", Element.Fire), ("skye", Element.Ice) },
+                new[] { flareVolley, crosswind },
+                power: new(9f, 12f), speed: new(0.8f, 1f), health: new(90f, 100f), defense: new(0.75f, 1.25f), defensePerLevel: new(0.2f, 0.25f),
+                refusalTemper: new(1f, 1.25f),
+                likes: new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Kills, CaptainTag.Boss },
+                dislikes: new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Selling, CaptainTag.Spending },
+                likedGifts: new[] { "EmberCharm", "SpicedWine", "HoneyCake", "FeatherQuill", "WindChime", "AncientBook" },
+                dislikedGifts: new[] { "SeaShell", "AncientBook", "PolishedPebble", "HoneyCake" },
+                lines: new[] { FireLines, AirLines }),
+            Template(CaptainRole.Healer, new[] { "Marin", "Terra", "Gust", "Elowen", "Briar", "Sorrel" },
+                new[] { ("marin", Element.Water), ("terra", Element.Grass), ("gust", Element.Ice) },
+                new[] { tidalMend, mendTheLand, secondWind },
+                power: new(6.5f, 7.5f), speed: new(0.95f, 1.1f), health: new(100f, 100f), defense: new(0.75f, 1.25f), defensePerLevel: new(0.2f, 0.25f),
+                refusalTemper: new(0.75f, 0.75f),
+                likes: new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Leaks, CaptainTag.Ability, CaptainTag.Flawless, CaptainTag.Spending },
+                dislikes: new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties, CaptainTag.Boss },
+                likedGifts: new[] { "SeaShell", "HerbalTea", "AncientBook", "PolishedPebble", "IronWhetstone", "FeatherQuill", "WindChime", "HoneyCake" },
+                dislikedGifts: new[] { "EmberCharm", "HoneyCake", "WindChime", "SpicedWine", "PolishedPebble", "AncientBook" },
+                lines: new[] { WaterLines, StoneLines, AirLines }),
         };
-
-        // The slice's captains (one of each role) come first so a new run's default picks are
-        // theirs; the rest of the roster follows for recruiting on the world map.
-        var roster = new List<CaptainData>();
-        foreach (string name in SliceCaptains)
-            roster.Add(allCaptains.Find(c => c.name == name));
-        foreach (CaptainData captain in allCaptains)
-            if (!roster.Contains(captain)) roster.Add(captain);
 
         string matchPath = DataFolder + "/GreyBoxMatch.asset";
         bool matchExisted = AssetDatabase.LoadAssetAtPath<MatchData>(matchPath) != null;
         MatchData match = LoadOrCreate<MatchData>(matchPath, m =>
         {
-            m.roster = roster;
+            m.captainTemplates = templates;
             m.availableClasses = classes;
             m.defaultMix = defaultMix;
             m.restoreBaseCost = 15;
             m.relocationCost = 25;
             m.waves = BuildWaves(grunt, raider, slinger, brute, bombard);
         });
-        if (matchExisted) UpgradeMatch(match, roster, classes, defaultMix, grunt, raider, slinger, brute, bombard);
+        if (matchExisted) UpgradeMatch(match, templates, classes, defaultMix, grunt, raider, slinger, brute, bombard);
         return match;
     }
 
@@ -363,15 +391,14 @@ public static class GreyBoxMatchBuilder
     // Assets saved before Milestone 2 lack its fields. Fill only what is still unset so
     // designer tuning survives, and leave assets untouched when there is nothing to do.
 
-    static void UpgradeMatch(MatchData match, List<CaptainData> roster, List<SoldierClassData> classes, List<SoldierClassData> defaultMix,
+    static void UpgradeMatch(MatchData match, List<CaptainData> templates, List<SoldierClassData> classes, List<SoldierClassData> defaultMix,
         EnemyData grunt, EnemyData raider, EnemyData slinger, EnemyData brute, EnemyData bombard)
     {
         bool changed = false;
-        // Captains added after the match was saved join the end of its roster.
-        foreach (CaptainData captain in roster)
+        // Matches saved with handmade captains, or missing a template, get the role templates.
+        if (!match.captainTemplates.SequenceEqual(templates))
         {
-            if (match.roster.Contains(captain)) continue;
-            match.roster.Add(captain);
+            match.captainTemplates = new List<CaptainData>(templates);
             changed = true;
         }
         if (match.availableClasses.Count == 0)
@@ -454,50 +481,62 @@ public static class GreyBoxMatchBuilder
         return AssetDatabase.LoadAssetAtPath<Tower>(path);
     }
 
-    static CaptainData Captain(string name, Element element, DamageType damageType, Color color, float power, float range, float speed,
-        string ability, string abilityDescription, AbilityData abilityData, CaptainTag[] likes, CaptainTag[] dislikes,
-        CaptainRole role = CaptainRole.Attacker, float refusalTemper = 1f)
+    // Gift lines by the element voice the handmade captains had: greeting, liked, neutral, disliked.
+    static readonly string[] WaterLines =
     {
-        CaptainData captain = LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{name}.asset", c =>
+        "Oh, a gift? How thoughtful of you.", "It's lovely. You remembered what I like.",
+        "That's kind. I'll find a use for it.", "Oh. It's not really to my taste, but thank you.",
+    };
+    static readonly string[] FireLines =
+    {
+        "Got something for me? Don't keep a fire waiting.", "Now that's got some heat to it! I'll treasure it.",
+        "Hm. Warm enough, I suppose. Thanks.", "You thought this would please me? It leaves me cold.",
+    };
+    static readonly string[] StoneLines =
+    {
+        "A gift, commander? Hand it over, then.", "Solid. Dependable. Exactly what I like.",
+        "It'll do. Thanks.", "Hmph. What am I supposed to do with this?",
+    };
+    static readonly string[] AirLines =
+    {
+        "Ooh, is that for me?", "Oh, I love it! It's perfect!",
+        "Thanks! That's sweet of you.", "Um... thanks? I think I'll pass it on.",
+    };
+
+    // A role's captain template. Portraits are named after the captain they were drawn for
+    // (Portraits/captain_brine) with the element on their emblem; gifts are loaded by asset name.
+    static CaptainData Template(CaptainRole role, string[] names, (string art, Element element)[] portraits, AbilityData[] abilities,
+        StatRange power, StatRange speed, StatRange health, StatRange defense, StatRange defensePerLevel, StatRange refusalTemper,
+        CaptainTag[] likes, CaptainTag[] dislikes, string[] likedGifts, string[] dislikedGifts, string[][] lines)
+    {
+        return LoadOrCreate<CaptainData>($"{DataFolder}/Captains/{role}.asset", t =>
         {
-            c.displayName = name;
-            c.element = element;
-            c.damageType = damageType;
-            c.role = role;
-            c.color = color;
-            c.power = power;
-            c.range = 0f; // Range comes from the soldier slots' reach; the argument is no longer used.
-            c.speed = speed;
-            c.abilityName = ability;
-            c.abilityDescription = abilityDescription;
-            c.ability = abilityData;
-            c.likes = likes;
-            c.dislikes = dislikes;
-            c.refusalTemper = refusalTemper;
+            t.role = role;
+            t.names = names;
+            t.portraits = Array.ConvertAll(portraits, p => new CaptainPortrait { portrait = ArtSprite("Portraits/captain_" + p.art), element = p.element });
+            t.abilities = abilities;
+            t.sprite = ArtSprite("captain_generic");
+            t.tintSprite = true;
+            t.power = power;
+            t.range = new StatRange(0f, 0f);
+            t.speed = speed;
+            t.health = health;
+            t.defense = defense;
+            t.defensePerLevel = defensePerLevel;
+            t.refusalTemper = refusalTemper;
+            t.likePool = likes;
+            t.dislikePool = dislikes;
+            t.likedGiftPool = Gifts(likedGifts);
+            t.dislikedGiftPool = Gifts(dislikedGifts);
+            t.giftGreetings = Array.ConvertAll(lines, l => l[0]);
+            t.giftLikedLines = Array.ConvertAll(lines, l => l[1]);
+            t.giftNeutralLines = Array.ConvertAll(lines, l => l[2]);
+            t.giftDislikedLines = Array.ConvertAll(lines, l => l[3]);
         });
-        // Captains saved before Milestone 3 have no ability yet.
-        if (captain.ability == null)
-        {
-            captain.ability = abilityData;
-            EditorUtility.SetDirty(captain);
-            Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its ability.");
-        }
-        // Support captains saved before the aura rework still describe the old special.
-        if (captain.role != CaptainRole.Attacker && captain.ability == abilityData && captain.abilityDescription != abilityDescription)
-        {
-            captain.abilityDescription = abilityDescription;
-            EditorUtility.SetDirty(captain);
-            Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its reworked special's description.");
-        }
-        // Captains saved before bond data existed lack a refusal temper. 1 is a legitimate value, so only a never-saved field counts as unset.
-        if (!IsSerialized(captain, nameof(CaptainData.refusalTemper)))
-        {
-            captain.refusalTemper = refusalTemper;
-            EditorUtility.SetDirty(captain);
-            Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(captain)} with its refusal temper.");
-        }
-        return captain;
     }
+
+    static GiftData[] Gifts(string[] names) =>
+        Array.FindAll(Array.ConvertAll(names, n => AssetDatabase.LoadAssetAtPath<GiftData>($"{DataFolder}/Gifts/{n}.asset")), g => g != null);
 
     static AbilityData Ability(string name, string displayName, string description, AbilityData.Shape shape, float chargeSeconds,
         float rangeMultiplier = 1f, float radius = 1f, float damageMultiplier = 2f, float knockbackDistance = 0f, float zoneDuration = 4f, float statusChance = 0.3f)
@@ -906,25 +945,22 @@ public static class GreyBoxMatchBuilder
             yield return AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guid));
     }
 
-    // Gives generated art (named after the asset: captain_cinder, soldier_knight, enemy_grunt) to
-    // data that has no sprite yet, so art set by hand is kept and a second run changes nothing.
-    // Captains without their own art share a pale generic sprite tinted with the captain colour.
+    // Gives generated art (named after the asset: soldier_knight, enemy_grunt) to data that has no
+    // sprite yet, so art set by hand is kept and a second run changes nothing. Captain templates
+    // without a sprite share the pale generic one, tinted with the captain's element colour.
     // Portraits come from the Portraits subfolder under the same names, with no shared fallback, and
     // ability and element icons from Icons/Abilities (ability_flarevolley) and Icons/Elements (element_fire).
     static void ApplyArt()
     {
-        foreach (CaptainData captain in LoadAll<CaptainData>(DataFolder + "/Captains"))
+        foreach (CaptainData template in LoadAll<CaptainData>(DataFolder + "/Captains"))
         {
-            if (captain.sprite != null) continue;
-            Sprite own = ArtSprite("captain_" + captain.name.ToLowerInvariant());
-            Sprite sprite = own != null ? own : ArtSprite("captain_generic");
+            if (template.sprite != null) continue;
+            Sprite sprite = ArtSprite("captain_generic");
             if (sprite == null) continue;
-            captain.sprite = sprite;
-            captain.tintSprite = own == null;
-            MarkUpgraded(captain, "its sprite");
+            template.sprite = sprite;
+            template.tintSprite = true;
+            MarkUpgraded(template, "its sprite");
         }
-        foreach (CaptainData captain in LoadAll<CaptainData>(DataFolder + "/Captains"))
-            UseArt(captain, captain.portrait, "Portraits/captain_", "its portrait", s => captain.portrait = s);
         foreach (SoldierClassData soldierClass in LoadAll<SoldierClassData>(DataFolder + "/Soldiers"))
         {
             UseArt(soldierClass, soldierClass.sprite, "soldier_", "its sprite", s => soldierClass.sprite = s);

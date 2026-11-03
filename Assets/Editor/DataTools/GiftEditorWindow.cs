@@ -51,7 +51,7 @@ public class GiftEditorWindow : DataEditorWindow<GiftData>
 
         DataToolsGUI.Section("Opinions");
         captains = DataToolsGUI.LoadAll(captains);
-        DataToolsGUI.AssetButtons("Liked by", captains.Where(c => c != null && c.ReactionTo(gift) == GiftReaction.Liked), CaptainEditorWindow.OpenFor);
-        DataToolsGUI.AssetButtons("Disliked by", captains.Where(c => c != null && c.ReactionTo(gift) == GiftReaction.Disliked), CaptainEditorWindow.OpenFor);
+        DataToolsGUI.AssetButtons("Liked pool of", captains.Where(c => c != null && c.likedGiftPool.Contains(gift)), CaptainEditorWindow.OpenFor);
+        DataToolsGUI.AssetButtons("Disliked pool of", captains.Where(c => c != null && c.dislikedGiftPool.Contains(gift)), CaptainEditorWindow.OpenFor);
     }
 }

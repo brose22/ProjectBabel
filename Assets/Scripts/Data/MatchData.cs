@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [Serializable]
 public class SpawnGroup
@@ -59,14 +60,14 @@ public class MatchData : ScriptableObject
 
     [Header("Towers")]
     public int maxTowers = 5;
-    [Tooltip("How many roster captains the player picks to start a run.")]
+    [Tooltip("How many captains the player picks to start a run.")]
     public int partySize = 3;
     [Tooltip("Most captains in the party at once (GDD: 8 per run). Walked-out captains don't count.")]
     public int maxPartySize = 8;
     [Tooltip("Captains offered to recruit after each won city.")]
     public int recruitChoices = 3;
-    [Tooltip("Captains available to place, in order.")]
-    public List<CaptainData> roster = new();
+    [Tooltip("The captain templates captains are rolled from, one per role.")]
+    [FormerlySerializedAs("roster")] public List<CaptainData> captainTemplates = new();
     [Tooltip("Soldier classes the player can choose from, in display order.")]
     public List<SoldierClassData> availableClasses = new();
     [Tooltip("Class of each soldier slot on a newly placed tower. Slots past the end reuse the last entry; empty uses the first available class.")]
@@ -135,8 +136,8 @@ public class MatchData : ScriptableObject
     [Header("Presentation")]
     [Tooltip("How each element is shown in menus (name, colour, icon).")]
     public List<ElementData> elements = new();
-    [Tooltip("Role icons for menus, in CaptainRole order: Attacker, Buffer, Healer.")]
-    public Sprite[] roleIcons = new Sprite[3];
+    [Tooltip("Role icons for menus, in CaptainRole order: Knight, Mage, Rogue, Archer, Healer.")]
+    public Sprite[] roleIcons = new Sprite[5];
 
     public ElementData ElementInfo(Element element) => elements.Find(e => e != null && e.element == element);
 

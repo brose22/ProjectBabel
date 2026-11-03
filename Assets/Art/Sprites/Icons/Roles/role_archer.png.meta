@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 4053c567249892548b3137dc0df2afd1
+guid: bc14d4f93b7aae34ba5c28147fc354c1
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 6649315923380582383
-    second: role_attacker_0
+      213: 3693714932760646943
+    second: role_archer_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -101,7 +101,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: role_attacker_0
+      name: role_archer_0
       rect:
         serializedVersion: 2
         x: 0
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: fe7b27c4a9d174c50800000000000000
-      internalID: 6649315923380582383
+      spriteID: f1511c44926b24330800000000000000
+      internalID: 3693714932760646943
       vertices: []
       indices: 
       edges: []

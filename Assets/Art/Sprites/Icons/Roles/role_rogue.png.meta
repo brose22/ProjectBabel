@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: e4ff38f7553c4e94b9149e85433233c5
+guid: 7b3b37c867169f446ad92e915e6e47da
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8006338930850392281
-    second: role_buffer_0
+      213: -4924977434293929437
+    second: role_rogue_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -101,7 +101,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: role_buffer_0
+      name: role_rogue_0
       rect:
         serializedVersion: 2
         x: 0
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 9d8e7b496da3c1f60800000000000000
-      internalID: 8006338930850392281
+      spriteID: 32a781efd17f6abb0800000000000000
+      internalID: -4924977434293929437
       vertices: []
       indices: 
       edges: []

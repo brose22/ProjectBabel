@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6375523ae6732e54a8d1c9770b832f72, type: 3}
+  m_Name: Mage
+  m_EditorClassIdentifier: Assembly-CSharp::CaptainData
+  role: 1
+  specialClassChance: 0.15
+  names:
+  - Pyre
+  - Ember
+  - Isolde
+  - Mirela
+  - Quillon
+  - Thessaly
+  portraits:
+  - portrait: {fileID: 21300000, guid: a3fdd1a39b5ccc44991e708c1b467e17, type: 3}
+    element: 1
+  - portrait: {fileID: 21300000, guid: cff08350ecfc5ad4d807964297918a2d, type: 3}
+    element: 1
+  abilities:
+  - {fileID: 11400000, guid: c8b2a61cb24fa6d47a9dd83f6013bce3, type: 2}
+  - {fileID: 11400000, guid: bef34b0ff85d81142ad2dc472fe7815f, type: 2}
+  sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
+  tintSprite: 1
+  power:
+    min: 8
+    max: 10
+  range:
+    min: 0
+    max: 0
+  speed:
+    min: 0.9
+    max: 1.1
+  health:
+    min: 90
+    max: 100
+  defense:
+    min: 0.5
+    max: 1
+  defensePerLevel:
+    min: 0.2
+    max: 0.25
+  resourceCapacity: 20
+  resourceRegen: 2
+  specialChargeRate: 1
+  refusalTemper:
+    min: 1.25
+    max: 1.5
+  likePool: 010000000200000003000000040000000500000007000000
+  dislikePool: 000000000100000004000000060000000a000000
+  likedGiftPool:
+  - {fileID: 11400000, guid: f5c7811a3475d204da5102a6d745b720, type: 2}
+  - {fileID: 11400000, guid: ddaa5009a7f47924db5a3dde9f06d22b, type: 2}
+  - {fileID: 11400000, guid: c6d96a7a9a1a5054da9b3e1080180468, type: 2}
+  dislikedGiftPool:
+  - {fileID: 11400000, guid: 12d5231594a9bdc499de3f355e7aa4fa, type: 2}
+  - {fileID: 11400000, guid: b49912cd3a7fc20439aff751b1b404d6, type: 2}
+  - {fileID: 11400000, guid: 271fa504e5929804b9c00a22f12ef60a, type: 2}
+  giftGreetings:
+  - Got something for me? Don't keep a fire waiting.
+  giftLikedLines:
+  - Now that's got some heat to it! I'll treasure it.
+  giftNeutralLines:
+  - Hm. Warm enough, I suppose. Thanks.
+  giftDislikedLines:
+  - You thought this would please me? It leaves me cold.

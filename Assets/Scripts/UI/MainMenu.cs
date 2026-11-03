@@ -72,10 +72,10 @@ public class MainMenu : MonoBehaviour
     int aiRuns = 1;
     float aiSpeed = 4f;
 
-    // The party rows of a picked map. Static with the map and layer, so the choices are still set
-    // when an AI run comes back to the menu.
-    static readonly CaptainRole[] AiPartyRoles = { CaptainRole.Attacker, CaptainRole.Healer, CaptainRole.Buffer };
-    static readonly Dictionary<CaptainRole, int> aiPicks = new();
+    // The role of each party row of a picked map; a captain of each is rolled when the run starts.
+    // Static with the map and layer, so the choices are still set when an AI run comes back to the menu.
+    static readonly CaptainRole[] aiPartyRoles = { CaptainRole.Knight, CaptainRole.Healer, CaptainRole.Archer };
+    static readonly CaptainRole[] AllRoles = (CaptainRole[])Enum.GetValues(typeof(CaptainRole));
     // The picked layout, or -1 for a full run.
     static int aiMap = -1;
     static int aiLayer;
@@ -116,24 +116,13 @@ public class MainMenu : MonoBehaviour
     {
         int layers = Mathf.Max(1, data.matchesPerRun - 1);
         SettingRow(column, "Layer", () => $"{aiLayer + 1} of {layers}", step => aiLayer = Wrap(aiLayer + step, layers));
-        foreach (CaptainRole role in AiPartyRoles)
+        for (int i = 0; i < aiPartyRoles.Length; i++)
         {
-            CaptainRole chosen = role;
-            SettingRow(column, role.ToString(), () => AiCaptain(chosen)?.displayName ?? "None", step =>
-            {
-                int count = AiCaptains(chosen).Count;
-                aiPicks[chosen] = Wrap(aiPicks.GetValueOrDefault(chosen) + step, count);
-            });
+            int row = i;
+            SettingRow(column, $"Captain {row + 1}", () => aiPartyRoles[row].ToString(), step =>
+                aiPartyRoles[row] = AllRoles[Wrap(Array.IndexOf(AllRoles, aiPartyRoles[row]) + step, AllRoles.Length)]);
         }
         SettingsNote(column, "One match on this map, with no world map, shops or recruits. Enemies get tougher with each layer.");
-    }
-
-    List<CaptainData> AiCaptains(CaptainRole role) => data.roster.FindAll(c => c != null && c.role == role);
-
-    CaptainData AiCaptain(CaptainRole role)
-    {
-        List<CaptainData> captains = AiCaptains(role);
-        return captains.Count > 0 ? captains[Wrap(aiPicks.GetValueOrDefault(role), captains.Count)] : null;
     }
 
     void StartAiRun()
@@ -142,17 +131,11 @@ public class MainMenu : MonoBehaviour
         var options = new AiOptions { runs = aiRuns, speed = aiSpeed, seed = Environment.TickCount & 0x7fffff, layout = aiMap, layer = aiLayer, captains = captains, bondRank = aiBond };
         if (aiMap >= 0)
         {
-            // The picked role captains first, then more attackers to fill a bigger party; a smaller one drops the last.
-            foreach (CaptainRole role in AiPartyRoles)
-                if (AiCaptain(role) != null) options.party.Add(AiCaptain(role));
-            // Extras come by role, cycling attacker, healer, buffer; a role with none left is skipped.
-            for (int turn = 0; options.party.Count < captains && turn < data.roster.Count * AiPartyRoles.Length; turn++)
-            {
-                CaptainRole role = AiPartyRoles[turn % AiPartyRoles.Length];
-                CaptainData extra = AiCaptains(role).Find(c => !options.party.Contains(c));
-                if (extra != null) options.party.Add(extra);
-            }
-            if (options.party.Count > captains) options.party.RemoveRange(captains, options.party.Count - captains);
+            // The picked roles first, then every role in turn to fill a bigger party; a smaller one drops the last.
+            options.partyRoles.AddRange(aiPartyRoles);
+            for (int turn = 0; options.partyRoles.Count < captains; turn++)
+                options.partyRoles.Add(AllRoles[turn % AllRoles.Length]);
+            if (options.partyRoles.Count > captains) options.partyRoles.RemoveRange(captains, options.partyRoles.Count - captains);
         }
         AiPlayer.Begin(options);
     }
@@ -161,7 +144,7 @@ public class MainMenu : MonoBehaviour
     {
         RectTransform column = NewScreen("Confirm", 460f);
         UIKit.Label(column, "START A NEW RUN?", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, "Your saved run will be lost. Captain approval and bonds carry over as always.", 14,
+        UIKit.Label(column, "Your saved run will be lost, along with its captains.", 14,
             TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);

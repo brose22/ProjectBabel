@@ -42,14 +42,14 @@ public class CaptainPanelParts
     // Name and level, then element, role and bond.
     public void Title(Transform panel, Tower tower)
     {
-        CaptainData captain = tower.Captain;
+        Captain captain = tower.Captain;
         Transform title = Row(panel);
         Text name = UIKit.Label(title, captain.displayName, 16);
         name.fontStyle = FontStyle.Bold;
         UIKit.Size(name, flexibleWidth: 1f);
         UIKit.LiveLabel(title, () => $"Lv {tower.Level}", refreshers, 14, TextAnchor.MiddleRight, UIKit.AccentColor);
         string element = $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{captain.element}</color>";
-        UIKit.LiveLabel(panel, () => $"{element} {captain.role}   ·   Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})",
+        UIKit.LiveLabel(panel, () => $"{element} {captain.ClassName}   ·   Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})",
             refreshers, 12, color: UIKit.MutedTextColor);
     }
 
@@ -77,9 +77,9 @@ public class CaptainPanelParts
 
     public void ReserveAndXp(Transform panel, Tower tower)
     {
-        CaptainData captain = tower.Captain;
-        UIKit.LiveBar(panel, () => tower.Reserve / (float)Mathf.Max(1, captain.resourceCapacity),
-            () => $"Reserve {tower.Reserve}/{captain.resourceCapacity}", UIKit.ReserveBarColor, refreshers);
+        Captain captain = tower.Captain;
+        UIKit.LiveBar(panel, () => tower.Reserve / (float)Mathf.Max(1, captain.ResourceCapacity),
+            () => $"Reserve {tower.Reserve}/{captain.ResourceCapacity}", UIKit.ReserveBarColor, refreshers);
         UIKit.LiveBar(panel, () => tower.IsMaxLevel ? 1f : tower.Xp / (float)Mathf.Max(1, tower.XpForNextLevel),
             () => tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}", UIKit.XpBarColor, refreshers);
     }
@@ -87,7 +87,7 @@ public class CaptainPanelParts
     // Power, range, speed and Defense, then this wave's boosts (green while there are any).
     public void Stats(Transform panel, Tower tower)
     {
-        CaptainData captain = tower.Captain;
+        Captain captain = tower.Captain;
         UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}    Range {tower.Range:0.#}    Speed {captain.speed:0.##}    Defense {tower.Defense:0.#}", refreshers, 12);
         Text boosts = UIKit.LiveLabel(panel, () => BoostLabel(tower), refreshers, 12);
         refreshers.Add(() => boosts.color = HasBoosts(tower) ? UIKit.GoodColor : UIKit.MutedTextColor);
@@ -97,7 +97,7 @@ public class CaptainPanelParts
     public void Ability(Transform panel, Tower tower)
     {
         UIKit.Header(panel, "Special");
-        AbilityData ability = tower.Captain.ability;
+        AbilityData ability = tower.Captain.Ability;
         if (ability == null)
         {
             UIKit.Label(panel, "No special ability", 12, color: UIKit.MutedTextColor);

@@ -5,11 +5,11 @@ using UnityEngine;
 // One approval change, for the HUD to show: who, why ("liked Kills") and by how much.
 public readonly struct ApprovalNotice
 {
-    public readonly CaptainData captain;
+    public readonly Captain captain;
     public readonly string reason;
     public readonly float amount;
 
-    public ApprovalNotice(CaptainData captain, string reason, float amount)
+    public ApprovalNotice(Captain captain, string reason, float amount)
     {
         this.captain = captain;
         this.reason = reason;
@@ -20,11 +20,11 @@ public readonly struct ApprovalNotice
 // One captain level-up, for the HUD to show. Levels gained at once make a single notice.
 public readonly struct LevelNotice
 {
-    public readonly CaptainData captain;
+    public readonly Captain captain;
     public readonly int previousLevel;
     public readonly int level;
 
-    public LevelNotice(CaptainData captain, int previousLevel, int level)
+    public LevelNotice(Captain captain, int previousLevel, int level)
     {
         this.captain = captain;
         this.previousLevel = previousLevel;
@@ -58,19 +58,19 @@ public class Relationships : MonoBehaviour
         public bool hurtBoss;
     }
 
-    readonly Dictionary<CaptainData, WaveRecord> records = new();
+    readonly Dictionary<Captain, WaveRecord> records = new();
     readonly Queue<ApprovalNotice> notices = new();
     readonly Queue<LevelNotice> levelNotices = new();
-    readonly Dictionary<CaptainData, float> approvalThisMatch = new();
+    readonly Dictionary<Captain, float> approvalThisMatch = new();
     int waveLeaks;
     bool waveSold;
     bool waveSpent;
 
     // Total approval change for a captain during this match, for the results screen.
-    public float ApprovalChangeThisMatch(CaptainData captain) => approvalThisMatch.TryGetValue(captain, out float change) ? change : 0f;
+    public float ApprovalChangeThisMatch(Captain captain) => approvalThisMatch.TryGetValue(captain, out float change) ? change : 0f;
 
     // Captains who walked out at the end of this match.
-    public List<CaptainData> Walkouts { get; } = new();
+    public List<Captain> Walkouts { get; } = new();
 
     // Takes the next approval change the HUD hasn't shown yet.
     public bool TryTakeNotice(out ApprovalNotice notice) => notices.TryDequeue(out notice);
@@ -128,7 +128,7 @@ public class Relationships : MonoBehaviour
         GameEvents.RaiseApprovalNoticed(notice);
     }
 
-    WaveRecord RecordFor(CaptainData captain)
+    WaveRecord RecordFor(Captain captain)
     {
         if (!records.TryGetValue(captain, out WaveRecord record))
             records[captain] = record = new WaveRecord();
@@ -157,7 +157,7 @@ public class Relationships : MonoBehaviour
 
     // Starts the walkout baseline from the captain's approval when it first takes the field.
     void OnTowerPlaced(Tower tower) => RunState.Current.BestApprovalThisRun(tower.Captain);
-    void OnApprovalChanged(CaptainData captain) => RunState.Current?.BestApprovalThisRun(captain);
+    void OnApprovalChanged(Captain captain) => RunState.Current?.BestApprovalThisRun(captain);
 
     // Each play-style tag a captain likes or dislikes is judged once per wave.
     void OnWaveEnded(int wave)
@@ -184,7 +184,6 @@ public class Relationships : MonoBehaviour
             JudgeTag(tower, CaptainTag.Kills, topKills > 0 && record.kills == topKills);
             JudgeTag(tower, CaptainTag.Boss, record.hurtBoss);
         }
-        ApprovalStore.Save();
     }
 
     void JudgeTag(Tower tower, CaptainTag tag, bool happened)
@@ -209,13 +208,12 @@ public class Relationships : MonoBehaviour
         Walkouts.Clear();
         foreach (Tower tower in Tower.All)
         {
-            CaptainData captain = tower.Captain;
+            Captain captain = tower.Captain;
             if (!BondMath.HasWalkedOut(RunState.Current.BestApprovalThisRun(captain), ApprovalStore.ApprovalOf(captain)))
                 continue;
             RunState.Current.Depart(captain);
             Walkouts.Add(captain);
         }
-        ApprovalStore.Save();
     }
 
     // Liked soldiers in the tower's mix minus disliked ones.
@@ -234,6 +232,4 @@ public class Relationships : MonoBehaviour
     // Soldier classes map to tags by name: Knight -> Knights, Archer -> Archers, and so on.
     public static bool TryGetClassTag(SoldierClassData soldierClass, out CaptainTag tag) =>
         Enum.TryParse(soldierClass.displayName + "s", out tag) && tag <= CaptainTag.Rogues;
-
-    void OnApplicationQuit() => ApprovalStore.Save();
 }

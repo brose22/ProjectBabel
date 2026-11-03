@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 
-// Mirrors CaptainRole in the game assembly, so this stays free of game types.
-public enum AiRole { Attacker, Buffer, Healer }
-
 // A roster captain as the AI sees it. Element is the Element enum's value (Water, Fire, Ice, Grass).
 public struct AiCaptainInfo
 {
     public string name;
-    public AiRole role;
+    public CaptainRole role;
+    // Whether the captain's ability heals or buffs rather than hitting enemies.
+    public bool support;
     public int element;
     // Damage per second at level 1: power x speed.
     public float strength;
@@ -26,10 +25,10 @@ public static class AiPartyPicker
         int sameElement = 0;
         foreach (AiCaptainInfo member in party)
         {
-            if (member.role != AiRole.Attacker) supports++;
+            if (member.support) supports++;
             if (member.element == captain.element) sameElement++;
         }
-        if (captain.role == AiRole.Attacker)
+        if (!captain.support)
         {
             // The last slot has to go to a support if the party still has none.
             if (supports == 0 && slotsLeft <= 1) score -= 100f;
@@ -88,8 +87,8 @@ public static class AiPartyPicker
         var order = new List<int>();
         for (int i = 0; i < party.Count; i++) order.Add(i);
         order.Sort((a, b) => party[b].strength.CompareTo(party[a].strength));
-        int firstAttacker = order.FindIndex(i => party[i].role == AiRole.Attacker);
-        int firstSupport = order.FindIndex(i => party[i].role != AiRole.Attacker);
+        int firstAttacker = order.FindIndex(i => !party[i].support);
+        int firstSupport = order.FindIndex(i => party[i].support);
         var result = new List<int>();
         if (firstAttacker >= 0) result.Add(order[firstAttacker]);
         if (firstSupport >= 0) result.Add(order[firstSupport]);

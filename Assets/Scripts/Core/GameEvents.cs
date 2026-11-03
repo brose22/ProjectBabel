@@ -28,8 +28,8 @@ public static class GameEvents
     public static event Action<Tower> TowerRestored;
     // The tower and the level it had before.
     public static event Action<Tower, int> CaptainLeveledUp;
-    public static event Action<CaptainData> ApprovalChanged;
-    public static event Action<CaptainData> BondRankUp;
+    public static event Action<Captain> ApprovalChanged;
+    public static event Action<Captain> BondRankUp;
     // An approval change with its reason ("liked Kills") and the amount actually applied.
     public static event Action<ApprovalNotice> ApprovalNoticed;
     // True for a win, false for a loss.
@@ -52,8 +52,8 @@ public static class GameEvents
     public static void RaiseTowerDisabled(Tower tower) => TowerDisabled?.Invoke(tower);
     public static void RaiseTowerRestored(Tower tower) => TowerRestored?.Invoke(tower);
     public static void RaiseCaptainLeveledUp(Tower tower, int previousLevel) => CaptainLeveledUp?.Invoke(tower, previousLevel);
-    public static void RaiseApprovalChanged(CaptainData captain) => ApprovalChanged?.Invoke(captain);
-    public static void RaiseBondRankUp(CaptainData captain) => BondRankUp?.Invoke(captain);
+    public static void RaiseApprovalChanged(Captain captain) => ApprovalChanged?.Invoke(captain);
+    public static void RaiseBondRankUp(Captain captain) => BondRankUp?.Invoke(captain);
     public static void RaiseApprovalNoticed(ApprovalNotice notice) => ApprovalNoticed?.Invoke(notice);
     public static void RaiseMatchEnded(bool won) => MatchEnded?.Invoke(won);
 

@@ -2,22 +2,21 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // State that lasts for a whole run (about 30 matches): global health, the shared Gold pool and
-// each captain's XP (levels reset each run, GDD). Lives outside any scene so it survives
-// loading the next match.
+// the run's captains. Each Captain carries its own XP and bond. Lives outside any scene so it
+// survives loading the next match.
 public class RunState
 {
     public static RunState Current { get; private set; }
 
-    readonly Dictionary<CaptainData, int> captainXp = new();
     // Each captain's highest approval seen this run, for the walkout rule.
-    readonly Dictionary<CaptainData, float> bestApprovalThisRun = new();
+    readonly Dictionary<Captain, float> bestApprovalThisRun = new();
     // Each captain's bond rank when it was first seen this run, which caps how far it can rise.
-    readonly Dictionary<CaptainData, int> startRanks = new();
+    readonly Dictionary<Captain, int> startRanks = new();
     // Captains who have walked out; they sit out the rest of this run only (GDD).
-    readonly HashSet<CaptainData> departed = new();
+    readonly HashSet<Captain> departed = new();
     // The soldier class the player picked for each captain's slots, from the party's details
     // window. A slot with no pick uses the match's default mix.
-    readonly Dictionary<CaptainData, SoldierClassData[]> loadouts = new();
+    readonly Dictionary<Captain, SoldierClassData[]> loadouts = new();
 
     // Gifts bought this run and not yet given. They don't carry over to the next run.
     readonly Dictionary<GiftData, int> gifts = new();
@@ -42,18 +41,17 @@ public class RunState
         return Current;
     }
 
-    public IEnumerable<KeyValuePair<CaptainData, int>> AllXp => captainXp;
-    public IEnumerable<KeyValuePair<CaptainData, float>> AllBestApprovals => bestApprovalThisRun;
-    public IEnumerable<CaptainData> Departed => departed;
+    public IEnumerable<KeyValuePair<Captain, float>> AllBestApprovals => bestApprovalThisRun;
+    public IEnumerable<Captain> Departed => departed;
 
-    public IEnumerable<KeyValuePair<CaptainData, int>> AllStartRanks => startRanks;
+    public IEnumerable<KeyValuePair<Captain, int>> AllStartRanks => startRanks;
 
-    public void SetBestApproval(CaptainData captain, float approval) => bestApprovalThisRun[captain] = approval;
-    public void SetStartRank(CaptainData captain, int rank) => startRanks[captain] = rank;
+    public void SetBestApproval(Captain captain, float approval) => bestApprovalThisRun[captain] = approval;
+    public void SetStartRank(Captain captain, int rank) => startRanks[captain] = rank;
 
     // The rank the captain had when this run first touched its approval. Every approval change
     // asks for this before applying itself, so the first ask sees the rank the run began with.
-    public int StartRankOf(CaptainData captain)
+    public int StartRankOf(Captain captain)
     {
         if (!startRanks.TryGetValue(captain, out int rank))
             startRanks[captain] = rank = ApprovalStore.RankOf(captain);
@@ -73,15 +71,15 @@ public class RunState
 
     public void Heal(int amount) => Health = RunHealing.Heal(Health, MaxHealth, amount);
 
-    public int XpOf(CaptainData captain) => captainXp.TryGetValue(captain, out int xp) ? xp : 0;
+    public int XpOf(Captain captain) => captain != null ? captain.xp : 0;
 
-    public void AddXp(CaptainData captain, int amount)
+    public void AddXp(Captain captain, int amount)
     {
-        if (amount > 0) captainXp[captain] = XpOf(captain) + amount;
+        if (captain != null && amount > 0) captain.xp += amount;
     }
 
     // The best approval this run, starting from the captain's approval when first seen this run.
-    public float BestApprovalThisRun(CaptainData captain)
+    public float BestApprovalThisRun(Captain captain)
     {
         float current = ApprovalStore.ApprovalOf(captain);
         if (!bestApprovalThisRun.TryGetValue(captain, out float best) || current > best)
@@ -91,16 +89,16 @@ public class RunState
 
     // The captains picked for this run (GDD: a run brings a subset of the roster). Empty until the
     // player has picked, which is how the match knows to show the run setup screen.
-    public List<CaptainData> Party { get; } = new();
+    public List<Captain> Party { get; } = new();
     public bool HasParty => Party.Count > 0;
 
-    // The roster captains drawn for this run's setup screen to pick the party from. Empty until drawn.
+    // The captains rolled for this run's setup screen to pick the party from. Empty until rolled.
     // Not saved: a run only saves once its party is picked.
-    public List<CaptainData> SetupOffer { get; } = new();
+    public List<Captain> SetupOffer { get; } = new();
     // Matches finished this run; the next match is MatchesPlayed + 1.
     public int MatchesPlayed { get; private set; }
 
-    public void SetParty(IEnumerable<CaptainData> captains)
+    public void SetParty(IEnumerable<Captain> captains)
     {
         Party.Clear();
         Party.AddRange(captains);
@@ -110,16 +108,16 @@ public class RunState
     public int ActivePartyCount => Party.FindAll(c => !HasDeparted(c)).Count;
 
     // Captains offered to join after a won city; empty when there's nothing to choose.
-    public List<CaptainData> RecruitOffer { get; } = new();
+    public List<Captain> RecruitOffer { get; } = new();
 
-    public void OfferRecruits(IEnumerable<CaptainData> captains)
+    public void OfferRecruits(IEnumerable<Captain> captains)
     {
         RecruitOffer.Clear();
         RecruitOffer.AddRange(captains);
     }
 
     // Takes one of the offered captains into the party, or none when captain is null.
-    public void Recruit(CaptainData captain)
+    public void Recruit(Captain captain)
     {
         if (captain != null && RecruitOffer.Contains(captain) && !Party.Contains(captain)) Party.Add(captain);
         RecruitOffer.Clear();
@@ -141,13 +139,13 @@ public class RunState
     // ahead, but it isn't a match.
     public void CompleteStop(int intelDepth) => Map?.ClearTarget(intelDepth);
 
-    public IEnumerable<KeyValuePair<CaptainData, SoldierClassData[]>> AllLoadouts => loadouts;
+    public IEnumerable<KeyValuePair<Captain, SoldierClassData[]>> AllLoadouts => loadouts;
 
     // The class picked for a captain's slot, or null when the slot keeps the default.
-    public SoldierClassData LoadoutClass(CaptainData captain, int slot) =>
+    public SoldierClassData LoadoutClass(Captain captain, int slot) =>
         slot >= 0 && slot < MaxSoldierSlots && loadouts.TryGetValue(captain, out SoldierClassData[] classes) ? classes[slot] : null;
 
-    public void SetLoadoutClass(CaptainData captain, int slot, SoldierClassData soldierClass)
+    public void SetLoadoutClass(Captain captain, int slot, SoldierClassData soldierClass)
     {
         if (captain == null || slot < 0 || slot >= MaxSoldierSlots) return;
         if (!loadouts.TryGetValue(captain, out SoldierClassData[] classes))
@@ -173,9 +171,9 @@ public class RunState
         return true;
     }
 
-    public bool HasDeparted(CaptainData captain) => departed.Contains(captain);
+    public bool HasDeparted(Captain captain) => departed.Contains(captain);
 
-    public void Depart(CaptainData captain) => departed.Add(captain);
+    public void Depart(Captain captain) => departed.Add(captain);
 
     // Forgets the run in memory, so the match scene loads the saved one (or starts afresh) next.
     public static void Clear() => Current = null;
