@@ -19,6 +19,17 @@ public static class ProfileSave
         public int locationsUnlocked = 1;
         public List<Captain> roster = new();
         public SoldierInventory soldiers;
+        public int shopSeed;
+        public List<int> soldSoldiers = new();
+        public List<int> soldCaptains = new();
+        public List<PackedGift> packedGifts = new();
+    }
+
+    [Serializable]
+    class PackedGift
+    {
+        public string gift;
+        public int count;
     }
 
     // Where the AI Run keeps its own profile, so it never touches the player's.
@@ -40,8 +51,13 @@ public static class ProfileSave
             gold = profile.Gold,
             locationsUnlocked = profile.LocationsUnlocked,
             soldiers = profile.Soldiers,
+            shopSeed = profile.ShopSeed,
         };
         file.roster.AddRange(profile.Roster);
+        file.soldSoldiers.AddRange(profile.SoldSoldiers);
+        file.soldCaptains.AddRange(profile.SoldCaptains);
+        foreach (KeyValuePair<string, int> entry in profile.PackedGifts)
+            file.packedGifts.Add(new PackedGift { gift = entry.Key, count = entry.Value });
         try
         {
             File.WriteAllText(FilePath, JsonUtility.ToJson(file, true));
@@ -73,6 +89,11 @@ public static class ProfileSave
         foreach (CaptainData template in templates)
             if (template != null) templateByName[template.name] = template;
         Profile profile = Profile.Resume(file.gold, file.locationsUnlocked, file.soldiers);
+        profile.RestockShop(file.shopSeed);
+        profile.SoldSoldiers.AddRange(file.soldSoldiers ?? new List<int>());
+        profile.SoldCaptains.AddRange(file.soldCaptains ?? new List<int>());
+        foreach (PackedGift entry in file.packedGifts ?? new List<PackedGift>())
+            if (entry != null) profile.PackGift(entry.gift, entry.count);
         foreach (Captain captain in file.roster ?? new List<Captain>())
         {
             if (captain == null || string.IsNullOrEmpty(captain.id) || !templateByName.TryGetValue(captain.templateName ?? "", out CaptainData template)) continue;

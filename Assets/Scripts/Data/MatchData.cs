@@ -45,6 +45,16 @@ public class MatchData : ScriptableObject
     [Tooltip("How many of those gifts a single shop has on its shelves.")]
     public int shopSize = 6;
 
+    [Header("Castle shop")]
+    [Tooltip("Soldiers on the Castle shop's Soldier Recruit tab, rolled anew after each run.")]
+    public int castleSoldierStock = 6;
+    [Tooltip("What a soldier costs at the Castle by rarity: Common, Uncommon, Rare, Epic, Legendary.")]
+    public int[] soldierPrices = { 60, 100, 160, 240, 400 };
+    [Tooltip("Captains on the Castle shop's Captain Recruit tab, rolled anew after each run.")]
+    public int castleCaptainStock = 3;
+    [Tooltip("What a captain costs at the Castle.")]
+    public int captainPrice = 250;
+
     // The least a gift costs, used by the AI to judge whether a shop is worth visiting.
     public int GiftCost
     {

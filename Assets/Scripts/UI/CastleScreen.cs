@@ -4,10 +4,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// The Castle (item: castle), home between runs: the inventory, with captains to equip soldiers to
-// and release, and setting out, which picks the party and then a location. Built in uGUI at runtime
+// The Castle (item: castle), home between runs: the shop (CastleScreen.Shop.cs), the inventory, with
+// captains to equip soldiers to and release, and setting out, which picks the party and then a location. Built in uGUI at runtime
 // like the main menu; the Castle scene only holds a camera and this component.
-public class CastleScreen : MonoBehaviour
+public partial class CastleScreen : MonoBehaviour
 {
     public const string SceneName = "Castle";
 
@@ -114,6 +114,7 @@ public class CastleScreen : MonoBehaviour
         UIKit.Size(UIKit.Group(column, "Gap"), height: 16f);
 
         UIKit.Primary(UIKit.Button(column, "Set out", BuildParty, 240f, 34f), refreshers);
+        UIKit.Button(column, "Shop", BuildShop, 240f, 34f);
         UIKit.Button(column, "Inventory", () => { pickingSlot = -1; BuildInventory(); }, 240f, 34f);
         UIKit.Button(column, "Main menu", MainMenu.Open, 240f, 34f);
     }
@@ -422,6 +423,7 @@ public class CastleScreen : MonoBehaviour
     {
         if (party.Count == 0 || !LocationSelect.TryStartRun(data, profile, location)) return;
         RunState.Current.SetParty(party);
+        PackForRun(RunState.Current);
         ProfileSave.Save(profile);
         SceneManager.LoadScene(MainMenu.MatchSceneName);
     }
