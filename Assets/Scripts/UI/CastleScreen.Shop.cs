@@ -61,8 +61,6 @@ public partial class CastleScreen
         if (shopTab == ShopTab.Soldiers) BuildSoldierShelves(panel);
         else if (shopTab == ShopTab.Captains) BuildCaptainShelves(panel);
         else BuildGiftShelves(panel);
-
-        UIKit.PadBadge(UIKit.Button(column, "Back", BuildHome, 200f, 32f), PadGlyph.East);
     }
 
     // Saves the purchase and redraws the tab.
@@ -144,7 +142,7 @@ public partial class CastleScreen
             int price = CastleShop.SoldierPrice(soldier.rarity, data.soldierPrices);
             RectTransform row = SoldierRow(list.content, soldier, $"{price} Gold");
             buyButtons.Add(UIKit.LiveButton(row, () => BuyLabel(price), () => BuySoldier(slot), refreshers,
-                () => CastleShop.CanBuySoldier(false, profile.Gold, price), width: 90f, height: 24f));
+                () => CastleShop.CanBuySoldier(false, profile.Gold, price), width: UIKit.ItemActionWidth, height: UIKit.ItemActionHeight));
             shown++;
         }
         if (shown == 0) SoldOut(list.content);
@@ -177,21 +175,29 @@ public partial class CastleScreen
         {
             if (profile.SoldCaptains.Contains(i)) continue;
             int slot = i;
-            RectTransform row = UIKit.Group(list.content, "Shelf");
-            UIKit.Layout<HorizontalLayoutGroup>(row, 0, 8).childAlignment = TextAnchor.MiddleLeft;
-            UIKit.Size(row, flexibleWidth: 1f);
-            RectTransform card = CaptainCard(row, captainStock[i], $"{price} GOLD", () => { }, false);
-            // Only the Buy button takes clicks and focus.
-            card.GetComponent<Button>().enabled = false;
+            Captain captain = captainStock[i];
+            RectTransform row = UIKit.ItemRow(list.content, captain.displayName, captain.Portrait, captain.displayName, UIKit.TextColor,
+                CaptainDetail(captain, price));
             buyButtons.Add(UIKit.LiveButton(row, () => CaptainBlock(price) switch
                 {
                     RecruitBlock.RosterFull => "Roster full",
                     RecruitBlock.NotEnoughGold => "Need Gold",
                     _ => $"Recruit {price}",
-                }, () => BuyCaptain(slot), refreshers, () => CaptainBlock(price) == RecruitBlock.None, width: 110f, height: 28f));
+                }, () => BuyCaptain(slot), refreshers, () => CaptainBlock(price) == RecruitBlock.None,
+                width: UIKit.ItemActionWidth, height: UIKit.ItemActionHeight));
             shown++;
         }
         if (shown == 0) SoldOut(list.content);
+    }
+
+    // "Fire Guardian   Lv 1   Ability   120 Gold", the element in its colour.
+    string CaptainDetail(Captain captain, int price)
+    {
+        ElementData element = data.ElementInfo(captain.element);
+        string elementName = element != null ? element.displayName : captain.element.ToString();
+        string ability = captain.Ability != null ? $"   {captain.AbilityName}" : "";
+        return $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{elementName}</color> {captain.ClassName}   Lv {Level(captain)}{ability}" +
+               $"   <color={UIKit.Hex(UIKit.AccentColor)}>{price} Gold</color>";
     }
 
     RecruitBlock CaptainBlock(int price) => CastleShop.CaptainBlock(false, profile.Roster.Count, Profile.MaxRoster, profile.Gold, price);
@@ -221,18 +227,12 @@ public partial class CastleScreen
         {
             GiftData gift = data.shopGifts[index];
             if (gift == null) continue;
-            RectTransform row = UIKit.Box(list.content, gift.displayName, CardColor, blocksClicks: false);
-            UIKit.Size(row, flexibleWidth: 1f);
-            UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
-            UIKit.Icon(row, gift.icon, 32f);
-            RectTransform text = UIKit.Group(row, "Text");
-            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
-            UIKit.Size(text, flexibleWidth: 1f);
-            UIKit.Label(text, gift.displayName, 13).fontStyle = FontStyle.Bold;
-            UIKit.LiveLabel(text, () => $"{gift.cost} Gold   (packed {profile.PackedGift(gift.name)})", refreshers, 11,
-                color: UIKit.MutedTextColor);
+            string Detail() => $"{gift.cost} Gold   (packed {profile.PackedGift(gift.name)})";
+            RectTransform row = UIKit.ItemRow(list.content, gift.displayName, gift.icon, gift.displayName, UIKit.TextColor, Detail(),
+                out Text detail);
+            refreshers.Add(() => detail.text = Detail());
             buyButtons.Add(UIKit.LiveButton(row, () => BuyLabel(gift.cost), () => BuyGift(gift), refreshers,
-                () => profile.Gold >= gift.cost, width: 90f, height: 24f));
+                () => profile.Gold >= gift.cost, width: UIKit.ItemActionWidth, height: UIKit.ItemActionHeight));
         }
     }
 
