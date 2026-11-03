@@ -382,7 +382,7 @@ public class RunScreens : MonoBehaviour
 
         int nextLayer = map.current < 0 ? 0 : map.nodes[map.current].layer + 1;
         string progress = nextLayer >= map.layerCount - 1 ? "The enemy base lies ahead" : $"Stop {nextLayer + 1} of {map.layerCount}";
-        UIKit.Label(column, "WORLD MAP", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, match.Location != null ? match.Location.displayName.ToUpperInvariant() : "WORLD MAP", 24, TextAnchor.MiddleCenter);
         UIKit.Label(column, $"{progress}. Choose one of the glowing stops; each stop you reach reveals the roads beyond it.",
             12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         BuildRunStats(root, run);

@@ -26,22 +26,22 @@ public class RunState
     // The soldiers the player owns and the captains they're equipped to, held by the profile.
     public SoldierInventory Soldiers => Profile.Soldiers;
 
-    // Which location this run is at. Only the first exists until locations land (#32).
-    public int Location { get; private set; }
+    // The id of the location this run is at (see LocationData), or null for a match without locations.
+    public string Location { get; private set; }
     public int Health { get; private set; }
     public int MaxHealth { get; private set; }
     // The profile's Gold: it carries over between runs.
     public int Gold => Profile.Gold;
     public bool IsDefeated => Health <= 0;
 
-    public static RunState StartNewRun(Profile profile, int location, int health)
+    public static RunState StartNewRun(Profile profile, string location, int health)
     {
         Current = new RunState { Profile = profile, Location = location, Health = health, MaxHealth = health };
         return Current;
     }
 
     // A saved run picked up again (see RunSave), which restores the rest.
-    public static RunState Resume(Profile profile, int location, int health, int maxHealth, int matchesPlayed)
+    public static RunState Resume(Profile profile, string location, int health, int maxHealth, int matchesPlayed)
     {
         Current = new RunState { Profile = profile, Location = location, Health = health, MaxHealth = maxHealth, MatchesPlayed = matchesPlayed };
         return Current;

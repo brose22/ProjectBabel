@@ -396,16 +396,32 @@ public class CastleScreen : MonoBehaviour
         UIKit.Label(column, "CHOOSE A LOCATION", 24, TextAnchor.MiddleCenter);
         UIKit.Label(column, $"Party: {string.Join(", ", party.ConvertAll(c => c.displayName))}", 13, TextAnchor.MiddleCenter,
             UIKit.MutedTextColor);
-        LocationSelect.Build(column, data, profile, SetOut, 520f);
+        // One row per location, in unlock order: its name and description, and a button that sets
+        // out for it while it is open.
+        foreach (LocationSelect.Entry entry in LocationSelect.Entries(data, profile))
+        {
+            LocationData location = entry.location;
+            RectTransform row = UIKit.Box(column, location.displayName, entry.unlocked ? null : UIKit.InsetColor, blocksClicks: false);
+            UIKit.Size(row, 520f);
+            UIKit.Layout<HorizontalLayoutGroup>(row, 8, 8).childAlignment = TextAnchor.MiddleLeft;
+            RectTransform text = UIKit.Group(row, "Text");
+            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
+            UIKit.Size(text, flexibleWidth: 1f);
+            Text name = UIKit.Label(text, location.displayName, 15, color: entry.unlocked ? UIKit.TextColor : UIKit.DisabledTextColor);
+            name.fontStyle = FontStyle.Bold;
+            UIKit.Label(text, entry.unlocked ? location.description : "Win the location before it to open this one.", 11,
+                color: UIKit.MutedTextColor);
+            Button button = UIKit.Button(row, entry.unlocked ? "Set out" : "Locked", () => SetOut(location), 110f, 28f);
+            button.interactable = entry.unlocked;
+        }
         UIKit.PadBadge(UIKit.Button(column, "Back", BuildParty, 200f, 32f), PadGlyph.East);
     }
 
     // Starts a run at the location with the picked party; the match makes its world map.
-    void SetOut(int location)
+    void SetOut(LocationData location)
     {
-        if (party.Count == 0) return;
-        RunSave.Delete();
-        RunState.StartNewRun(profile, location, data.startingHealth).SetParty(party);
+        if (party.Count == 0 || !LocationSelect.TryStartRun(data, profile, location)) return;
+        RunState.Current.SetParty(party);
         ProfileSave.Save(profile);
         SceneManager.LoadScene(MainMenu.MatchSceneName);
     }

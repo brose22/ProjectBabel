@@ -45,6 +45,8 @@ public class MapNode
     public NodeKind kind;
     // A per-node random number, e.g. to pick which event an event node holds.
     public int seed;
+    // The location element this city's enemies lean to (an Element value), or -1 for none.
+    public int element = -1;
     public List<int> next = new();
     // Revealed by intel; hidden cities and their roads aren't shown.
     public bool revealed;
@@ -221,6 +223,17 @@ public class WorldMap
 
         foreach (MapNode node in layers[0]) map.RevealFrom(node.id, Math.Max(0, intelDepth - 1));
         map.Base.revealed = true;
+        return map;
+    }
+
+    // Builds the map for a location: its size, branching, special-node odds and gate tiers, and a
+    // leaning element for every city, picked from the location's elements.
+    public static WorldMap Generate(int seed, LocationSpec location, int layoutCount, int intelDepth, IReadOnlyList<int> layoutGates = null)
+    {
+        LocationMapSettings settings = location?.map ?? new LocationMapSettings();
+        WorldMap map = Generate(seed, settings.matchesPerRun, layoutCount, settings.minCitiesPerLayer, settings.maxCitiesPerLayer,
+            intelDepth, settings.nodeOdds, layoutGates, settings.doubleGateFirstLayer, settings.tripleGateFirstLayer);
+        foreach (MapNode node in map.nodes) node.element = LocationRules.CityElement(node.seed, location?.elements);
         return map;
     }
 

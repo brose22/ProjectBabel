@@ -7,6 +7,9 @@ using UnityEngine.Serialization;
 public class SpawnGroup
 {
     public EnemyData enemy;
+    // The element the group fights with in place of the enemy's own; set on the waves a location
+    // reshapes, never authored.
+    [NonSerialized] public Element? element;
     public int count = 5;
     public float spawnInterval = 1f;
     public float delayBefore;
@@ -83,8 +86,17 @@ public class MatchData : ScriptableObject
     [Tooltip("Map templates the world map's cities are played on. Empty keeps the scene's own road.")]
     public List<CityLayout> layouts = new();
 
+    [Header("Locations")]
+    [Tooltip("Where runs are played, in unlock order: winning one opens the next. Each brings its own world map settings, enemies and elements. Empty plays every run with the world map settings below.")]
+    public List<LocationData> locations = new();
+
+    // The location with this id, or null when there is none.
+    public LocationData FindLocation(string id) => string.IsNullOrEmpty(id) ? null : locations.Find(l => l != null && l.id == id);
+
+    public List<string> LocationIds => locations.ConvertAll(l => l != null ? l.id : null);
+
     [Header("World map")]
-    [Tooltip("Matches in a run, the enemy base included (GDD: about 30; short for testing).")]
+    [Tooltip("Used when the match has no locations, and by AI single matches. Matches in a run, the enemy base included (GDD: about 30; short for testing).")]
     public int matchesPerRun = 7;
     public int minCitiesPerLayer = 2;
     public int maxCitiesPerLayer = 3;
