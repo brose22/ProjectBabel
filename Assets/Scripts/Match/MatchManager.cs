@@ -101,7 +101,9 @@ public class MatchManager : MonoBehaviour
         if (RunState.Current == null && !RunSave.TryResume(LoadProfile(), data.captainTemplates, data.shopGifts))
             StartRun();
         // A run without a party starts at the setup screen, then the world map until a city is picked.
+        // A run the Castle just set out on has its party but no map yet.
         RunState run = RunState.Current;
+        if (run.HasParty && run.Map == null) run.SetMap(NewWorldMap());
         City = run.Map?.Target;
         State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : City.IsMatch ? MatchState.Preparing : MatchState.Stop;
         waves = ScaledWaves();
@@ -206,7 +208,9 @@ public class MatchManager : MonoBehaviour
     }
 
     // Bond rank sets how many soldiers a captain fields (GDD); soldiersPerTower is the floor.
-    public int SoldierCountFor(Captain captain) =>
+    public int SoldierCountFor(Captain captain) => SoldierCountFor(data, captain);
+
+    public static int SoldierCountFor(MatchData data, Captain captain) =>
         Mathf.Max(data.soldiersPerTower, BondMath.SoldierCount(ApprovalStore.RankOf(captain)));
 
     // A rank-up mid-match fields any soldier equipped in the slot it opens.
@@ -241,15 +245,16 @@ public class MatchManager : MonoBehaviour
 
     // Until the starting captains come with their own soldiers (#33), each captain joining the roster
     // with none brings a few random ones, equipped in its first slots.
-    void GiveStartingSoldiers(IEnumerable<Captain> captains)
+    void GiveStartingSoldiers(IEnumerable<Captain> captains) => GiveStartingSoldiers(data, RunState.Current.Soldiers, captains);
+
+    public static void GiveStartingSoldiers(MatchData data, SoldierInventory inventory, IEnumerable<Captain> captains)
     {
-        SoldierInventory inventory = RunState.Current.Soldiers;
         foreach (Captain captain in captains)
         {
             if (captain == null || inventory.EquippedTo(captain.id).Count > 0) continue;
             for (int i = 0; i < data.startingSoldiersPerCaptain; i++)
             {
-                int slot = inventory.FirstEmptySlot(captain.id, SoldierCountFor(captain));
+                int slot = inventory.FirstEmptySlot(captain.id, SoldierCountFor(data, captain));
                 if (slot < 0) break;
                 SoldierItem soldier = SoldierRules.Roll(Random.Range(int.MinValue, int.MaxValue));
                 inventory.Add(soldier);
@@ -412,6 +417,16 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
+    // Ends the run, by abandoning it or once it is won or lost, and goes home to the Castle. The
+    // profile, with the roster, soldiers and Gold, is kept.
+    public void ReturnToCastle()
+    {
+        IsPaused = false;
+        RunSave.Delete();
+        if (RunState.Current != null) ProfileSave.Save(RunState.Current.Profile);
+        CastleScreen.Open();
+    }
+
     // The profile in memory, else the saved one, else a new one with the starting Gold.
     Profile LoadProfile()
     {
@@ -434,8 +449,8 @@ public class MatchManager : MonoBehaviour
     // At least this many captains are offered, for an AI run that fields a bigger party than usual.
     public int SetupOfferMinimum { get; set; }
 
-    // The captains the setup screen offers: the profile's roster. Until the Castle recruits captains
-    // (#30), a roster smaller than the usual offer is topped up with newly rolled captains, each
+    // The captains the setup screen offers (AI runs; players pick the party at the Castle): the
+    // profile's roster. Until the starting captains land (#33), a roster smaller than the usual offer is topped up with newly rolled captains, each
     // with a few soldiers, so a new profile has captains to pick and a run can always field one.
     public IReadOnlyList<Captain> SetupOffer
     {
@@ -456,9 +471,15 @@ public class MatchManager : MonoBehaviour
     // captains apart.
     public List<Captain> RollCaptains(int count, int seed)
     {
-        List<CaptainData> templates = data.captainTemplates.FindAll(t => t != null);
         RunState run = RunState.Current;
-        var taken = new HashSet<string>(run.Profile.Roster.Concat(run.Party).Concat(run.RecruitOffer).Select(c => c.displayName));
+        return RollCaptains(data, run.Profile.Roster.Concat(run.Party).Concat(run.RecruitOffer), count, seed);
+    }
+
+    // The same outside a match (the Castle), with the names of the given captains taken.
+    public static List<Captain> RollCaptains(MatchData data, IEnumerable<Captain> named, int count, int seed)
+    {
+        List<CaptainData> templates = data.captainTemplates.FindAll(t => t != null);
+        var taken = new HashSet<string>(named.Select(c => c.displayName));
         var rolled = new List<Captain>();
         foreach ((int template, int rollSeed) in CaptainOffer.Draw(templates.Count, count, seed))
         {
@@ -482,14 +503,17 @@ public class MatchManager : MonoBehaviour
         return counts;
     }
 
+    // A fresh world map for the run's location.
+    WorldMap NewWorldMap() => WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
+        data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds,
+        LayoutGateCounts(), data.doubleGateFirstLayer, data.tripleGateFirstLayer);
+
     // Starts the run with the chosen roster captains and a fresh world map; called from the setup screen.
     public void BeginRun(IEnumerable<Captain> party)
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party.Where(RunState.Current.Profile.Owns));
-        RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
-            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds,
-            LayoutGateCounts(), data.doubleGateFirstLayer, data.tripleGateFirstLayer));
+        RunState.Current.SetMap(NewWorldMap());
         nextCaptainIndex = 0;
         State = MatchState.Map;
         RunSave.Save(RunState.Current);
