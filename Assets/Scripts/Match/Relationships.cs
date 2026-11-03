@@ -35,7 +35,7 @@ public readonly struct LevelNotice
 // Judges captains' likes and dislikes and changes their approval (GDD relationship system).
 // Play-style tags are judged at the end of each wave and the soldier mix at the end of the match,
 // along with a bonus for winning. A captain whose approval falls 20 below its best this run walks
-// out at the end of the match (never mid-match) and sits out the rest of the run.
+// out at the end of the match (never mid-match) and leaves the roster for good.
 // Added to the match object at runtime by MatchManager, like CameraShake.
 public class Relationships : MonoBehaviour
 {

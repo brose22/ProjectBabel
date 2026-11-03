@@ -89,9 +89,12 @@ public class AiPlayer : MonoBehaviour
         string folder = Path.Combine(Application.persistentDataPath, "ai");
         Directory.CreateDirectory(folder);
         RunSave.PathOverride = Path.Combine(folder, "run.json");
+        ProfileSave.PathOverride = Path.Combine(folder, "profile.json");
         MatchStats.WriteCsvEnabled = false;
         RunSave.Delete();
+        ProfileSave.Delete();
         RunState.Clear();
+        Profile.Clear();
 
         recorder.Subscribe();
         overlay = new AiOverlay(transform, StatusText, () => recorder.LastDecision, () => speed, SetSpeed, () => Finish("Stopped"));
@@ -131,6 +134,7 @@ public class AiPlayer : MonoBehaviour
     static void EndIsolation()
     {
         RunSave.PathOverride = null;
+        ProfileSave.PathOverride = null;
         MatchStats.WriteCsvEnabled = true;
     }
 
@@ -244,12 +248,8 @@ public class AiPlayer : MonoBehaviour
             return;
         }
         int partySize = options.captains > 0 ? options.captains : match.Data.partySize;
-        // The setup screen has drawn its usual offer; draw a wider one when the party is bigger than it.
-        if (RunState.Current.SetupOffer.Count < partySize)
-        {
-            RunState.Current.SetupOffer.Clear();
-            match.SetupOfferMinimum = partySize;
-        }
+        // The setup screen offers the roster; top it up further when the party is bigger than that.
+        match.SetupOfferMinimum = partySize;
         List<Captain> roster = match.SetupOffer.ToList();
         List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), partySize);
         var party = picks.ConvertAll(i => roster[i]);
@@ -406,7 +406,8 @@ public class AiPlayer : MonoBehaviour
         }
         runIndex++;
         runSeed = SeedFor(runIndex);
-        match.RestartRun();
+        // Each run starts from a new profile, so runs in a batch compare.
+        match.RestartRun(freshProfile: true);
         pendingLoad = true;
     }
 

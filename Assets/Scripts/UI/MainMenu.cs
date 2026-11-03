@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// The title screen the game starts on: start or resume a run, change settings, or quit. Built in
+// The title screen the game starts on: start or resume a run, start a new game, change settings, or quit. Built in
 // uGUI at runtime like the run screens; the menu scene only holds a camera and this component.
 public class MainMenu : MonoBehaviour
 {
@@ -25,8 +25,12 @@ public class MainMenu : MonoBehaviour
     // (Awake) rather than here, where the match HUD would still read it this frame.
     public static void Open() => SceneManager.LoadScene(SceneName);
 
-    // Resume reloads the run from its save, so nothing from the match lingers in memory.
-    void Awake() => RunState.Clear();
+    // Resume reloads the profile and run from their saves, so nothing from the match lingers in memory.
+    void Awake()
+    {
+        RunState.Clear();
+        Profile.Clear();
+    }
 
     void Start()
     {
@@ -61,6 +65,7 @@ public class MainMenu : MonoBehaviour
 
         UIKit.Button(column, "Start run", () => { if (RunSave.Exists) BuildConfirmNewRun(); else StartRun(); }, 240f, 34f);
         UIKit.LiveButton(column, () => "Resume run", ResumeRun, refreshers, () => RunSave.Exists, width: 240f, height: 34f);
+        UIKit.Button(column, "New game", () => { if (ProfileSave.Exists) BuildConfirmNewGame(); else NewGame(); }, 240f, 34f);
         UIKit.Button(column, "AI Run", BuildAiRun, 240f, 34f);
         UIKit.Button(column, "Settings", BuildSettings, 240f, 34f);
         UIKit.Button(column, "Exit", Quit, 240f, 34f);
@@ -144,7 +149,7 @@ public class MainMenu : MonoBehaviour
     {
         RectTransform column = NewScreen("Confirm", 460f);
         UIKit.Label(column, "START A NEW RUN?", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, "Your saved run will be lost, along with its captains.", 14,
+        UIKit.Label(column, "Your run in progress will be lost. Your captains, soldiers and Gold stay.", 14,
             TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
@@ -152,11 +157,32 @@ public class MainMenu : MonoBehaviour
         UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f), PadGlyph.East);
     }
 
+    void BuildConfirmNewGame()
+    {
+        RectTransform column = NewScreen("Confirm", 460f);
+        UIKit.Label(column, "START A NEW GAME?", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, "Your captains, soldiers, Gold and any run in progress will be lost.", 14,
+            TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        RectTransform buttons = UIKit.Group(column, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
+        UIKit.Button(buttons, "Start new game", NewGame, 180f, 32f);
+        UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f), PadGlyph.East);
+    }
+
+    // A new run on the saved profile; a new profile is made if there is none.
     static void StartRun()
     {
         RunSave.Delete();
         RunState.Clear();
         SceneManager.LoadScene(MatchSceneName);
+    }
+
+    // Throws the profile away with the run, so the next run starts a new one.
+    static void NewGame()
+    {
+        ProfileSave.Delete();
+        Profile.Clear();
+        StartRun();
     }
 
     static void ResumeRun()

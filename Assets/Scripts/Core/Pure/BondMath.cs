@@ -7,7 +7,7 @@ public static class BondMath
     public const float MinApproval = -100f;
     public const float MaxApproval = 100f;
     public const int MaxRank = 4;
-    // A captain whose approval falls this far below its best this run leaves for the rest of the run.
+    // A captain whose approval falls this far below its best this run walks out for good.
     public const float WalkoutDrop = 20f;
 
     // Slower than the GDD's 30 / 50 / 70 / 90: C 40 / B 65 / A 85 / S 100. Anything below C,

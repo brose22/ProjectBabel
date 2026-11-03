@@ -342,7 +342,7 @@ public class RunScreens : MonoBehaviour
         layout.childAlignment = TextAnchor.UpperCenter;
 
         UIKit.Label(column, "A CAPTAIN OFFERS TO JOIN", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, $"Recruit one for the rest of the run, or go on without.  Party {run.ActivePartyCount}/{match.Data.maxPartySize}",
+        UIKit.Label(column, $"Recruit one into your roster and party, or go on without.  Party {run.ActivePartyCount}/{match.Data.maxPartySize}",
             14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
         RectTransform row = UIKit.Group(column, "Captains");
@@ -970,7 +970,7 @@ public class RunScreens : MonoBehaviour
     static string WhereIs(RunState run, SoldierItem soldier)
     {
         if (!soldier.IsEquipped) return "In the inventory";
-        Captain owner = run.Party.Find(c => c.id == soldier.equippedTo);
+        Captain owner = run.Profile.Find(soldier.equippedTo);
         return owner != null ? $"With {owner.displayName}, slot {soldier.slot + 1}" : "With another captain";
     }
 
@@ -1302,7 +1302,7 @@ public class RunScreens : MonoBehaviour
         if (won && !runWon) UIKit.Primary(UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f), refreshers);
         RectTransform buttons = UIKit.Group(panel, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 8, fitContent: true);
-        Button newRun = UIKit.Button(buttons, "New run", match.RestartRun, 150f, 28f);
+        Button newRun = UIKit.Button(buttons, "New run", () => match.RestartRun(), 150f, 28f);
         if (!won || runWon) UIKit.Primary(newRun, refreshers);
         UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 150f, 28f);
     }

@@ -1,9 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// State that lasts for a whole run (about 30 matches): global health, the shared Gold pool and
-// the run's captains. Each Captain carries its own XP and bond. Lives outside any scene so it
-// survives loading the next match.
+// State that lasts for one run (item: run): the location, its world map, global health and the
+// party picked from the profile's roster. Gold, soldiers and the captains themselves belong to the
+// Profile; the run reaches them through it. Lives outside any scene so it survives loading the
+// next match.
 public class RunState
 {
     public static RunState Current { get; private set; }
@@ -12,32 +13,37 @@ public class RunState
     readonly Dictionary<Captain, float> bestApprovalThisRun = new();
     // Each captain's bond rank when it was first seen this run, which caps how far it can rise.
     readonly Dictionary<Captain, int> startRanks = new();
-    // Captains who have walked out; they sit out the rest of this run only (GDD).
+    // Captains who have walked out this run. They have left the roster for good; this keeps them
+    // in the party list so the run's screens can still say they left.
     readonly HashSet<Captain> departed = new();
     // Gifts bought this run and not yet given. They don't carry over to the next run.
     readonly Dictionary<GiftData, int> gifts = new();
 
     public const int MaxSoldierSlots = SoldierInventory.SlotsPerCaptain;
 
-    // The soldiers the player owns and the captains they're equipped to. Lives in the run until
-    // the profile holds it (#29).
-    public SoldierInventory Soldiers { get; private set; } = new();
+    public Profile Profile { get; private set; }
 
+    // The soldiers the player owns and the captains they're equipped to, held by the profile.
+    public SoldierInventory Soldiers => Profile.Soldiers;
+
+    // Which location this run is at. Only the first exists until locations land (#32).
+    public int Location { get; private set; }
     public int Health { get; private set; }
     public int MaxHealth { get; private set; }
-    public int Gold { get; private set; }
+    // The profile's Gold: it carries over between runs.
+    public int Gold => Profile.Gold;
     public bool IsDefeated => Health <= 0;
 
-    public static RunState StartNewRun(int health, int gold)
+    public static RunState StartNewRun(Profile profile, int location, int health)
     {
-        Current = new RunState { Health = health, MaxHealth = health, Gold = gold };
+        Current = new RunState { Profile = profile, Location = location, Health = health, MaxHealth = health };
         return Current;
     }
 
     // A saved run picked up again (see RunSave), which restores the rest.
-    public static RunState Resume(int health, int maxHealth, int gold, int matchesPlayed)
+    public static RunState Resume(Profile profile, int location, int health, int maxHealth, int matchesPlayed)
     {
-        Current = new RunState { Health = health, MaxHealth = maxHealth, Gold = gold, MatchesPlayed = matchesPlayed };
+        Current = new RunState { Profile = profile, Location = location, Health = health, MaxHealth = maxHealth, MatchesPlayed = matchesPlayed };
         return Current;
     }
 
@@ -58,14 +64,9 @@ public class RunState
         return rank;
     }
 
-    public void AddGold(int amount) => Gold += Mathf.Max(0, amount);
+    public void AddGold(int amount) => Profile.AddGold(amount);
 
-    public bool TrySpendGold(int amount)
-    {
-        if (amount > Gold) return false;
-        Gold -= amount;
-        return true;
-    }
+    public bool TrySpendGold(int amount) => Profile.TrySpendGold(amount);
 
     public void TakeDamage(int amount) => Health = Mathf.Max(0, Health - amount);
 
@@ -87,14 +88,11 @@ public class RunState
         return best;
     }
 
-    // The captains picked for this run (GDD: a run brings a subset of the roster). Empty until the
-    // player has picked, which is how the match knows to show the run setup screen.
+    // The captains picked from the roster for this run, up to 5. Empty until the player has
+    // picked, which is how the match knows to show the run setup screen.
     public List<Captain> Party { get; } = new();
     public bool HasParty => Party.Count > 0;
 
-    // The captains rolled for this run's setup screen to pick the party from. Empty until rolled.
-    // Not saved: a run only saves once its party is picked.
-    public List<Captain> SetupOffer { get; } = new();
     // Matches finished this run; the next match is MatchesPlayed + 1.
     public int MatchesPlayed { get; private set; }
 
@@ -116,10 +114,11 @@ public class RunState
         RecruitOffer.AddRange(captains);
     }
 
-    // Takes one of the offered captains into the party, or none when captain is null.
+    // Takes one of the offered captains into the roster and the party, or none when captain is
+    // null. Nobody joins while the roster is full.
     public void Recruit(Captain captain)
     {
-        if (captain != null && RecruitOffer.Contains(captain) && !Party.Contains(captain)) Party.Add(captain);
+        if (captain != null && RecruitOffer.Contains(captain) && !Party.Contains(captain) && Profile.TryAdd(captain)) Party.Add(captain);
         RecruitOffer.Clear();
     }
 
@@ -139,11 +138,8 @@ public class RunState
     // ahead, but it isn't a match.
     public void CompleteStop(int intelDepth) => Map?.ClearTarget(intelDepth);
 
-    public void SetSoldiers(SoldierInventory inventory) => Soldiers = inventory ?? new SoldierInventory();
-
     // The captain's soldiers in slot order.
-    public List<SoldierItem> SoldiersOf(Captain captain) =>
-        captain != null ? Soldiers.EquippedTo(captain.id) : new List<SoldierItem>();
+    public List<SoldierItem> SoldiersOf(Captain captain) => Profile.SoldiersOf(captain);
 
     public IEnumerable<KeyValuePair<GiftData, int>> AllGifts => gifts;
 
@@ -165,11 +161,12 @@ public class RunState
 
     public bool HasDeparted(Captain captain) => departed.Contains(captain);
 
-    // A captain who walks out leaves their soldiers behind in the inventory.
+    // A captain who walks out leaves the roster for good, and their soldiers go back to the inventory.
     public void Depart(Captain captain)
     {
+        if (captain == null) return;
         departed.Add(captain);
-        if (captain != null) Soldiers.UnequipAll(captain.id);
+        Profile.Release(captain);
     }
 
     // Forgets the run in memory, so the match scene loads the saved one (or starts afresh) next.
