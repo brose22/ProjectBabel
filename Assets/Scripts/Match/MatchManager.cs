@@ -97,13 +97,11 @@ public class MatchManager : MonoBehaviour
 
     void Awake()
     {
-        // Pick up a saved run if there is one, otherwise start fresh.
-        if (RunState.Current == null && !RunSave.TryResume(data.captainTemplates, data.shopGifts))
-            RunState.StartNewRun(data.startingHealth, data.startingGold);
+        // Pick up the saved profile and run if there are any, otherwise start fresh.
+        if (RunState.Current == null && !RunSave.TryResume(LoadProfile(), data.captainTemplates, data.shopGifts))
+            StartRun();
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
-        // A run saved before soldiers were items has none, so its captains get theirs now.
-        if (run.HasParty && run.Soldiers.Items.Count == 0) GiveStartingSoldiers(run.Party);
         City = run.Map?.Target;
         State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : City.IsMatch ? MatchState.Preparing : MatchState.Stop;
         waves = ScaledWaves();
@@ -241,7 +239,7 @@ public class MatchManager : MonoBehaviour
         return TowerReach.Range(reaches, captain.range + StatBonus(captain, CaptainStat.Range));
     }
 
-    // Until the starting captains come with their own soldiers (#33), each captain joining a run
+    // Until the starting captains come with their own soldiers (#33), each captain joining the roster
     // with none brings a few random ones, equipped in its first slots.
     void GiveStartingSoldiers(IEnumerable<Captain> captains)
     {
@@ -398,14 +396,32 @@ public class MatchManager : MonoBehaviour
         MainMenu.Open();
     }
 
-    // Ends the run: back to the setup screen with fresh health and Gold. Approval and bond ranks
-    // are untouched, since they carry between runs.
-    public void RestartRun()
+    // Ends the run: back to the setup screen with fresh health. The profile, with the roster,
+    // soldiers and Gold, carries on, unless freshProfile asks for a new one (for AI runs that
+    // each start from scratch).
+    public void RestartRun(bool freshProfile = false)
     {
         RunSave.Delete();
-        RunState.StartNewRun(data.startingHealth, data.startingGold);
+        if (freshProfile)
+        {
+            ProfileSave.Delete();
+            Profile.Clear();
+        }
+        else if (RunState.Current != null) ProfileSave.Save(RunState.Current.Profile);
+        StartRun();
         SceneManager.LoadScene(gameObject.scene.name);
     }
+
+    // The profile in memory, else the saved one, else a new one with the starting Gold.
+    Profile LoadProfile()
+    {
+        if (Profile.Current == null && !ProfileSave.TryLoad(data.captainTemplates))
+            Profile.StartNew(data.startingGold);
+        return Profile.Current;
+    }
+
+    // A new run at the first location, with fresh health.
+    void StartRun() => RunState.StartNewRun(LoadProfile(), 0, data.startingHealth);
 
     // Back to the main menu from the setup, map or results screen. The run is already saved
     // whenever it can be resumed, so nothing is lost.
@@ -418,25 +434,31 @@ public class MatchManager : MonoBehaviour
     // At least this many captains are offered, for an AI run that fields a bigger party than usual.
     public int SetupOfferMinimum { get; set; }
 
-    // The captains the setup screen offers: rolled from the templates once per run.
+    // The captains the setup screen offers: the profile's roster. Until the Castle recruits captains
+    // (#30), a roster smaller than the usual offer is topped up with newly rolled captains, each
+    // with a few soldiers, so a new profile has captains to pick and a run can always field one.
     public IReadOnlyList<Captain> SetupOffer
     {
         get
         {
-            List<Captain> offer = RunState.Current.SetupOffer;
-            if (offer.Count > 0) return offer;
-            int size = CaptainOffer.Size(Mathf.Max(GameSettings.CaptainsOffered, SetupOfferMinimum), data.partySize);
-            offer.AddRange(RollCaptains(size, Random.Range(int.MinValue, int.MaxValue)));
-            return offer;
+            Profile profile = RunState.Current.Profile;
+            int size = Mathf.Min(Profile.MaxRoster, CaptainOffer.Size(Mathf.Max(GameSettings.CaptainsOffered, SetupOfferMinimum), data.partySize));
+            if (profile.Roster.Count >= size) return profile.Roster;
+            foreach (Captain captain in RollCaptains(size - profile.Roster.Count, Random.Range(int.MinValue, int.MaxValue)))
+                if (profile.TryAdd(captain)) GiveStartingSoldiers(new[] { captain });
+            ProfileSave.Save(profile);
+            return profile.Roster;
         }
     }
 
     // Rolls count captains from the templates, every template once before any repeats. Names
-    // already in the run are rerolled where the template has others, so names tell captains apart.
+    // already in the roster or on offer are rerolled where the template has others, so names tell
+    // captains apart.
     public List<Captain> RollCaptains(int count, int seed)
     {
         List<CaptainData> templates = data.captainTemplates.FindAll(t => t != null);
-        var taken = new HashSet<string>(RunState.Current.Party.Concat(RunState.Current.SetupOffer).Select(c => c.displayName));
+        RunState run = RunState.Current;
+        var taken = new HashSet<string>(run.Profile.Roster.Concat(run.Party).Concat(run.RecruitOffer).Select(c => c.displayName));
         var rolled = new List<Captain>();
         foreach ((int template, int rollSeed) in CaptainOffer.Draw(templates.Count, count, seed))
         {
@@ -460,12 +482,11 @@ public class MatchManager : MonoBehaviour
         return counts;
     }
 
-    // Starts the run with the chosen captains and a fresh world map; called from the setup screen.
+    // Starts the run with the chosen roster captains and a fresh world map; called from the setup screen.
     public void BeginRun(IEnumerable<Captain> party)
     {
         if (State != MatchState.Setup) return;
-        RunState.Current.SetParty(party);
-        GiveStartingSoldiers(RunState.Current.Party);
+        RunState.Current.SetParty(party.Where(RunState.Current.Profile.Owns));
         RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
             data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds,
             LayoutGateCounts(), data.doubleGateFirstLayer, data.tripleGateFirstLayer));
@@ -475,19 +496,22 @@ public class MatchManager : MonoBehaviour
     }
 
     // Starts a run that is one match on the given layout, with no world map to cross. Layer sets
-    // the difficulty; called by the AI run, which ends the run when the match does.
+    // the difficulty; called by the AI run, which ends the run when the match does. Captains not
+    // yet in the roster join it, with a few soldiers each, while there's room.
     public void BeginSingleMatch(IEnumerable<Captain> party, int layout, int layer)
     {
         if (State != MatchState.Setup) return;
-        RunState.Current.SetParty(party);
-        GiveStartingSoldiers(RunState.Current.Party);
+        Profile profile = RunState.Current.Profile;
+        foreach (Captain captain in party)
+            if (profile.TryAdd(captain)) GiveStartingSoldiers(new[] { captain });
+        RunState.Current.SetParty(party.Where(profile.Owns));
         RunState.Current.SetMap(WorldMap.SingleMatch(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun, layout, layer));
         nextCaptainIndex = 0;
         RunSave.Save(RunState.Current);
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
-    // Takes an offered captain into the party (or none, for null) and saves the choice.
+    // Takes an offered captain into the roster and party (or none, for null) and saves the choice.
     public void Recruit(Captain captain)
     {
         RunState.Current.Recruit(captain);
@@ -500,7 +524,7 @@ public class MatchManager : MonoBehaviour
     void OfferRecruits()
     {
         RunState run = RunState.Current;
-        if (run.ActivePartyCount >= data.maxPartySize) return;
+        if (run.ActivePartyCount >= data.maxPartySize || run.Profile.RosterFull) return;
         int choices = data.recruitChoices + (IsEliteMatch ? Mathf.Max(0, data.eliteExtraRecruitChoices) : 0);
         run.OfferRecruits(RollCaptains(choices, Random.Range(int.MinValue, int.MaxValue)));
     }
@@ -735,7 +759,12 @@ public class MatchManager : MonoBehaviour
             OfferRecruits();
             RunSave.Save(RunState.Current);
         }
-        else RunSave.Delete();
+        else
+        {
+            // The run is over; the profile it leaves behind is kept.
+            ProfileSave.Save(RunState.Current.Profile);
+            RunSave.Delete();
+        }
     }
 
     // The tower that landed the killing blow earns the XP; a destroyed (sold) tower earns nothing.
