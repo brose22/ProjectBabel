@@ -615,6 +615,18 @@ public class RunScreens : MonoBehaviour
         UIKit.Layout<HorizontalLayoutGroup>(special, 0, 4);
         UIKit.Icon(special, captain.Ability != null ? captain.Ability.icon : null, IconSize);
         UIKit.Label(special, captain.Ability != null ? captain.Ability.displayName : "No special", 12);
+        // The equipped soldiers, live so a change from the details window shows on the card behind it.
+        if (live) UIKit.LiveLabel(info, () => SoldiersLine(captain), refreshers, 11);
+    }
+
+    // The captain's soldiers in slot order, each in its rarity's colour.
+    string SoldiersLine(Captain captain)
+    {
+        List<SoldierItem> soldiers = RunState.Current.SoldiersOf(captain);
+        string muted = UIKit.Hex(UIKit.MutedTextColor);
+        if (soldiers.Count == 0) return $"<color={muted}>No soldiers</color>";
+        return $"<color={muted}>Soldiers</color> " +
+               string.Join(", ", soldiers.ConvertAll(s => CaptainPanelParts.SoldierName(s, match.Data.ClassData(s.soldierClass))));
     }
 
     // A window over the map with everything about one captain. A click beside it, or Close,
@@ -641,14 +653,16 @@ public class RunScreens : MonoBehaviour
         RectTransform stats = UIKit.Group(window, "Stats");
         UIKit.Layout<HorizontalLayoutGroup>(stats, 0, 8).childAlignment = TextAnchor.UpperCenter;
         UIKit.Size(stats, flexibleWidth: 1f);
-        // Small lines under the values: power and defense against the level-1 base, the rest as a party ranking.
-        // Range follows the loadout, so it has none.
-        Stat(stats, "POWER", $"{captain.power * LevelMath.StatFactor(level):0}", level > 1 ? $"base {captain.power:0}" : PartyRank(run, captain, c => c.power));
-        Text rangeStat = Stat(stats, "RANGE", $"{match.RangeFor(captain):0.#}");
-        Stat(stats, "SPEED", $"{captain.speed:0.##}", PartyRank(run, captain, c => c.speed));
+        // Power, range, speed and Defense include what the soldiers add. Small lines under the
+        // values: power and defense against the level-1 base, the rest as a party ranking. Range
+        // follows the soldiers, so it has none.
+        float power = captain.power + match.StatBonus(captain, CaptainStat.Power);
+        Stat(stats, "POWER", $"{power * LevelMath.StatFactor(level):0}", level > 1 ? $"base {captain.power:0}" : PartyRank(run, captain, c => c.power));
+        Stat(stats, "RANGE", $"{match.RangeFor(captain):0.#}");
+        Stat(stats, "SPEED", $"{captain.speed + match.StatBonus(captain, CaptainStat.Speed):0.##}", PartyRank(run, captain, c => c.speed));
         Stat(stats, "HEALTH", $"{captain.health}", PartyRank(run, captain, c => c.health));
-        Stat(stats, "DEFENSE", $"{DefenseMath.AtLevel(captain.defense, captain.defensePerLevel, level):0.#}",
-            level > 1 ? $"base {captain.defense:0.#}" : PartyRank(run, captain, c => c.defense));
+        float defense = DefenseMath.AtLevel(captain.defense, captain.defensePerLevel, level) + match.StatBonus(captain, CaptainStat.Defense);
+        Stat(stats, "DEFENSE", $"{defense:0.#}", level > 1 ? $"base {captain.defense:0.#}" : PartyRank(run, captain, c => c.defense));
         Stat(stats, "RESERVE", $"{captain.ResourceCapacity}", PartyRank(run, captain, c => c.ResourceCapacity));
         Stat(stats, "DRAW", $"{captain.ResourceRegen:0.#}/s", PartyRank(run, captain, c => c.ResourceRegen));
 
@@ -665,8 +679,12 @@ public class RunScreens : MonoBehaviour
         TagLine(window, "Likes", captain.likes, UIKit.GoodColor);
         TagLine(window, "Dislikes", captain.dislikes, UIKit.BadColor);
 
-        // Range follows the soldier classes, so it is redrawn whenever one is changed.
-        BuildLoadout(window, run, captain, () => rangeStat.text = $"{match.RangeFor(captain):0.#}");
+        // The stats follow the soldiers, so the window is drawn again whenever one is changed.
+        BuildLoadout(window, run, captain, () =>
+        {
+            Destroy(overlay.gameObject);
+            ShowCaptainDetails(run, captain);
+        });
 
         UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
         Transform buttons = UIKit.Group(window, "Buttons");
@@ -855,16 +873,14 @@ public class RunScreens : MonoBehaviour
         UIKit.Label(row, string.Join(", ", tags), 12);
     }
 
-    // The soldier class for each slot, saved with the run and used when the captain's tower is
-    // placed. Slots the captain's bond hasn't opened yet say when they open. Class names are
-    // green or red when the captain likes or dislikes that class.
-    void BuildLoadout(Transform window, RunState run, Captain captain, Action onChanged = null)
+    // The soldier equipped in each slot, saved with the run and fielded when the captain's tower is
+    // placed; a slot's button opens the soldier picker. Slots the captain's bond hasn't opened yet
+    // say when they open. onChanged runs after a soldier is equipped or removed.
+    void BuildLoadout(Transform window, RunState run, Captain captain, Action onChanged)
     {
         UIKit.Size(UIKit.Header(window, "Soldiers"), flexibleWidth: 1f);
-        // The class names are coloured by taste; spell it out so colour isn't the only cue.
-        UIKit.Label(window, $"<color={UIKit.Hex(UIKit.GoodColor)}>Green</color> = liked by this captain, " +
-                            $"<color={UIKit.Hex(UIKit.BadColor)}>red</color> = disliked", 10, color: UIKit.MutedTextColor);
-        var classes = match.Data.ChoosableClasses;
+        UIKit.Label(window, "Soldiers take this captain's element and add a stat by class: Knight Defense, Archer Range, " +
+                            "Mage Power, Rogue Speed. Click a slot to change its soldier.", 10, color: UIKit.MutedTextColor);
         int open = match.SoldierCountFor(captain);
         for (int i = 0; i < RunState.MaxSoldierSlots; i++)
         {
@@ -881,34 +897,81 @@ public class RunScreens : MonoBehaviour
                 continue;
             }
 
-            var buttons = new List<(Button button, SoldierClassData soldierClass)>();
-            void Restyle()
-            {
-                SoldierClassData current = match.ClassForSlot(captain, slot);
-                foreach ((Button button, SoldierClassData soldierClass) in buttons)
-                {
-                    bool picked = soldierClass == current;
-                    button.GetComponent<Image>().color = picked ? UIKit.SelectedButtonColor : UIKit.ButtonColor;
-                    button.GetComponentInChildren<Text>().color = picked ? UIKit.SelectedTextColor : TasteColor(captain, soldierClass);
-                }
-            }
-            foreach (SoldierClassData soldierClass in classes)
-            {
-                if (soldierClass == null) continue;
-                SoldierClassData option = soldierClass;
-                Button button = UIKit.Button(row, option.displayName, () =>
-                {
-                    run.SetLoadoutClass(captain, slot, option);
-                    RunSave.Save(run);
-                    Restyle();
-                    onChanged?.Invoke();
-                }, height: 22f);
-                UIKit.Size(button, height: 22f, flexibleWidth: 1f);
-                button.GetComponentInChildren<Text>().fontSize = 12;
-                buttons.Add((button, option));
-            }
-            Restyle();
+            SoldierItem soldier = run.Soldiers.InSlot(captain.id, slot);
+            Button button = UIKit.Button(row, soldier != null ? SoldierSummary(captain, soldier) : "Empty", () =>
+                ShowSoldierPicker(run, captain, slot, onChanged), height: 22f);
+            UIKit.Size(button, height: 22f, flexibleWidth: 1f);
+            Text text = button.GetComponentInChildren<Text>();
+            text.fontSize = 12;
+            if (soldier == null) text.color = UIKit.DisabledTextColor;
         }
+    }
+
+    // "Rare Knight  +0.75 Defense  Melee", with a word on the captain's taste for the class.
+    string SoldierSummary(Captain captain, SoldierItem soldier)
+    {
+        SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
+        string summary = $"{CaptainPanelParts.SoldierName(soldier, soldierClass)}  {CaptainPanelParts.SoldierBonus(soldier, soldierClass)}";
+        if (soldierClass != null) summary += $"  {soldierClass.damageType}";
+        if (soldierClass == null || !Relationships.TryGetClassTag(soldierClass, out CaptainTag tag)) return summary;
+        if (Array.IndexOf(captain.likes, tag) >= 0) return summary + $"  <color={UIKit.Hex(UIKit.GoodColor)}>liked</color>";
+        return Array.IndexOf(captain.dislikes, tag) >= 0 ? summary + $"  <color={UIKit.Hex(UIKit.BadColor)}>disliked</color>" : summary;
+    }
+
+    // Beside the captain window: every soldier owned, those in the inventory first, rarest first.
+    // Equip puts one in the slot, moving it from another captain if it was theirs, and Remove sends
+    // the slot's soldier back to the inventory. Either closes the picker and runs onChanged.
+    void ShowSoldierPicker(RunState run, Captain captain, int slot, Action onChanged)
+    {
+        RectTransform window = OpenWindow("Soldiers", GiftWindowWidth, new Vector2(1f, 0.5f),
+            new Vector2(-(DetailsWidth + 2f * UIKit.Pad), 0f), 0f);
+        GameObject backdrop = window.parent.gameObject;
+        UIKit.Size(UIKit.Header(window, $"{captain.displayName}  Slot {slot + 1}"), flexibleWidth: 1f);
+
+        void Change(Action change)
+        {
+            change();
+            RunSave.Save(run);
+            Destroy(backdrop);
+            onChanged?.Invoke();
+        }
+
+        ScrollRect list = UIKit.ScrollList(window, "Soldiers", UIKit.Gap);
+        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
+        var soldiers = new List<SoldierItem>(run.Soldiers.Items);
+        soldiers.Sort((a, b) => a.IsEquipped != b.IsEquipped ? a.IsEquipped.CompareTo(b.IsEquipped)
+            : b.rarity != a.rarity ? b.rarity.CompareTo(a.rarity) : a.soldierClass.CompareTo(b.soldierClass));
+        foreach (SoldierItem soldier in soldiers)
+        {
+            bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
+            RectTransform row = UIKit.Box(list.content, soldier.id, CardColor, blocksClicks: false);
+            UIKit.Size(row, flexibleWidth: 1f);
+            UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
+            SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
+            UIKit.Icon(row, soldierClass != null ? soldierClass.portrait : null, 32f);
+
+            RectTransform text = UIKit.Group(row, "Text");
+            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
+            UIKit.Size(text, flexibleWidth: 1f);
+            UIKit.Label(text, SoldierSummary(captain, soldier), 13);
+            UIKit.Label(text, here ? "In this slot" : WhereIs(run, soldier), 11, color: UIKit.MutedTextColor);
+            SoldierItem chosen = soldier;
+            if (here) UIKit.Button(row, "Remove", () => Change(() => run.Soldiers.Unequip(chosen.id)), 70f, 24f);
+            else UIKit.Button(row, "Equip", () => Change(() => run.Soldiers.Equip(chosen.id, captain.id, slot)), 70f, 24f);
+        }
+        if (soldiers.Count == 0)
+            UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+
+        Button close = UIKit.Button(window, "Close", () => Destroy(backdrop));
+        UIKit.Size(close, height: 26f, flexibleWidth: 1f);
+        UIKit.PadBadge(close, PadGlyph.East);
+    }
+
+    static string WhereIs(RunState run, SoldierItem soldier)
+    {
+        if (!soldier.IsEquipped) return "In the inventory";
+        Captain owner = run.Party.Find(c => c.id == soldier.equippedTo);
+        return owner != null ? $"With {owner.displayName}, slot {soldier.slot + 1}" : "With another captain";
     }
 
     // The lowest bond rank whose soldier count reaches past this slot.
@@ -917,13 +980,6 @@ public class RunScreens : MonoBehaviour
         for (int rank = 0; rank <= BondMath.MaxRank; rank++)
             if (Mathf.Max(match.Data.soldiersPerTower, BondMath.SoldierCount(rank)) > slot) return rank;
         return BondMath.MaxRank;
-    }
-
-    static Color TasteColor(Captain captain, SoldierClassData soldierClass)
-    {
-        if (!Relationships.TryGetClassTag(soldierClass, out CaptainTag tag)) return UIKit.TextColor;
-        if (Array.IndexOf(captain.likes, tag) >= 0) return UIKit.GoodColor;
-        return Array.IndexOf(captain.dislikes, tag) >= 0 ? UIKit.BadColor : UIKit.TextColor;
     }
 
     // Layers run left to right; cities in a layer are spread evenly top to bottom, nudged a little

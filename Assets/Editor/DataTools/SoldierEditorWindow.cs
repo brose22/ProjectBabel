@@ -24,7 +24,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
 
     protected override string[] TableColumns => new[]
     {
-        nameof(SoldierClassData.damageType), nameof(SoldierClassData.actCost), nameof(SoldierClassData.respawnCost),
+        nameof(SoldierClassData.soldierClass), nameof(SoldierClassData.damageType), nameof(SoldierClassData.statBonus), nameof(SoldierClassData.respawnCost),
         nameof(SoldierClassData.maxHealth), nameof(SoldierClassData.damageMultiplier), nameof(SoldierClassData.attackRange), nameof(SoldierClassData.reach),
         nameof(SoldierClassData.moveSpeed), nameof(SoldierClassData.homeTile), nameof(SoldierClassData.knockbackDistance), nameof(SoldierClassData.knockbackChance),
         nameof(SoldierClassData.projectileSpeed), nameof(SoldierClassData.splashRadius), nameof(SoldierClassData.color),
@@ -57,6 +57,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
             using (new EditorGUILayout.VerticalScope())
             {
                 DataToolsGUI.Section("Identity");
+                DataToolsGUI.Field(so, nameof(SoldierClassData.soldierClass));
                 DataToolsGUI.Field(so, nameof(SoldierClassData.displayName));
                 DataToolsGUI.Field(so, nameof(SoldierClassData.color));
                 DataToolsGUI.Field(so, nameof(SoldierClassData.sprite));
@@ -64,7 +65,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
             }
         }
 
-        DataToolsGUI.Field(so, nameof(SoldierClassData.actCost));
+        DataToolsGUI.Field(so, nameof(SoldierClassData.statBonus), "Captain Stat Bonus");
         DataToolsGUI.Field(so, nameof(SoldierClassData.respawnCost));
 
         DataToolsGUI.Field(so, nameof(SoldierClassData.maxHealth));

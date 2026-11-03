@@ -3,6 +3,8 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Babel/Soldier Class", fileName = "SoldierClass")]
 public class SoldierClassData : ScriptableObject
 {
+    [Tooltip("The class soldier items of this kind belong to. It fixes the captain stat they add: Knight Defense, Archer Range, Mage Power, Rogue Speed.")]
+    public SoldierClass soldierClass;
     public string displayName = "Soldier";
     public Color color = Color.white;
     [Tooltip("Optional art, drawn at 16 px per unit. Without it the soldier is a square in its colour.")]
@@ -10,10 +12,12 @@ public class SoldierClassData : ScriptableObject
     [Tooltip("Head-and-shoulders art for menus.")]
     public Sprite portrait;
 
+    [Header("Captain bonus")]
+    [Tooltip("What a Common soldier adds to its captain's stat (Knight Defense, Archer Range in tiles, Mage Power, Rogue Speed in acts per second). Rarer soldiers add x1.25 per tier, up to x2 for Legendary.")]
+    public float statBonus = 0.5f;
+
     [Header("Gold")]
-    [Tooltip("Gold taken from the tower reserve each time a soldier leaves to act.")]
-    public int actCost = 1;
-    [Tooltip("Gold taken from the tower reserve to bring a dead soldier back.")]
+    [Tooltip("Gold taken from the tower reserve to bring a dead soldier back. Acting is free.")]
     public int respawnCost = 4;
 
     [Header("Combat")]

@@ -225,20 +225,20 @@ public static class GreyBoxMatchBuilder
             e.element = Element.Fire;
         });
 
-        // GDD cost tiers. Act: Rogue very low, Knight/Archer low, Mage high.
-        // Respawn: Rogue/Archer low, Knight medium, Mage high.
-        SoldierClassData knight = SoldierClass("Knight", new Color(0.4f, 0.55f, 1f), DamageType.Melee,
-            actCost: 2, respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, reach: 1.5f, knockback: 0.5f);
+        // GDD respawn cost tiers: Rogue/Archer low, Knight medium, Mage high. Acting is free.
+        // The stat bonus is what a Common soldier adds to its captain: Knight Defense, Archer Range
+        // in tiles, Mage Power, Rogue acts per second.
+        SoldierClassData knight = SoldierClassAsset("Knight", SoldierClass.Knight, new Color(0.4f, 0.55f, 1f), DamageType.Melee, statBonus: 0.5f,
+            respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, reach: 1.5f, knockback: 0.5f);
         // Archers shoot from further than they reach, so they step out a little for far targets.
-        SoldierClassData archer = SoldierClass("Archer", new Color(0.45f, 0.85f, 0.35f), DamageType.Range,
-            actCost: 2, respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad, reach: 2.5f);
-        SoldierClassData rogue = SoldierClass("Rogue", new Color(0.9f, 0.9f, 0.75f), DamageType.Melee,
-            actCost: 1, respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road, reach: 1.5f);
+        SoldierClassData archer = SoldierClassAsset("Archer", SoldierClass.Archer, new Color(0.45f, 0.85f, 0.35f), DamageType.Range, statBonus: 0.25f,
+            respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad, reach: 2.5f);
+        SoldierClassData rogue = SoldierClassAsset("Rogue", SoldierClass.Rogue, new Color(0.9f, 0.9f, 0.75f), DamageType.Melee, statBonus: 0.1f,
+            respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road, reach: 1.5f);
         // Weak against lone enemies, strong against the bunched-up late waves.
-        SoldierClassData mage = SoldierClass("Mage", new Color(1f, 0.45f, 0.75f), DamageType.Magic,
-            actCost: 5, respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, reach: 3f, splash: 1f);
+        SoldierClassData mage = SoldierClassAsset("Mage", SoldierClass.Mage, new Color(1f, 0.45f, 0.75f), DamageType.Magic, statBonus: 1f,
+            respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, reach: 3f, splash: 1f);
         var classes = new List<SoldierClassData> { knight, archer, rogue, mage };
-        var defaultMix = new List<SoldierClassData> { knight, archer };
 
         AbilityData flareVolley = Ability("FlareVolley", "Flare Volley", "Burst area damage", AbilityData.Shape.Area,
             chargeSeconds: 20f, radius: 1.3f, damageMultiplier: 2.5f, statusChance: 0.35f);
@@ -330,12 +330,11 @@ public static class GreyBoxMatchBuilder
         {
             m.captainTemplates = templates;
             m.availableClasses = classes;
-            m.defaultMix = defaultMix;
             m.restoreBaseCost = 15;
             m.relocationCost = 25;
             m.waves = BuildWaves(grunt, raider, slinger, brute, bombard);
         });
-        if (matchExisted) UpgradeMatch(match, templates, classes, defaultMix, grunt, raider, slinger, brute, bombard);
+        if (matchExisted) UpgradeMatch(match, templates, classes, grunt, raider, slinger, brute, bombard);
         return match;
     }
 
@@ -365,15 +364,16 @@ public static class GreyBoxMatchBuilder
         return waves;
     }
 
-    static SoldierClassData SoldierClass(string name, Color color, DamageType damageType, int actCost, int respawnCost,
+    static SoldierClassData SoldierClassAsset(string name, SoldierClass soldierClass, Color color, DamageType damageType, float statBonus, int respawnCost,
         float maxHealth, float damage, float attackRange, float moveSpeed, HomeTile homeTile, float reach, float knockback = 0f, float splash = 0f)
     {
         return LoadOrCreate<SoldierClassData>($"{DataFolder}/Soldiers/{name}.asset", s =>
         {
+            s.soldierClass = soldierClass;
             s.displayName = name;
             s.color = color;
             s.damageType = damageType;
-            s.actCost = actCost;
+            s.statBonus = statBonus;
             s.respawnCost = respawnCost;
             s.maxHealth = maxHealth;
             s.damageMultiplier = damage;
@@ -391,7 +391,7 @@ public static class GreyBoxMatchBuilder
     // Assets saved before Milestone 2 lack its fields. Fill only what is still unset so
     // designer tuning survives, and leave assets untouched when there is nothing to do.
 
-    static void UpgradeMatch(MatchData match, List<CaptainData> templates, List<SoldierClassData> classes, List<SoldierClassData> defaultMix,
+    static void UpgradeMatch(MatchData match, List<CaptainData> templates, List<SoldierClassData> classes,
         EnemyData grunt, EnemyData raider, EnemyData slinger, EnemyData brute, EnemyData bombard)
     {
         bool changed = false;
@@ -404,11 +404,6 @@ public static class GreyBoxMatchBuilder
         if (match.availableClasses.Count == 0)
         {
             match.availableClasses = new List<SoldierClassData>(classes);
-            changed = true;
-        }
-        if (match.defaultMix.Count == 0)
-        {
-            match.defaultMix = new List<SoldierClassData>(defaultMix);
             changed = true;
         }
         // 0 is a legitimate "free" setting, so only fields never saved count as unset.

@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a5bce822bb49e64892756d0445f458d, type: 3}
   m_Name: Archer
   m_EditorClassIdentifier: Assembly-CSharp::SoldierClassData
+  soldierClass: 1
   displayName: Archer
   color: {r: 0.45, g: 0.85, b: 0.35, a: 1}
   sprite: {fileID: 21300000, guid: 53a1e68038157fa4baa924e5fe3b4b02, type: 3}
   portrait: {fileID: 21300000, guid: 7ddaeca9edb0cd745a88abb4d0b079f1, type: 3}
-  actCost: 2
+  statBonus: 0.25
   respawnCost: 4
   maxHealth: 12
   damageMultiplier: 1.2

@@ -108,8 +108,8 @@ public class CaptainWidget
         parts.Actions(panel, tower);
     }
 
-    // The soldiers as a 2 x 2 grid. Each shows its
-    // class, red while the soldier is down. Slots the bond hasn't opened yet show a dash.
+    // The soldiers as a 2 x 2 grid. Each shows its class in its rarity's colour, greyed and marked
+    // while the soldier is down. Empty slots say so; slots the bond hasn't opened yet show a dash.
     void BuildSoldiers(Tower tower)
     {
         UIKit.Header(panel, "Soldiers");
@@ -128,14 +128,17 @@ public class CaptainWidget
         RectTransform cell = UIKit.Box(row, "Soldier", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(cell, 3, 0);
         UIKit.Size(cell, flexibleWidth: 1f);
-        if (slot >= tower.Soldiers.Count)
+        Soldier fielded = tower.SoldierInSlot(slot);
+        if (fielded == null)
         {
-            UIKit.Size(UIKit.Label(cell, "-", 10, TextAnchor.MiddleCenter, UIKit.DisabledTextColor), flexibleWidth: 1f);
+            string empty = slot < match.SoldierCountFor(tower.Captain) ? "empty" : "-";
+            UIKit.Size(UIKit.Label(cell, empty, 10, TextAnchor.MiddleCenter, UIKit.DisabledTextColor), flexibleWidth: 1f);
             return;
         }
-        Text soldier = UIKit.LiveLabel(cell, () => tower.Soldiers[slot].Class.displayName, refreshers, 10);
+        string name = fielded.Class.displayName;
+        Text soldier = UIKit.LiveLabel(cell, () => fielded.IsDead ? $"{name} <size=8>down</size>" : name, refreshers, 10);
         soldier.alignment = TextAnchor.MiddleCenter;
         UIKit.Size(soldier, flexibleWidth: 1f);
-        refreshers.Add(() => soldier.color = tower.Soldiers[slot].IsDead ? UIKit.BadColor : UIKit.TextColor);
+        refreshers.Add(() => soldier.color = fielded.IsDead ? UIKit.DisabledTextColor : UIKit.RarityColor(fielded.Item.rarity));
     }
 }

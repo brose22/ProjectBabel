@@ -52,8 +52,8 @@ MonoBehaviour:
   defensePerLevel:
     min: 0.3
     max: 0.4
-  resourceCapacity: 20
-  resourceRegen: 2
+  resourceCapacity: 24
+  resourceRegen: 1
   specialChargeRate: 1
   refusalTemper:
     min: 0.75

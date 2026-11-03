@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a5bce822bb49e64892756d0445f458d, type: 3}
   m_Name: Rogue
   m_EditorClassIdentifier: Assembly-CSharp::SoldierClassData
+  soldierClass: 3
   displayName: Rogue
   color: {r: 0.9, g: 0.9, b: 0.75, a: 1}
   sprite: {fileID: 21300000, guid: 98434a62ef21da14f8f52f2059f489c6, type: 3}
   portrait: {fileID: 21300000, guid: 7497f42c4738ea1418de8098b4288cf6, type: 3}
-  actCost: 1
+  statBonus: 0.1
   respawnCost: 4
   maxHealth: 20
   damageMultiplier: 1

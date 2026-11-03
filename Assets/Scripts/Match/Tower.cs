@@ -3,8 +3,8 @@ using UnityEngine;
 
 public enum DrawRate { Low, Normal, High }
 
-// A tower is a captain plus their soldiers. It pulls Gold from the shared pool into its own
-// reserve at the player-set draw rate; soldiers spend from that reserve to act and respawn.
+// A tower is a captain plus their equipped soldiers. It pulls Gold from the shared pool into its
+// own reserve at the player-set draw rate; soldiers act for free and spend from that reserve to respawn.
 public class Tower : MonoBehaviour
 {
     public static readonly List<Tower> All = new();
@@ -47,9 +47,12 @@ public class Tower : MonoBehaviour
     // Game time a requested special stops waiting to fire by itself, or below zero for none.
     float autoFireUntil = -1f;
 
+    // The fielded soldiers in slot order; empty slots have none.
     readonly List<Soldier> soldiers = new();
-    // The tile each soldier slot waits on.
+    // The tile each soldier waits on, by index in soldiers.
     readonly List<Vector2Int> slotCells = new();
+    // What the soldiers add to each CaptainStat; set when the soldiers change.
+    readonly float[] soldierBonuses = new float[System.Enum.GetValues(typeof(CaptainStat)).Length];
     float drawProgress;
     // Fractional free reserve earned from approval, paid out a whole coin at a time.
     float efficiencyBank;
@@ -62,17 +65,23 @@ public class Tower : MonoBehaviour
     // soldiers until the wave ends, so they live here rather than on each tower.
     static readonly float[] waveBoosts = new float[System.Enum.GetValues(typeof(SupportEffect)).Length];
 
-    // Average reach of the soldier classes in its slots plus the captain's bonus; set when the slots change.
+    // Average reach of its soldiers' classes plus the captain's bonus and its Archers'; set when the soldiers change.
     public float Range { get; private set; }
-    public float ActCooldown => 1f / Mathf.Max(0.05f, Captain.speed * (1f + Boost(SupportEffect.ActSpeed)));
-    public float SoldierPower => Captain.power * LevelMath.StatFactor(Level) * (1f + Boost(SupportEffect.Damage));
+    // Soldier acts per second: the captain's speed plus what its Rogues add.
+    public float Speed => Captain.speed + SoldierBonus(CaptainStat.Speed);
+    public float ActCooldown => 1f / Mathf.Max(0.05f, Speed * (1f + Boost(SupportEffect.ActSpeed)));
+    // The captain's power plus what its Mages add, grown by level.
+    public float SoldierPower => (Captain.power + SoldierBonus(CaptainStat.Power)) * LevelMath.StatFactor(Level) * (1f + Boost(SupportEffect.Damage));
     // Multiplies damage the tower and its soldiers take.
     public float DamageTakenMultiplier => BoostMath.DamageTakenMultiplier(Boost(SupportEffect.Defense));
     // Flat reduction to each hit the tower and its soldiers take: the captain's, grown by level,
     // plus what equipped soldiers add.
     public float Defense => DefenseMath.AtLevel(Captain.defense, Captain.defensePerLevel, Level) + SoldierDefense;
-    // Defense added by equipped Knight soldiers. None until soldiers are owned items (#28).
-    public float SoldierDefense => 0f;
+    // Defense added by equipped Knight soldiers.
+    public float SoldierDefense => SoldierBonus(CaptainStat.Defense);
+
+    // What the fielded soldiers add to a captain stat, by class and rarity.
+    public float SoldierBonus(CaptainStat stat) => soldierBonuses[(int)stat];
 
     bool IsWaveRunning => match != null && match.State == MatchState.WaveActive;
 
@@ -134,8 +143,8 @@ public class Tower : MonoBehaviour
         _ => 1f,
     };
 
-    // One soldier per entry in slotClasses; the soldier list index is the slot index.
-    public void Init(MatchManager owner, GridMap map, Captain captain, IReadOnlyList<SoldierClassData> slotClasses, Vector2Int cell)
+    // One soldier per fielded soldier item, in slot order.
+    public void Init(MatchManager owner, GridMap map, Captain captain, IReadOnlyList<SoldierItem> fielded, Vector2Int cell)
     {
         match = owner;
         grid = map;
@@ -148,59 +157,51 @@ public class Tower : MonoBehaviour
         Health = MaxHealth;
         UpdateHealthBar();
 
-        slotCells.AddRange(PickHomes(grid, cell, slotClasses));
-        for (int i = 0; i < slotClasses.Count; i++)
-            soldiers.Add(SpawnSoldier(slotClasses[i], i));
-        UpdateRange();
+        var classes = new List<SoldierClassData>();
+        foreach (SoldierItem item in fielded) classes.Add(match.Data.ClassData(item.soldierClass));
+        slotCells.AddRange(PickHomes(grid, cell, classes));
+        for (int i = 0; i < fielded.Count; i++)
+            soldiers.Add(SpawnSoldier(fielded[i], classes[i], i));
+        UpdateSoldierStats();
 
         All.Add(this);
     }
 
-    // The range follows the soldier slots, so it changes only when a slot is added. The range
-    // sprite is a disc two units across, so its scale equals the radius.
-    void UpdateRange()
+    // The range and stat bonuses follow the soldiers, so they change only when one is added. The
+    // range sprite is a disc two units across, so its scale equals the radius.
+    void UpdateSoldierStats()
     {
+        var items = new List<SoldierItem>(soldiers.Count);
         var reaches = new List<float>(soldiers.Count);
-        foreach (Soldier soldier in soldiers) reaches.Add(soldier.Class.reach);
-        Range = TowerReach.Range(reaches, Captain.range);
+        foreach (Soldier soldier in soldiers)
+        {
+            items.Add(soldier.Item);
+            reaches.Add(soldier.Class.reach);
+        }
+        foreach (CaptainStat stat in System.Enum.GetValues(typeof(CaptainStat)))
+            soldierBonuses[(int)stat] = match.Data.StatBonus(items, stat);
+        Range = TowerReach.Range(reaches, Captain.range + SoldierBonus(CaptainStat.Range));
         rangeIndicator.transform.localScale = Vector3.one * Range;
     }
 
-    Soldier SpawnSoldier(SoldierClassData soldierClass, int slot)
+    Soldier SpawnSoldier(SoldierItem item, SoldierClassData soldierClass, int index)
     {
         Soldier soldier = Instantiate(soldierPrefab, transform);
-        soldier.Init(this, soldierClass, HomeOffset(slot));
+        soldier.Init(this, item, soldierClass, HomeOffset(index));
         return soldier;
     }
 
-    Vector3 HomeOffset(int slot)
+    Vector3 HomeOffset(int index)
     {
-        Vector2Int offset = slotCells[slot] - Cell;
+        Vector2Int offset = slotCells[index] - Cell;
         return new Vector3(offset.x, offset.y, 0f);
     }
 
-    public SoldierClassData SlotClass(int slot) => soldiers[slot].Class;
+    // The soldier fielded from a slot, or null when the slot is empty or not open.
+    public Soldier SoldierInSlot(int slot) => soldiers.Find(s => s.Item.slot == slot);
 
-    // Soldier costs scale with the captain's level, not the soldier's.
-    public int ActCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.actCost, Level);
+    // Respawn costs scale with the captain's level, not the soldier's.
     public int RespawnCostOf(SoldierClassData soldierClass) => GoldCosts.Scaled(soldierClass.respawnCost, Level);
-
-    // Swapping a slot's class costs the new class's respawn, and the replacement starts fresh
-    // on a tile of its own choosing. The old soldier is retired, not killed, so it is no casualty. A disabled tower has
-    // no soldiers on the field, so its mix is locked until it is restored.
-    public bool SetSlotClass(int slot, SoldierClassData newClass, bool free = false)
-    {
-        if (IsDisabled || newClass == null || slot < 0 || slot >= soldiers.Count) return false;
-        if (soldiers[slot].Class == newClass) return false;
-        if (!free && !TrySpendReserve(RespawnCostOf(newClass))) return false;
-
-        Destroy(soldiers[slot].gameObject);
-        slotCells[slot] = PickHomeInsteadOf(slot, newClass);
-        soldiers[slot] = SpawnSoldier(newClass, slot);
-        GameEvents.RaiseSoldierMixChanged(this);
-        if (!free) GameEvents.RaiseGoldSpent();
-        return true;
-    }
 
     // Each soldier waits on the tile around the tower that suits their class best.
     Vector2Int PickHome(SoldierClassData soldierClass) =>
@@ -228,12 +229,6 @@ public class Tower : MonoBehaviour
         return classes;
     }
 
-    // The slot's own tile counts as free, so its soldier can stay put if that is still the best.
-    Vector2Int PickHomeInsteadOf(int slot, SoldierClassData soldierClass)
-    {
-        slotCells[slot] = Cell;
-        return PickHome(soldierClass);
-    }
 
     bool IsHomeTaken(Vector2Int cell) => slotCells.Contains(cell) || IsSoldierHome(cell);
 
@@ -245,20 +240,23 @@ public class Tower : MonoBehaviour
         return false;
     }
 
-    // A rank-up mid-match adds soldiers straight away (GDD: 3 at B, 4 at S). A disabled tower's
-    // new soldiers wait off the field until it is restored.
-    public void GrowSoldierSlots(int count, System.Func<int, SoldierClassData> classForSlot)
+    // A rank-up mid-match fields the soldier equipped in the slot it opens straight away (GDD: 3
+    // at B, 4 at S). A disabled tower's new soldiers wait off the field until it is restored.
+    public void FieldSoldiers(IReadOnlyList<SoldierItem> fielded)
     {
-        while (soldiers.Count < count)
+        foreach (SoldierItem item in fielded)
         {
-            int slot = soldiers.Count;
-            SoldierClassData soldierClass = classForSlot(slot);
-            slotCells.Add(PickHome(soldierClass));
-            Soldier soldier = SpawnSoldier(soldierClass, slot);
-            soldiers.Add(soldier);
+            if (soldiers.Exists(s => s.Item == item)) continue;
+            SoldierClassData soldierClass = match.Data.ClassData(item.soldierClass);
+            if (soldierClass == null) continue;
+            int index = soldiers.FindIndex(s => s.Item.slot > item.slot);
+            if (index < 0) index = soldiers.Count;
+            slotCells.Insert(index, PickHome(soldierClass));
+            Soldier soldier = SpawnSoldier(item, soldierClass, index);
+            soldiers.Insert(index, soldier);
             if (IsDisabled) soldier.Despawn();
-            UpdateRange();
         }
+        UpdateSoldierStats();
     }
 
     void Update()

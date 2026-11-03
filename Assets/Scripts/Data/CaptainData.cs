@@ -53,10 +53,10 @@ public class CaptainData : ScriptableObject
     public StatRange defensePerLevel = new(0.25f, 0.25f);
 
     [Header("Economy")]
-    [Tooltip("Most Gold the tower can hold in its own reserve.")]
-    public int resourceCapacity = 20;
-    [Tooltip("Gold per second drawn from the shared pool at Normal draw rate.")]
-    public float resourceRegen = 2f;
+    [Tooltip("Most Gold the tower can hold in its own reserve. The reserve only pays for respawning soldiers, so this is a few respawns' worth.")]
+    public int resourceCapacity = 24;
+    [Tooltip("Gold per second drawn from the shared pool at Normal draw rate, until the reserve is full.")]
+    public float resourceRegen = 1f;
     public float specialChargeRate = 1f;
 
     [Header("Relationship")]

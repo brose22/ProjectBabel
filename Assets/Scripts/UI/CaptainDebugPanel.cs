@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // The full selected-captain panel for testing, toggled with F2 and docked bottom-left: everything
-// the captain widget shows plus likes and dislikes, Gold draw buttons and soldier class switching.
+// the captain widget shows plus likes and dislikes, Gold draw buttons and what each soldier adds.
 // MatchHUD only creates it in the editor and development builds.
 public class CaptainDebugPanel
 {
@@ -87,40 +87,28 @@ public class CaptainDebugPanel
     static void TagLine(Transform panel, string caption, CaptainTag[] tags, Color color) =>
         UIKit.Label(panel, $"<color={UIKit.Hex(color)}>{caption}</color>  {string.Join(", ", tags)}", 11, color: UIKit.MutedTextColor);
 
-    // Per slot: its label (red when the soldier is down), then a button per class. The current
-    // class is gold; others show the reserve cost of switching in gold and grey out when the
-    // reserve can't cover it or the tower is disabled.
+    // Per slot: its label (red when the soldier is down), then the soldier in its rarity's colour
+    // with its damage type, what it adds to the captain and its respawn cost. Soldiers are
+    // equipped on the world map, so this only reads.
     void BuildSoldierSlots(Transform panel, Tower tower)
     {
         UIKit.Header(panel, "Soldiers");
-        var classes = match.Data.ChoosableClasses;
-        string cost = UIKit.Hex(UIKit.AccentColor), unaffordable = UIKit.Hex(UIKit.DisabledTextColor);
-        for (int i = 0; i < tower.Soldiers.Count; i++)
+        int open = match.SoldierCountFor(tower.Captain);
+        string muted = UIKit.Hex(UIKit.MutedTextColor);
+        for (int i = 0; i < RunState.MaxSoldierSlots; i++)
         {
             int slot = i;
+            Soldier soldier = tower.SoldierInSlot(slot);
             Transform row = CaptainPanelParts.Row(panel);
             Text label = UIKit.LiveLabel(row,
-                () => tower.Soldiers[slot].IsDead ? $"{CaptainPanelParts.SlotLabel(slot)}\n<size=9>down</size>" : CaptainPanelParts.SlotLabel(slot),
+                () => soldier != null && soldier.IsDead ? $"{CaptainPanelParts.SlotLabel(slot)}\n<size=9>down</size>" : CaptainPanelParts.SlotLabel(slot),
                 panelRefreshers, 11);
             UIKit.Size(label, SlotLabelWidth);
-            panelRefreshers.Add(() => label.color = tower.Soldiers[slot].IsDead ? UIKit.BadColor : UIKit.MutedTextColor);
-            foreach (SoldierClassData soldierClass in classes)
-            {
-                if (soldierClass == null) continue;
-                SoldierClassData option = soldierClass;
-                bool current() => tower.Soldiers[slot].Class == option;
-                bool affordable() => !tower.IsDisabled && tower.Reserve >= tower.RespawnCostOf(option);
-                Button button = UIKit.LiveButton(row,
-                    () => current() ? option.displayName
-                        : $"{option.displayName} <size=9><color={(affordable() ? cost : unaffordable)}>{tower.RespawnCostOf(option)}g</color></size>",
-                    () => tower.SetSlotClass(slot, option), panelRefreshers, () => current() || affordable(), current, height: 22f);
-                CaptainPanelParts.Flexible(button, 22f);
-                Text text = button.GetComponentInChildren<Text>();
-                text.fontSize = 11;
-                text.horizontalOverflow = HorizontalWrapMode.Overflow;
-                text.rectTransform.offsetMin = new Vector2(1f, text.rectTransform.offsetMin.y);
-                text.rectTransform.offsetMax = new Vector2(-1f, 0f);
-            }
+            panelRefreshers.Add(() => label.color = soldier != null && soldier.IsDead ? UIKit.BadColor : UIKit.MutedTextColor);
+            string text = soldier == null ? (slot < open ? "empty" : "locked")
+                : $"{CaptainPanelParts.SoldierName(soldier.Item, soldier.Class)} <color={muted}>{soldier.Class.damageType}  " +
+                  $"{CaptainPanelParts.SoldierBonus(soldier.Item, soldier.Class)}  {tower.RespawnCostOf(soldier.Class)}g</color>";
+            UIKit.Size(UIKit.Label(row, text, 11, color: soldier == null ? UIKit.DisabledTextColor : UIKit.TextColor), height: 22f, flexibleWidth: 1f);
         }
     }
 }

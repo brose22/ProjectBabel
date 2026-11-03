@@ -98,10 +98,12 @@ public class MatchManager : MonoBehaviour
     void Awake()
     {
         // Pick up a saved run if there is one, otherwise start fresh.
-        if (RunState.Current == null && !RunSave.TryResume(data.captainTemplates, data.availableClasses, data.shopGifts))
+        if (RunState.Current == null && !RunSave.TryResume(data.captainTemplates, data.shopGifts))
             RunState.StartNewRun(data.startingHealth, data.startingGold);
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
+        // A run saved before soldiers were items has none, so its captains get theirs now.
+        if (run.HasParty && run.Soldiers.Items.Count == 0) GiveStartingSoldiers(run.Party);
         City = run.Map?.Target;
         State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : City.IsMatch ? MatchState.Preparing : MatchState.Stop;
         waves = ScaledWaves();
@@ -209,31 +211,53 @@ public class MatchManager : MonoBehaviour
     public int SoldierCountFor(Captain captain) =>
         Mathf.Max(data.soldiersPerTower, BondMath.SoldierCount(ApprovalStore.RankOf(captain)));
 
+    // A rank-up mid-match fields any soldier equipped in the slot it opens.
     void OnBondRankUp(Captain captain)
     {
         Tower tower = Tower.All.Find(t => t.Captain == captain);
-        if (tower != null) tower.GrowSoldierSlots(SoldierCountFor(captain), slot => ClassForSlot(captain, slot));
+        if (tower != null) tower.FieldSoldiers(FieldedSoldiers(captain));
     }
 
-    // The class the player picked for this slot on the world map, or the match's default.
-    public SoldierClassData ClassForSlot(Captain captain, int slot) =>
-        RunState.Current.LoadoutClass(captain, slot) ?? data.DefaultClassForSlot(slot);
-
-    public SoldierClassData[] SlotClassesFor(Captain captain)
+    // The soldiers a captain fields: those equipped in the slots its bond has opened, in slot
+    // order. Empty slots field nobody.
+    public List<SoldierItem> FieldedSoldiers(Captain captain)
     {
-        var slotClasses = new SoldierClassData[SoldierCountFor(captain)];
-        for (int i = 0; i < slotClasses.Length; i++)
-            slotClasses[i] = ClassForSlot(captain, i);
-        return slotClasses;
+        int open = SoldierCountFor(captain);
+        return RunState.Current.SoldiersOf(captain).FindAll(s => s.slot < open && data.ClassData(s.soldierClass) != null);
     }
 
-    // The range a captain would have with the soldier classes it would field now: what a new
-    // tower of theirs reaches, for placement checks before it exists.
+    public List<SoldierClassData> SlotClassesFor(Captain captain) =>
+        FieldedSoldiers(captain).ConvertAll(s => data.ClassData(s.soldierClass));
+
+    // What a captain's fielded soldiers add to one of its stats.
+    public float StatBonus(Captain captain, CaptainStat stat) => data.StatBonus(FieldedSoldiers(captain), stat);
+
+    // The range a captain would have with the soldiers it would field now: what a new tower of
+    // theirs reaches, for placement checks before it exists.
     public float RangeFor(Captain captain)
     {
         var reaches = new List<float>();
         foreach (SoldierClassData soldierClass in SlotClassesFor(captain)) reaches.Add(soldierClass.reach);
-        return TowerReach.Range(reaches, captain.range);
+        return TowerReach.Range(reaches, captain.range + StatBonus(captain, CaptainStat.Range));
+    }
+
+    // Until the starting captains come with their own soldiers (#33), each captain joining a run
+    // with none brings a few random ones, equipped in its first slots.
+    void GiveStartingSoldiers(IEnumerable<Captain> captains)
+    {
+        SoldierInventory inventory = RunState.Current.Soldiers;
+        foreach (Captain captain in captains)
+        {
+            if (captain == null || inventory.EquippedTo(captain.id).Count > 0) continue;
+            for (int i = 0; i < data.startingSoldiersPerCaptain; i++)
+            {
+                int slot = inventory.FirstEmptySlot(captain.id, SoldierCountFor(captain));
+                if (slot < 0) break;
+                SoldierItem soldier = SoldierRules.Roll(Random.Range(int.MinValue, int.MaxValue));
+                inventory.Add(soldier);
+                inventory.Equip(soldier.id, captain.id, slot);
+            }
+        }
     }
 
     // Captains can't stand on a soldier's tile. A moving captain's own soldiers will pick new
@@ -246,7 +270,7 @@ public class MatchManager : MonoBehaviour
         if (!CanPlaceOn(cell)) return null;
         Tower tower = Instantiate(towerPrefab, grid.CellCenter(cell), Quaternion.identity);
         Captain captain = NextCaptain;
-        tower.Init(this, grid, captain, SlotClassesFor(captain), cell);
+        tower.Init(this, grid, captain, FieldedSoldiers(captain), cell);
         grid.SetOccupant(cell, tower);
         GameEvents.RaiseTowerPlaced(tower);
         return tower;
@@ -441,6 +465,7 @@ public class MatchManager : MonoBehaviour
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
+        GiveStartingSoldiers(RunState.Current.Party);
         RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
             data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds,
             LayoutGateCounts(), data.doubleGateFirstLayer, data.tripleGateFirstLayer));
@@ -455,6 +480,7 @@ public class MatchManager : MonoBehaviour
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party);
+        GiveStartingSoldiers(RunState.Current.Party);
         RunState.Current.SetMap(WorldMap.SingleMatch(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun, layout, layer));
         nextCaptainIndex = 0;
         RunSave.Save(RunState.Current);
@@ -465,6 +491,7 @@ public class MatchManager : MonoBehaviour
     public void Recruit(Captain captain)
     {
         RunState.Current.Recruit(captain);
+        if (captain != null && RunState.Current.Party.Contains(captain)) GiveStartingSoldiers(new[] { captain });
         RunSave.Save(RunState.Current);
     }
 
