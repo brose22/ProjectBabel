@@ -27,7 +27,6 @@ public static class GameSettings
     public static bool HitFlash => Flag("hitFlash");
     public static bool StatusIcons => Flag("statusIcons");
     public static bool StunStars => Flag("stunStars");
-    public static bool DizzyWobble => Flag("dizzyWobble");
     public static bool KnockbackEffects => Flag("knockbackEffects");
     public static bool DeathBurst => Flag("deathBurst");
     public static bool SoldierSpawnEffects => Flag("soldierSpawnEffects");

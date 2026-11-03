@@ -670,22 +670,22 @@ EMBLEMS = {
         "eeyee",
         ".eye.",
     ],
-    "earth": [
-        ".....",
-        "..e..",
+    "ice": [
+        "e.e.e",
         ".eee.",
-        "eeeee",
-        "eeeee",
+        "eeWee",
+        ".eee.",
+        "e.e.e",
     ],
-    "air": [
-        "eeee.",
-        "....e",
+    "grass": [
+        "..e..",
+        "e.e.e",
+        "e.e.e",
         ".eee.",
-        "e....",
-        ".eeee",
+        "..e..",
     ],
 }
-ELEMENT_COLOURS = {"water": "3fa7f2", "fire": "ff7a1f", "earth": "8bb24a", "air": "dff4f0"}
+ELEMENT_COLOURS = {"water": "3fa7f2", "fire": "ff7a1f", "ice": "dff4f0", "grass": "8bb24a"}
 
 SKIN = {
     "light": {"S": "f1c27d", "s": "d9a066", "p": "e8967a"},
@@ -715,20 +715,20 @@ PORTRAITS = {
     "captain_ember": captain_portrait([HAIR_SPIKY], "fire", "tan", "8e3b1f", "f4b33d", "8a5a12"),
     "captain_marin": captain_portrait([HOOD], "water", "pale", "2e86c1", "5dade2", "f4f6f7"),
     # The rest wear their captain colour.
-    "captain_boulder": captain_portrait([HAIR_SHORT, PAULDRONS], "earth", "dark", "2b1d16", "99734d", "5a3a28",
+    "captain_boulder": captain_portrait([HAIR_SHORT, PAULDRONS], "grass", "dark", "2b1d16", "99734d", "5a3a28",
                                         {"P": "7d6a55", "p": "a89580"}),
     "captain_brine": captain_portrait([HAIR_LONG], "water", "light", "1f3a5a", "3373e6", "f4f6f7"),
-    "captain_gust": captain_portrait([HAIR_SPIKY], "air", "pale", "e9e9e9", "bff2d9", "5a8a78"),
+    "captain_gust": captain_portrait([HAIR_SPIKY], "ice", "pale", "e9e9e9", "bff2d9", "5a8a78"),
     "captain_pyre": captain_portrait([HAIR_LONG, BAND], "fire", "dark", "1b1416", "bf261a", "f2c14e",
                                      {"B": "f2c14e"}),
     "captain_rill": captain_portrait([HAIR_SHORT, BAND], "water", "tan", "3a2a1e", "5999ff", "f4f6f7",
                                      {"B": "f4f6f7"}),
-    "captain_skye": captain_portrait([HAIR_LONG], "air", "light", "f2d06b", "ccccff", "7a7ab8"),
-    "captain_slate": captain_portrait([HAIR_SHORT, PAULDRONS], "earth", "pale", "6d6d6d", "8c8073", "3a3a3a",
+    "captain_skye": captain_portrait([HAIR_LONG], "ice", "light", "f2d06b", "ccccff", "7a7ab8"),
+    "captain_slate": captain_portrait([HAIR_SHORT, PAULDRONS], "grass", "pale", "6d6d6d", "8c8073", "3a3a3a",
                                       {"P": "8d8d8d", "p": "b5b5b5"}),
-    "captain_terra": captain_portrait([HAIR_LONG, BAND], "earth", "tan", "6d4c2f", "80b359", "3f6b2a",
+    "captain_terra": captain_portrait([HAIR_LONG, BAND], "grass", "tan", "6d4c2f", "80b359", "3f6b2a",
                                       {"B": "3f9b4a"}),
-    "captain_zephyr": captain_portrait([HOOD], "air", "dark", "99e6e6", "6fb8b8", "f4f6f7"),
+    "captain_zephyr": captain_portrait([HOOD], "ice", "dark", "99e6e6", "6fb8b8", "f4f6f7"),
 }
 
 
@@ -787,8 +787,8 @@ BOOST = [
 ELEMENT_ICON_COLOURS = {
     "water": {"b": "15324f", "e": "3fa7f2", "E": "a8ddff", "d": "1f6fb0"},
     "fire": {"b": "4a1a10", "e": "ff7a1f", "E": "ffe066", "d": "c23b14"},
-    "earth": {"b": "2e2a1a", "e": "a07850", "E": "c9a77a", "d": "6d4c2f"},
-    "air": {"b": "1f3a3a", "e": "cfeee8", "E": "ffffff", "d": "7fb8b0"},
+    "ice": {"b": "1a3348", "e": "9fdcf5", "E": "ffffff", "d": "4f9cc4"},
+    "grass": {"b": "1d3a17", "e": "5fb83a", "E": "a8e070", "d": "2f6b1f"},
 }
 
 ICON_SYMBOLS = {
@@ -831,7 +831,7 @@ ICON_SYMBOLS = {
         "................",
     ]),
     # Single target: a boulder dropping onto its mark.
-    "rockfall": ("earth", [
+    "rockfall": ("grass", [
         "................",
         "....E..E..E.....",
         "....E..E..E.....",
@@ -850,7 +850,7 @@ ICON_SYMBOLS = {
         "...rr......rr...",
     ]),
     # Line: a piercing arrow of wind.
-    "galestrike": ("air", [
+    "galestrike": ("ice", [
         "................",
         "................",
         ".........EEEEE..",
@@ -888,7 +888,7 @@ ICON_SYMBOLS = {
         "................",
     ]),
     # Area that pushes back: gusting wind.
-    "crosswind": ("air", [
+    "crosswind": ("ice", [
         "................",
         "................",
         "................",
@@ -964,7 +964,7 @@ ICON_SYMBOLS = {
         "................",
     ]),
     # Boost defense: a stone shield.
-    "stoneward": ("earth", [
+    "stoneward": ("grass", [
         "................",
         "................",
         "..dddddddddd....",
@@ -983,7 +983,7 @@ ICON_SYMBOLS = {
         "................",
     ]),
     # Heal and boost defense: a shield with a green plus.
-    "mendtheland": ("earth", [
+    "mendtheland": ("grass", [
         "................",
         "................",
         "..dddddddddd....",
@@ -1002,7 +1002,7 @@ ICON_SYMBOLS = {
         "................",
     ]),
     # Heal and boost act speed: wind around a green plus.
-    "secondwind": ("air", [
+    "secondwind": ("ice", [
         "................",
         "................",
         "......EEE.......",
@@ -1099,40 +1099,41 @@ ELEMENT_SYMBOLS = {
         "................",
         "................",
     ],
-    # A mountain with grass on its slopes.
-    "earth": [
+    # A snowflake.
+    "ice": [
         "................",
         "................",
-        "................",
-        "......dd........",
-        ".....dEEd.......",
-        "....dEEeed......",
-        "....dEeeeed.dd..",
-        "...dEeeeeeddEEd.",
-        "...dEeeeeeeEeed.",
-        "..dleeeeeeeeeed.",
-        "..dlleeeeeeleld.",
-        "..dlllllllllld..",
-        "...dddddddddd...",
+        "........E.......",
+        ".......eEe......",
+        ".....d..e..d....",
+        "......e.e.e.....",
+        ".......eEe......",
+        "...EeeeeEeeeeE..",
+        ".......eEe......",
+        "......e.e.e.....",
+        ".....d..e..d....",
+        ".......eEe......",
+        "........E.......",
         "................",
         "................",
         "................",
     ],
-    "air": [
+    # A tuft of grass blades.
+    "grass": [
         "................",
         "................",
+        "........e.......",
+        ".......eE.......",
+        "...e...eE...e...",
+        "...eE..eE..eE...",
+        "....eE.eE.eE....",
+        "....eE.eE.eE....",
+        ".....eEeEeE.....",
+        ".....eeeeee.....",
+        "....eeeeeeee....",
+        ".....dddddd.....",
         "................",
-        "........EEE.....",
-        ".......E...E....",
-        "...........E....",
-        "..EEEEEEEEE.....",
         "................",
-        ".eeeeeeeeeeeee..",
-        "................",
-        "..EEEEEEEEEE....",
-        "............E...",
-        "........E...E...",
-        ".........EEE....",
         "................",
         "................",
     ],

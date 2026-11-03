@@ -43,8 +43,8 @@ public static class UIKit
     {
         Element.Fire => new Color(1f, 0.58f, 0.36f, 1f),
         Element.Water => new Color(0.45f, 0.72f, 1f, 1f),
-        Element.Earth => new Color(0.78f, 0.7f, 0.42f, 1f),
-        _ => new Color(0.7f, 0.92f, 0.9f, 1f),
+        Element.Grass => new Color(0.55f, 0.85f, 0.42f, 1f),
+        _ => new Color(0.7f, 0.92f, 1f, 1f),
     };
 
     // Rich-text colour tag for a colour, for mixing colours inside one label.

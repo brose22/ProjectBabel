@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Terra
   m_EditorClassIdentifier: Assembly-CSharp::CaptainData
   displayName: Terra
-  element: 2
+  element: 3
   role: 2
   color: {r: 0.5, g: 0.7, b: 0.35, a: 1}
   abilityName: Mend the Land

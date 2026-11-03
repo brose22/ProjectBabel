@@ -102,7 +102,7 @@ public class ElementEditorWindow : DataEditorWindow<ElementData>
             StatusKind.Slow => $"moves at {StatusRules.SlowSpeedMultiplier:0.##}× speed",
             StatusKind.Burn => $"takes {StatusRules.BurnPowerPerSecond:0.##}× the caster's power per second",
             StatusKind.Stun => $"attacks {StatusRules.StunAttackIntervalMultiplier:0.##}× slower",
-            _ => "walks the wrong way",
+            _ => "stands still and holds its attacks",
         };
         DataToolsGUI.Note($"In game: {kind} for {StatusRules.DurationOf(kind):0.#}s, the enemy {effect}");
         if (element.statusName != kind.ToString())

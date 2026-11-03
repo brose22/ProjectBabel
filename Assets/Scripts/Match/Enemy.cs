@@ -55,7 +55,6 @@ public class Enemy : MonoBehaviour
     static readonly Color DustColor = new(0.8f, 0.76f, 0.65f, 0.8f);
     static readonly Color StarColor = new(1f, 0.9f, 0.3f);
     const int StarCount = 3;
-    const float DizzyWobbleDegrees = 18f;
     // Most an enemy strays sideways from the road's centre line, in tiles; each picks its own lane.
     const float LaneSpread = 0.3f;
     // How fast the lane direction eases round a corner, per second.
@@ -180,6 +179,13 @@ public class Enemy : MonoBehaviour
         if (!IsTargetable) return;
         UpdateBodyLook();
 
+        // A frozen enemy stands still and holds its attacks until it thaws.
+        if (HasStatus(StatusKind.Freeze))
+        {
+            ShowWalkPose(false);
+            return;
+        }
+
         // Deployed soldiers in reach block the enemy until one side falls back or dies.
         Soldier blocker = Soldier.FindDeployedNear(transform.position, Data.attackRange);
         if (blocker != null)
@@ -199,13 +205,6 @@ public class Enemy : MonoBehaviour
         ShowWalkPose(true);
 
         float step = MoveSpeed * Time.deltaTime;
-        if (HasStatus(StatusKind.Dizzy))
-        {
-            lanePosition = PathMath.MoveBack(path, nextPoint, lanePosition, step, out nextPoint);
-            ApplyLane();
-            return;
-        }
-
         Vector3 target = path[nextPoint];
         lanePosition = Vector3.MoveTowards(lanePosition, target, step);
         ApplyLane();
@@ -426,7 +425,7 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    // Body squash and hit swell, the dizzy wobble, and the stun stars, each shown only while it applies.
+    // Body squash and hit swell, and the stun stars, each shown only while it applies.
     void UpdateBodyLook()
     {
         Vector3 scale = bodyScale;
@@ -434,10 +433,6 @@ public class Enemy : MonoBehaviour
         float squash = Mathf.Clamp01((squashUntil - Time.unscaledTime) / SquashSeconds);
         if (squash > 0f) scale = Vector3.Scale(scale, new Vector3(1f - 0.3f * squash, 1f + 0.25f * squash, 1f));
         body.transform.localScale = scale;
-
-        body.transform.localRotation = GameSettings.DizzyWobble && HasStatus(StatusKind.Dizzy)
-            ? Quaternion.Euler(0f, 0f, Mathf.Sin(Time.time * 14f) * DizzyWobbleDegrees)
-            : Quaternion.identity;
 
         bool stunned = GameSettings.StunStars && HasStatus(StatusKind.Stun);
         for (int i = 0; i < stars.Length; i++)

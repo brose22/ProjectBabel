@@ -79,7 +79,7 @@ Because soldier classes can be changed live, the counter is actionable mid-match
 ### 4.1 Element, role and special
 Each captain has an **element**, a **role**, one **special** with a meter, and 3 likes and 3 dislikes.
 
-**Elements and statuses:** Water slows (×0.5 speed), Fire burns (30% of power per second), Earth stuns (attacks take 2× as long), Air makes the enemy dizzy (walks the wrong way, 1.5 s). Statuses last 3 s. Bond rank adds +5% status chance per rank.
+**Elements and statuses:** Water slows (×0.5 speed), Fire burns (30% of power per second), Ice freezes (the enemy stands still and holds its attacks, 1.5 s), Grass tangles it in vines (a stun: attacks take 2× as long). Other statuses last 3 s. Bond rank adds +5% status chance per rank.
 
 **Roles** decide what the special does:
 - **Attacker:** an offensive effect (area burst, zone, pierce, stun hit).
@@ -95,15 +95,15 @@ Each captain has an **element**, a **role**, one **special** with a meter, and 3
 | Cinder | Fire | Attacker | Flare Volley: burst area damage |
 | Pyre | Fire | Attacker | Scorched Earth: damage zone on the path |
 | Brine | Water | Attacker | Undertow: area damage, pulls enemies back |
-| Slate | Earth | Attacker | Rockfall: single-target stun hit |
-| Skye | Air | Attacker | Crosswind: pushes back, applies Dizzy |
-| Zephyr | Air | Attacker | Gale Strike: long-range pierce |
+| Slate | Grass | Attacker | Rockfall: single-target stun hit |
+| Skye | Ice | Attacker | Crosswind: pushes back, applies Freeze |
+| Zephyr | Ice | Attacker | Gale Strike: long-range pierce |
 | Ember | Fire | Buffer | Kindle: all towers +25% damage this wave |
 | Rill | Water | Buffer | Flow State: all towers act 25% faster this wave |
-| Boulder | Earth | Buffer | Stone Ward: all towers take 30% less damage this wave |
+| Boulder | Grass | Buffer | Stone Ward: all towers take 30% less damage this wave |
 | Marin | Water | Healer | Tidal Mend: heals all 35% |
-| Terra | Earth | Healer | Mend the Land: heals all 25%, +15% defense this wave |
-| Gust | Air | Healer | Second Wind: heals all 20%, +15% act speed this wave |
+| Terra | Grass | Healer | Mend the Land: heals all 25%, +15% defense this wave |
+| Gust | Ice | Healer | Second Wind: heals all 20%, +15% act speed this wave |
 
 ### 4.3 Relationships
 Each captain tracks **approval** (−100 to 100), saved between runs, and a **bond rank** D → C (40) → B (65) → A (85) → S (100).
@@ -155,7 +155,7 @@ Left-click places the next captain's tower or selects a tower (opens its captain
 
 **HUD:** slim top bar (health, Gold, wave progress, next-wave preview, speed, pause), contextual controls hint, a large request card, floating damage numbers, approval and level-up toasts, health bars, threat alerts, and a camera that pans and focuses on events.
 
-**Combat feedback** (each toggleable in Settings → Gameplay): damage numbers, armor labels, hit flash, stun stars, dizzy wobble, knockback effects, death burst, status icons, health-bar extras, leak edge flash, elite/boss banner.
+**Combat feedback** (each toggleable in Settings → Gameplay): damage numbers, armor labels, hit flash, stun stars, knockback effects, death burst, status icons, health-bar extras, leak edge flash, elite/boss banner.
 
 **Menus:** Start run, Resume run, AI Run, Settings (Graphics, Audio, Gameplay tabs), Exit. HUD size is adjustable.
 

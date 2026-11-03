@@ -229,7 +229,7 @@ public static class GreyBoxMatchBuilder
             chargeSeconds: 20f, rangeMultiplier: 2f, radius: 0.35f, damageMultiplier: 2.5f, statusChance: 0.3f);
         AbilityData scorchedEarth = Ability("ScorchedEarth", "Scorched Earth", "Damage zone on the path", AbilityData.Shape.Zone,
             chargeSeconds: 22f, radius: 1f, damageMultiplier: 1f, zoneDuration: 5f, statusChance: 0.5f);
-        AbilityData crosswind = Ability("Crosswind", "Crosswind", "Pushes enemies back, applies Dizzy", AbilityData.Shape.Area,
+        AbilityData crosswind = Ability("Crosswind", "Crosswind", "Pushes enemies back, applies Freeze", AbilityData.Shape.Area,
             chargeSeconds: 20f, radius: 1.3f, damageMultiplier: 1f, knockbackDistance: 1.5f, statusChance: 0.4f);
 
         // Support specials reach every tower: Healers restore a share of max health, Buffers boost a
@@ -253,13 +253,13 @@ public static class GreyBoxMatchBuilder
                 new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Boss }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1.25f),
             Captain("Brine", Element.Water, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back", undertow,
                 new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Boss }, refusalTemper: 1f),
-            Captain("Slate", Element.Earth, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
+            Captain("Slate", Element.Grass, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
                 new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Boss }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Spending }, refusalTemper: 1f),
-            Captain("Zephyr", Element.Air, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
+            Captain("Zephyr", Element.Ice, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
                 new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1f),
             Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
                 new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Leaks, CaptainTag.Selling }, refusalTemper: 1.5f),
-            Captain("Skye", Element.Air, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Dizzy", crosswind,
+            Captain("Skye", Element.Ice, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Freeze", crosswind,
                 new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Kills }, new[] { CaptainTag.Rogues, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1.25f),
             Captain("Marin", Element.Water, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", tidalMend.description, tidalMend,
                 new[] { CaptainTag.Knights, CaptainTag.Ability, CaptainTag.Flawless }, new[] { CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties },
@@ -270,13 +270,13 @@ public static class GreyBoxMatchBuilder
             Captain("Ember", Element.Fire, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", kindle.description, kindle,
                 new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Leaks }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Kills },
                 CaptainRole.Buffer, refusalTemper: 1.25f),
-            Captain("Boulder", Element.Earth, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", stoneWard.description, stoneWard,
+            Captain("Boulder", Element.Grass, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", stoneWard.description, stoneWard,
                 new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Flawless }, new[] { CaptainTag.Mages, CaptainTag.Casualties, CaptainTag.Boss },
                 CaptainRole.Buffer, refusalTemper: 0.75f),
-            Captain("Terra", Element.Earth, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", mendTheLand.description, mendTheLand,
+            Captain("Terra", Element.Grass, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", mendTheLand.description, mendTheLand,
                 new[] { CaptainTag.Knights, CaptainTag.Leaks, CaptainTag.Spending }, new[] { CaptainTag.Rogues, CaptainTag.Casualties, CaptainTag.Boss },
                 CaptainRole.Healer, refusalTemper: 0.75f),
-            Captain("Gust", Element.Air, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", secondWind.description, secondWind,
+            Captain("Gust", Element.Ice, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", secondWind.description, secondWind,
                 new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Flawless }, new[] { CaptainTag.Knights, CaptainTag.Casualties, CaptainTag.Boss },
                 CaptainRole.Healer, refusalTemper: 0.75f),
         };

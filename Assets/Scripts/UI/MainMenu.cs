@@ -289,7 +289,6 @@ public class MainMenu : MonoBehaviour
         UIKit.Label(column, "Enemy body", 16, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         FlagRow(column, "Hit flash and swell", "hitFlash");
         FlagRow(column, "Stun stars", "stunStars");
-        FlagRow(column, "Dizzy wobble", "dizzyWobble");
         FlagRow(column, "Knockback squash, dust", "knockbackEffects");
         FlagRow(column, "Death burst", "deathBurst");
 

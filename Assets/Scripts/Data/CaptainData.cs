@@ -1,6 +1,7 @@
 using UnityEngine;
 
-public enum Element { Water, Fire, Earth, Air }
+// Ordered round the cycle (ElementRules): each element beats the next and loses to the one before.
+public enum Element { Water, Fire, Ice, Grass }
 
 public enum CaptainRole { Attacker, Buffer, Healer }
 
