@@ -68,6 +68,11 @@ public class Tower : MonoBehaviour
     public float SoldierPower => Captain.power * LevelMath.StatFactor(Level) * (1f + Boost(SupportEffect.Damage));
     // Multiplies damage the tower and its soldiers take.
     public float DamageTakenMultiplier => BoostMath.DamageTakenMultiplier(Boost(SupportEffect.Defense));
+    // Flat reduction to each hit the tower and its soldiers take: the captain's, grown by level,
+    // plus what equipped soldiers add.
+    public float Defense => DefenseMath.AtLevel(Captain.defense, Captain.defensePerLevel, Level) + SoldierDefense;
+    // Defense added by equipped Knight soldiers. None until soldiers are owned items (#28).
+    public float SoldierDefense => 0f;
 
     bool IsWaveRunning => match != null && match.State == MatchState.WaveActive;
 
@@ -549,10 +554,14 @@ public class Tower : MonoBehaviour
         return closest;
     }
 
+    // An enemy hit on the tower or one of its soldiers, already scaled by the advantage multipliers:
+    // the Buffer boost, then Defense.
+    public float DamageAfterDefense(float amount) => DefenseMath.DamageAfterDefense(amount * DamageTakenMultiplier, Defense);
+
     public void TakeDamage(float amount)
     {
         if (IsDisabled) return;
-        Health = Mathf.Max(0f, Health - amount * DamageTakenMultiplier);
+        Health = Mathf.Max(0f, Health - DamageAfterDefense(amount));
         UpdateHealthBar();
         if (Health <= 0f) Disable();
     }

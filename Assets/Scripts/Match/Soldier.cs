@@ -225,7 +225,7 @@ public class Soldier : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (IsDead) return;
-        health -= amount * Tower.DamageTakenMultiplier;
+        health -= Tower.DamageAfterDefense(amount);
         if (CannotDie) health = Mathf.Max(health, 1f);
         healthBar.SetFraction(health / MaxHealth);
         if (health <= 0f) Die();

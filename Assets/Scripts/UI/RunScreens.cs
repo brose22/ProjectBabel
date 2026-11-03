@@ -641,12 +641,14 @@ public class RunScreens : MonoBehaviour
         RectTransform stats = UIKit.Group(window, "Stats");
         UIKit.Layout<HorizontalLayoutGroup>(stats, 0, 8).childAlignment = TextAnchor.UpperCenter;
         UIKit.Size(stats, flexibleWidth: 1f);
-        // Small lines under the values: power against the level-1 base, the rest as a party ranking.
+        // Small lines under the values: power and defense against the level-1 base, the rest as a party ranking.
         // Range follows the loadout, so it has none.
         Stat(stats, "POWER", $"{captain.power * LevelMath.StatFactor(level):0}", level > 1 ? $"base {captain.power:0}" : PartyRank(run, captain, c => c.power));
         Text rangeStat = Stat(stats, "RANGE", $"{match.RangeFor(captain):0.#}");
         Stat(stats, "SPEED", $"{captain.speed:0.##}", PartyRank(run, captain, c => c.speed));
         Stat(stats, "HEALTH", $"{captain.health}", PartyRank(run, captain, c => c.health));
+        Stat(stats, "DEFENSE", $"{DefenseMath.AtLevel(captain.defense, captain.defensePerLevel, level):0.#}",
+            level > 1 ? $"base {captain.defense:0.#}" : PartyRank(run, captain, c => c.defense));
         Stat(stats, "RESERVE", $"{captain.resourceCapacity}", PartyRank(run, captain, c => c.resourceCapacity));
         Stat(stats, "DRAW", $"{captain.resourceRegen:0.#}/s", PartyRank(run, captain, c => c.resourceRegen));
 

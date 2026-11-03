@@ -84,11 +84,11 @@ public class CaptainPanelParts
             () => tower.IsMaxLevel ? $"XP {tower.Xp} (max level)" : $"XP {tower.Xp}/{tower.XpForNextLevel}", UIKit.XpBarColor, refreshers);
     }
 
-    // Power, range and speed, then this wave's boosts (green while there are any).
+    // Power, range, speed and Defense, then this wave's boosts (green while there are any).
     public void Stats(Transform panel, Tower tower)
     {
         CaptainData captain = tower.Captain;
-        UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}    Range {tower.Range:0.#}    Speed {captain.speed:0.##}", refreshers, 12);
+        UIKit.LiveLabel(panel, () => $"Power {tower.SoldierPower:0}    Range {tower.Range:0.#}    Speed {captain.speed:0.##}    Defense {tower.Defense:0.#}", refreshers, 12);
         Text boosts = UIKit.LiveLabel(panel, () => BoostLabel(tower), refreshers, 12);
         refreshers.Add(() => boosts.color = HasBoosts(tower) ? UIKit.GoodColor : UIKit.MutedTextColor);
     }

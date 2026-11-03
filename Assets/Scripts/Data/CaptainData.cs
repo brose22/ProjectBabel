@@ -39,6 +39,10 @@ public class CaptainData : ScriptableObject
     [Tooltip("Soldier acts per second (the wait after a soldier returns is 1 / speed).")]
     public float speed = 1f;
     public int health = 100;
+    [Tooltip("Flat reduction to each enemy hit on the tower and its soldiers, after the advantage multipliers. Hits never drop below 1.")]
+    public float defense = 1f;
+    [Tooltip("Defense gained for each level above 1.")]
+    public float defensePerLevel = 0.25f;
     [Tooltip("Most Gold the tower can hold in its own reserve.")]
     public int resourceCapacity = 20;
     [Tooltip("Gold per second drawn from the shared pool at Normal draw rate.")]

@@ -26,7 +26,7 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
     protected override string[] TableColumns => new[]
     {
         nameof(CaptainData.element), nameof(CaptainData.role), nameof(CaptainData.color), nameof(CaptainData.power),
-        nameof(CaptainData.range), nameof(CaptainData.speed), nameof(CaptainData.health),
+        nameof(CaptainData.range), nameof(CaptainData.speed), nameof(CaptainData.health), nameof(CaptainData.defense),
         nameof(CaptainData.resourceCapacity), nameof(CaptainData.resourceRegen), nameof(CaptainData.specialChargeRate),
         nameof(CaptainData.level), nameof(CaptainData.refusalTemper), nameof(CaptainData.ability),
     };
@@ -79,6 +79,8 @@ public class CaptainEditorWindow : DataEditorWindow<CaptainData>
         DataToolsGUI.Field(so, nameof(CaptainData.range), "Range Bonus");
         DataToolsGUI.Field(so, nameof(CaptainData.speed));
         DataToolsGUI.Field(so, nameof(CaptainData.health));
+        DataToolsGUI.Field(so, nameof(CaptainData.defense));
+        DataToolsGUI.Field(so, nameof(CaptainData.defensePerLevel));
         DataToolsGUI.Field(so, nameof(CaptainData.resourceCapacity));
         DataToolsGUI.Field(so, nameof(CaptainData.resourceRegen));
         DataToolsGUI.Field(so, nameof(CaptainData.specialChargeRate));
