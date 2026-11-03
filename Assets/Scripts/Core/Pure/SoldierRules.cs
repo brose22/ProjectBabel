@@ -137,6 +137,11 @@ public class SoldierInventory
         foreach (SoldierItem item in EquippedTo(captainId)) Unequip(item.id);
     }
 
+    // Takes the captain's soldiers out of the inventory for good, as when a lost run takes the
+    // captain. Returns how many went.
+    public int RemoveEquippedTo(string captainId) =>
+        string.IsNullOrEmpty(captainId) ? 0 : items.RemoveAll(i => i.IsEquipped && i.equippedTo == captainId);
+
     // The lowest empty slot below openSlots, or -1 when they're all taken.
     public int FirstEmptySlot(string captainId, int openSlots)
     {

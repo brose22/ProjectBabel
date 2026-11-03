@@ -17,6 +17,7 @@ public class EventChoiceTests
     {
         Assert.That(new EventChoice { gold = 120, health = -3 }.Describe(), Is.EqualTo("+120 Gold, -3 health"));
         Assert.That(new EventChoice { xp = 40, approval = 5f }.Describe(), Is.EqualTo("+40 XP each, +5 approval each"));
+        Assert.That(new EventChoice { gold = -150, recruit = true }.Describe(), Is.EqualTo("-150 Gold, a captain joins"));
         Assert.That(new EventChoice().Describe(), Is.Empty);
     }
 }
