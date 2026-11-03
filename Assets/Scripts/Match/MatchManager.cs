@@ -46,6 +46,12 @@ public class MatchManager : MonoBehaviour
     // Gold the win paid into the pool: the flat bonus plus the towers' unspent reserves.
     public int WinGoldEarned { get; private set; }
     public int ReserveRefunded { get; private set; }
+    // What a lost run cost the profile: Gold, and the party captains with their soldiers.
+    public int GoldLost { get; private set; }
+    public List<Captain> CaptainsLost { get; private set; } = new();
+    public int SoldiersLost { get; private set; }
+    // The location a won run opened, or null.
+    public LocationData LocationUnlocked { get; private set; }
     // Gold the wave just cleared paid out.
     public int LastWaveClearGold { get; private set; }
 
@@ -248,8 +254,8 @@ public class MatchManager : MonoBehaviour
         return TowerReach.Range(reaches, captain.range + StatBonus(captain, CaptainStat.Range));
     }
 
-    // Until the starting captains come with their own soldiers (#33), each captain joining the roster
-    // with none brings a few random ones, equipped in its first slots.
+    // A captain joining the roster outside the starting pick (a recruit, an AI run's extra
+    // captains) with no soldiers brings a few random ones, equipped in its first slots.
     void GiveStartingSoldiers(IEnumerable<Captain> captains) => GiveStartingSoldiers(data, RunState.Current.Soldiers, captains);
 
     public static void GiveStartingSoldiers(MatchData data, SoldierInventory inventory, IEnumerable<Captain> captains)
@@ -460,17 +466,21 @@ public class MatchManager : MonoBehaviour
     public int SetupOfferMinimum { get; set; }
 
     // The captains the setup screen offers (AI runs; players pick the party at the Castle): the
-    // profile's roster. Until the starting captains land (#33), a roster smaller than the usual offer is topped up with newly rolled captains, each
-    // with a few soldiers, so a new profile has captains to pick and a run can always field one.
+    // profile's roster. A new profile first gets all of the starting captains, each with their
+    // soldiers, for the AI to pick its party from; a bigger AI party tops the roster up with rolled
+    // captains, each with a few soldiers.
     public IReadOnlyList<Captain> SetupOffer
     {
         get
         {
             Profile profile = RunState.Current.Profile;
-            int size = Mathf.Min(Profile.MaxRoster, CaptainOffer.Size(Mathf.Max(GameSettings.CaptainsOffered, SetupOfferMinimum), data.partySize));
-            if (profile.Roster.Count >= size) return profile.Roster;
-            foreach (Captain captain in RollCaptains(size - profile.Roster.Count, Random.Range(int.MinValue, int.MaxValue)))
-                if (profile.TryAdd(captain)) GiveStartingSoldiers(new[] { captain });
+            if (profile.Roster.Count == 0)
+                TakeStartingCaptains(profile, RollStartingCaptains(data, Random.Range(int.MinValue, int.MaxValue)),
+                    Random.Range(int.MinValue, int.MaxValue));
+            int size = Mathf.Min(Profile.MaxRoster, Mathf.Max(SetupOfferMinimum, data.partySize));
+            if (profile.Roster.Count < size)
+                foreach (Captain captain in RollCaptains(size - profile.Roster.Count, Random.Range(int.MinValue, int.MaxValue)))
+                    if (profile.TryAdd(captain)) GiveStartingSoldiers(new[] { captain });
             ProfileSave.Save(profile);
             return profile.Roster;
         }
@@ -489,9 +499,30 @@ public class MatchManager : MonoBehaviour
     public static List<Captain> RollCaptains(MatchData data, IEnumerable<Captain> named, int count, int seed)
     {
         List<CaptainData> templates = data.captainTemplates.FindAll(t => t != null);
+        return Roll(templates, CaptainOffer.Draw(templates.Count, count, seed), named);
+    }
+
+    // The starting captains offered on the first play: one of each starting role, with no two
+    // sharing a name.
+    public static List<Captain> RollStartingCaptains(MatchData data, int seed)
+    {
+        List<CaptainData> templates = data.captainTemplates.FindAll(t => t != null);
+        return Roll(templates, StartingCaptains.Draw(templates.ConvertAll(t => t.role), seed), Enumerable.Empty<Captain>());
+    }
+
+    // Adds the picked starting captains to the roster, each with its soldiers equipped. The
+    // caller saves the profile.
+    public static void TakeStartingCaptains(Profile profile, IEnumerable<Captain> picked, int seed)
+    {
+        var joined = picked.Where(profile.TryAdd).ToList();
+        StartingCaptains.GiveSoldiers(profile.Soldiers, joined.Select(c => c.id), seed);
+    }
+
+    static List<Captain> Roll(List<CaptainData> templates, IEnumerable<(int template, int seed)> draws, IEnumerable<Captain> named)
+    {
         var taken = new HashSet<string>(named.Select(c => c.displayName));
         var rolled = new List<Captain>();
-        foreach ((int template, int rollSeed) in CaptainOffer.Draw(templates.Count, count, seed))
+        foreach ((int template, int rollSeed) in draws)
         {
             Captain captain = templates[template].Roll(rollSeed);
             for (int retry = 1; retry <= MaxNameRerolls && taken.Contains(captain.displayName); retry++)
@@ -641,7 +672,10 @@ public class MatchManager : MonoBehaviour
         State == MatchState.Stop && City.kind == NodeKind.Event && data.events.Count > 0 ? data.events[City.seed % data.events.Count] : null;
 
     public bool CanTakeEventChoice(EventChoice choice) =>
-        StopEvent != null && choice != null && choice.CanTake(RunState.Current.Gold, RunState.Current.Health);
+        StopEvent != null && choice != null && PendingRecruit == null && choice.CanTake(RunState.Current.Gold, RunState.Current.Health);
+
+    // A captain an event recruited into a full roster, waiting on ReleaseForRecruit.
+    public Captain PendingRecruit => RunState.Current?.PendingRecruit;
 
     // Applies an event choice to the run and moves on.
     public void TakeEventChoice(EventChoice choice)
@@ -658,6 +692,27 @@ public class MatchManager : MonoBehaviour
             run.AddXp(captain, choice.xp);
             if (choice.approval != 0f) ApprovalStore.Change(captain, choice.approval);
         }
+        // A newcomer for a full roster stays on the stop until the player picks who to release.
+        if (choice.recruit && !RecruitFromEvent()) return;
+        LeaveStop();
+    }
+
+    // Rolls a captain for an event to recruit. Returns false while they wait on a full roster.
+    bool RecruitFromEvent()
+    {
+        RunState run = RunState.Current;
+        Captain captain = RollCaptains(1, Random.Range(int.MinValue, int.MaxValue)).FirstOrDefault();
+        if (run.RecruitFromEvent(captain, data.maxPartySize)) GiveStartingSoldiers(new[] { captain });
+        return run.PendingRecruit == null;
+    }
+
+    // Settles the pending recruit by releasing either them or a captain from the roster, whose
+    // soldiers go back to the inventory, then moves on from the event.
+    public void ReleaseForRecruit(Captain released)
+    {
+        Captain newcomer = PendingRecruit;
+        if (newcomer == null || released == null) return;
+        if (RunState.Current.ReleaseFor(released, data.maxPartySize)) GiveStartingSoldiers(new[] { newcomer });
         LeaveStop();
     }
 
@@ -811,10 +866,30 @@ public class MatchManager : MonoBehaviour
         else
         {
             // The run is over; the profile it leaves behind is kept. Winning it opens the next location.
-            if (won) LocationSelect.RecordWin(data, RunState.Current.Profile, RunState.Current.Location);
+            if (won) RecordRunWon();
+            else LoseRun();
             ProfileSave.Save(RunState.Current.Profile);
             RunSave.Delete();
         }
+    }
+
+    // A won run opens the next location; the party keeps its levels and bonds.
+    void RecordRunWon()
+    {
+        Profile profile = RunState.Current.Profile;
+        int before = profile.LocationsUnlocked;
+        LocationSelect.RecordWin(data, profile, RunState.Current.Location);
+        if (profile.LocationsUnlocked > before && profile.LocationsUnlocked <= data.locations.Count)
+            LocationUnlocked = data.locations[profile.LocationsUnlocked - 1];
+    }
+
+    // A lost run costs a share of the Gold and every party captain, with their soldiers.
+    void LoseRun()
+    {
+        RunState run = RunState.Current;
+        CaptainsLost = run.Profile.LoseRun(run.Party, out int goldLost, out int soldiersLost);
+        GoldLost = goldLost;
+        SoldiersLost = soldiersLost;
     }
 
     // The tower that landed the killing blow earns the XP; a destroyed (sold) tower earns nothing.

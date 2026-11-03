@@ -5,8 +5,10 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 // The Castle (item: castle), home between runs: the shop (CastleScreen.Shop.cs), the inventory, with
-// captains to equip soldiers to and release, and setting out, which picks the party and then a location. Built in uGUI at runtime
-// like the main menu; the Castle scene only holds a camera and this component.
+// captains to equip soldiers to and release, and setting out, which picks the party and then a
+// location. Built in uGUI at runtime like the main menu; the Castle scene only holds a camera and
+// this component. The first time the game is played, the starting captains are picked here first
+// (CastleScreen.Starting.cs).
 public partial class CastleScreen : MonoBehaviour
 {
     public const string SceneName = "Castle";
@@ -45,33 +47,24 @@ public partial class CastleScreen : MonoBehaviour
     public static void Open() => SceneManager.LoadScene(SceneName);
 
     // Whatever run there was has ended or been given up by now; the profile is loaded from its save
-    // (or made afresh) unless it is still in memory from the run.
+    // (or made afresh) unless it is still in memory from the run. A new profile isn't saved until
+    // its starting captains are picked, so quitting before then offers them again.
     void Awake()
     {
         RunState.Clear();
         if (Profile.Current == null && !ProfileSave.TryLoad(data.captainTemplates)) Profile.StartNew(data.startingGold);
         profile = Profile.Current;
-        GiveStarterCaptains();
-        ProfileSave.Save(profile);
+        if (!NeedsStartingCaptains) ProfileSave.Save(profile);
     }
 
     void Start()
     {
         canvas = UIKit.CreateCanvas("Castle", 0);
-        BuildHome();
+        if (NeedsStartingCaptains) BuildStartingCaptains();
+        else BuildHome();
     }
 
     void LateUpdate() => UIKit.Refresh(refreshers);
-
-    // Until the starting captains are picked on the first play (#33), an empty roster gets a few
-    // rolled captains, each with a few soldiers, so there is always a party to take.
-    void GiveStarterCaptains()
-    {
-        if (profile.Roster.Count > 0) return;
-        int count = Mathf.Min(Profile.MaxRoster, CaptainOffer.Size(GameSettings.CaptainsOffered, data.partySize));
-        foreach (Captain captain in MatchManager.RollCaptains(data, profile.Roster, count, UnityEngine.Random.Range(int.MinValue, int.MaxValue)))
-            if (profile.TryAdd(captain)) MatchManager.GiveStartingSoldiers(data, profile.Soldiers, new[] { captain });
-    }
 
     // A full-screen page with a centred column; the gamepad's cancel button runs back.
     RectTransform NewScreen(string name, float width, Action back)
@@ -481,6 +474,7 @@ public partial class CastleScreen : MonoBehaviour
     {
         List<SoldierItem> soldiers = profile.SoldiersOf(captain);
         string muted = UIKit.Hex(UIKit.MutedTextColor);
+        if (!profile.Owns(captain)) return $"<color={muted}>Brings {StartingCaptains.SoldiersEach} random soldiers</color>";
         if (soldiers.Count == 0) return $"<color={muted}>No soldiers</color>";
         return $"<color={muted}>Soldiers</color> " +
                string.Join(", ", soldiers.ConvertAll(s => CaptainPanelParts.SoldierName(s, data.ClassData(s.soldierClass))));
