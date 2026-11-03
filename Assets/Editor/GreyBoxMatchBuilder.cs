@@ -136,12 +136,16 @@ public static class GreyBoxMatchBuilder
         {
             e.displayName = "Grunt";
             e.color = new Color(0.85f, 0.2f, 0.25f);
+            e.damageType = DamageType.Melee;
+            e.element = Element.Grass;
         });
 
         // Passes towers and chips at them; Knights that hold it up also keep it off the towers.
         EnemyData raider = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Raider.asset", e =>
         {
             e.displayName = "Raider";
+            e.damageType = DamageType.Melee;
+            e.element = Element.Fire;
             e.color = new Color(0.6f, 0.3f, 0.85f);
             e.size = 0.5f;
             e.maxHealth = 35f;
@@ -167,7 +171,8 @@ public static class GreyBoxMatchBuilder
             e.attackDamage = 4f;
             e.attackInterval = 1.5f;
             e.rangedAttackRange = 2f;
-            e.armor = ArmorType.Swift;
+            e.damageType = DamageType.Range;
+            e.element = Element.Water;
         });
 
         EnemyData brute = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Brute.asset", e =>
@@ -182,7 +187,8 @@ public static class GreyBoxMatchBuilder
             e.leakDamage = 2;
             e.attackDamage = 10f;
             e.attackInterval = 1.2f;
-            e.armor = ArmorType.Armored;
+            e.damageType = DamageType.Melee;
+            e.element = Element.Ice;
         });
 
         EnemyData bombard = LoadOrCreate<EnemyData>(DataFolder + "/Enemies/Bombard.asset", e =>
@@ -201,20 +207,21 @@ public static class GreyBoxMatchBuilder
             e.towerDamage = 5f;
             e.towerAttackRange = 2f;
             e.towerAttackInterval = 2f;
-            e.armor = ArmorType.Armored;
+            e.damageType = DamageType.Magic;
+            e.element = Element.Fire;
         });
 
         // GDD cost tiers. Act: Rogue very low, Knight/Archer low, Mage high.
         // Respawn: Rogue/Archer low, Knight medium, Mage high.
-        SoldierClassData knight = SoldierClass("Knight", new Color(0.4f, 0.55f, 1f), SoldierClassData.AttackStyle.Melee,
+        SoldierClassData knight = SoldierClass("Knight", new Color(0.4f, 0.55f, 1f), DamageType.Melee,
             actCost: 2, respawnCost: 8, maxHealth: 50f, damage: 1.1f, attackRange: 0.4f, moveSpeed: 3f, homeTile: HomeTile.Road, reach: 1.5f, knockback: 0.5f);
         // Archers shoot from further than they reach, so they step out a little for far targets.
-        SoldierClassData archer = SoldierClass("Archer", new Color(0.45f, 0.85f, 0.35f), SoldierClassData.AttackStyle.Ranged,
+        SoldierClassData archer = SoldierClass("Archer", new Color(0.45f, 0.85f, 0.35f), DamageType.Range,
             actCost: 2, respawnCost: 4, maxHealth: 12f, damage: 1.2f, attackRange: 2f, moveSpeed: 3.5f, homeTile: HomeTile.OffRoad, reach: 2.5f);
-        SoldierClassData rogue = SoldierClass("Rogue", new Color(0.9f, 0.9f, 0.75f), SoldierClassData.AttackStyle.Melee,
+        SoldierClassData rogue = SoldierClass("Rogue", new Color(0.9f, 0.9f, 0.75f), DamageType.Melee,
             actCost: 1, respawnCost: 4, maxHealth: 20f, damage: 1f, attackRange: 0.4f, moveSpeed: 4f, homeTile: HomeTile.Road, reach: 1.5f);
         // Weak against lone enemies, strong against the bunched-up late waves.
-        SoldierClassData mage = SoldierClass("Mage", new Color(1f, 0.45f, 0.75f), SoldierClassData.AttackStyle.Magic,
+        SoldierClassData mage = SoldierClass("Mage", new Color(1f, 0.45f, 0.75f), DamageType.Magic,
             actCost: 5, respawnCost: 12, maxHealth: 18f, damage: 2f, attackRange: 1.5f, moveSpeed: 3f, homeTile: HomeTile.OffRoad, reach: 3f, splash: 1f);
         var classes = new List<SoldierClassData> { knight, archer, rogue, mage };
         var defaultMix = new List<SoldierClassData> { knight, archer };
@@ -249,34 +256,34 @@ public static class GreyBoxMatchBuilder
 
         var allCaptains = new List<CaptainData>
         {
-            Captain("Cinder", Element.Fire, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage", flareVolley,
+            Captain("Cinder", Element.Fire, DamageType.Range, new Color(0.95f, 0.45f, 0.15f), 12f, 2f, 0.8f, "Flare Volley", "Burst area damage", flareVolley,
                 new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Boss }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1.25f),
-            Captain("Brine", Element.Water, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back", undertow,
+            Captain("Brine", Element.Water, DamageType.Melee, new Color(0.2f, 0.45f, 0.9f), 9f, 2.5f, 1f, "Undertow", "Area damage, pulls enemies back", undertow,
                 new[] { CaptainTag.Archers, CaptainTag.Mages, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Boss }, refusalTemper: 1f),
-            Captain("Slate", Element.Grass, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
+            Captain("Slate", Element.Grass, DamageType.Melee, new Color(0.55f, 0.5f, 0.45f), 14f, 1.75f, 0.6f, "Rockfall", "Single-target stun hit", rockfall,
                 new[] { CaptainTag.Knights, CaptainTag.Rogues, CaptainTag.Boss }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Spending }, refusalTemper: 1f),
-            Captain("Zephyr", Element.Ice, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
+            Captain("Zephyr", Element.Ice, DamageType.Melee, new Color(0.6f, 0.9f, 0.9f), 8f, 3f, 1.2f, "Gale Strike", "Long-range pierce", galeStrike,
                 new[] { CaptainTag.Rogues, CaptainTag.Archers, CaptainTag.Kills }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1f),
-            Captain("Pyre", Element.Fire, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
+            Captain("Pyre", Element.Fire, DamageType.Magic, new Color(0.75f, 0.15f, 0.1f), 10f, 2f, 1f, "Scorched Earth", "Damage zone on the path", scorchedEarth,
                 new[] { CaptainTag.Rogues, CaptainTag.Mages, CaptainTag.Casualties }, new[] { CaptainTag.Archers, CaptainTag.Leaks, CaptainTag.Selling }, refusalTemper: 1.5f),
-            Captain("Skye", Element.Ice, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Freeze", crosswind,
+            Captain("Skye", Element.Ice, DamageType.Range, new Color(0.8f, 0.8f, 1f), 9f, 2.25f, 1f, "Crosswind", "Pushes enemies back, applies Freeze", crosswind,
                 new[] { CaptainTag.Mages, CaptainTag.Ability, CaptainTag.Kills }, new[] { CaptainTag.Rogues, CaptainTag.Selling, CaptainTag.Spending }, refusalTemper: 1.25f),
-            Captain("Marin", Element.Water, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", tidalMend.description, tidalMend,
+            Captain("Marin", Element.Water, DamageType.Magic, new Color(0.3f, 0.75f, 0.8f), 7f, 2f, 1f, "Tidal Mend", tidalMend.description, tidalMend,
                 new[] { CaptainTag.Knights, CaptainTag.Ability, CaptainTag.Flawless }, new[] { CaptainTag.Rogues, CaptainTag.Leaks, CaptainTag.Casualties },
                 CaptainRole.Healer, refusalTemper: 0.75f),
-            Captain("Rill", Element.Water, new Color(0.35f, 0.6f, 1f), 7f, 2f, 1.1f, "Flow State", flowState.description, flowState,
+            Captain("Rill", Element.Water, DamageType.Range, new Color(0.35f, 0.6f, 1f), 7f, 2f, 1.1f, "Flow State", flowState.description, flowState,
                 new[] { CaptainTag.Rogues, CaptainTag.Ability, CaptainTag.Spending }, new[] { CaptainTag.Mages, CaptainTag.Leaks, CaptainTag.Kills },
                 CaptainRole.Buffer, refusalTemper: 1f),
-            Captain("Ember", Element.Fire, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", kindle.description, kindle,
+            Captain("Ember", Element.Fire, DamageType.Magic, new Color(1f, 0.6f, 0.3f), 8f, 2f, 1f, "Kindle", kindle.description, kindle,
                 new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Leaks }, new[] { CaptainTag.Knights, CaptainTag.Selling, CaptainTag.Kills },
                 CaptainRole.Buffer, refusalTemper: 1.25f),
-            Captain("Boulder", Element.Grass, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", stoneWard.description, stoneWard,
+            Captain("Boulder", Element.Grass, DamageType.Melee, new Color(0.6f, 0.45f, 0.3f), 7f, 1.75f, 0.9f, "Stone Ward", stoneWard.description, stoneWard,
                 new[] { CaptainTag.Knights, CaptainTag.Archers, CaptainTag.Flawless }, new[] { CaptainTag.Mages, CaptainTag.Casualties, CaptainTag.Boss },
                 CaptainRole.Buffer, refusalTemper: 0.75f),
-            Captain("Terra", Element.Grass, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", mendTheLand.description, mendTheLand,
+            Captain("Terra", Element.Grass, DamageType.Magic, new Color(0.5f, 0.7f, 0.35f), 7f, 2f, 1f, "Mend the Land", mendTheLand.description, mendTheLand,
                 new[] { CaptainTag.Knights, CaptainTag.Leaks, CaptainTag.Spending }, new[] { CaptainTag.Rogues, CaptainTag.Casualties, CaptainTag.Boss },
                 CaptainRole.Healer, refusalTemper: 0.75f),
-            Captain("Gust", Element.Ice, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", secondWind.description, secondWind,
+            Captain("Gust", Element.Ice, DamageType.Magic, new Color(0.75f, 0.95f, 0.85f), 7f, 2.25f, 1.1f, "Second Wind", secondWind.description, secondWind,
                 new[] { CaptainTag.Archers, CaptainTag.Ability, CaptainTag.Flawless }, new[] { CaptainTag.Knights, CaptainTag.Casualties, CaptainTag.Boss },
                 CaptainRole.Healer, refusalTemper: 0.75f),
         };
@@ -330,14 +337,14 @@ public static class GreyBoxMatchBuilder
         return waves;
     }
 
-    static SoldierClassData SoldierClass(string name, Color color, SoldierClassData.AttackStyle style, int actCost, int respawnCost,
+    static SoldierClassData SoldierClass(string name, Color color, DamageType damageType, int actCost, int respawnCost,
         float maxHealth, float damage, float attackRange, float moveSpeed, HomeTile homeTile, float reach, float knockback = 0f, float splash = 0f)
     {
         return LoadOrCreate<SoldierClassData>($"{DataFolder}/Soldiers/{name}.asset", s =>
         {
             s.displayName = name;
             s.color = color;
-            s.attackStyle = style;
+            s.damageType = damageType;
             s.actCost = actCost;
             s.respawnCost = respawnCost;
             s.maxHealth = maxHealth;
@@ -447,7 +454,7 @@ public static class GreyBoxMatchBuilder
         return AssetDatabase.LoadAssetAtPath<Tower>(path);
     }
 
-    static CaptainData Captain(string name, Element element, Color color, float power, float range, float speed,
+    static CaptainData Captain(string name, Element element, DamageType damageType, Color color, float power, float range, float speed,
         string ability, string abilityDescription, AbilityData abilityData, CaptainTag[] likes, CaptainTag[] dislikes,
         CaptainRole role = CaptainRole.Attacker, float refusalTemper = 1f)
     {
@@ -455,6 +462,7 @@ public static class GreyBoxMatchBuilder
         {
             c.displayName = name;
             c.element = element;
+            c.damageType = damageType;
             c.role = role;
             c.color = color;
             c.power = power;
@@ -657,6 +665,8 @@ public static class GreyBoxMatchBuilder
             e.towerDamage = 12f;
             e.towerAttackRange = 1.75f;
             e.towerAttackInterval = 1.5f;
+            e.damageType = DamageType.Melee;
+            e.element = Element.Water;
         });
         if (match.boss != null) return;
         match.boss = boss;

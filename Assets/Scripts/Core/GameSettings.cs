@@ -23,7 +23,8 @@ public static class GameSettings
     static readonly Dictionary<string, bool> flags = new();
 
     public static bool DamageNumbers => Flag("damageNumbers");
-    public static bool ArmorLabels => Flag("armorLabels");
+    // Keyed "armorLabels" from before damage types replaced armor, so saved choices carry over.
+    public static bool MatchupLabels => Flag("armorLabels");
     public static bool HitFlash => Flag("hitFlash");
     public static bool StatusIcons => Flag("statusIcons");
     public static bool StunStars => Flag("stunStars");

@@ -14,6 +14,8 @@ public class CaptainData : ScriptableObject
     [Header("Identity")]
     public string displayName = "Captain";
     public Element element;
+    [Tooltip("The damage type of the captain's ability, and of the tower when enemies hit it. Melee beats Range, Range beats Magic, Magic beats Melee.")]
+    public DamageType damageType;
     public CaptainRole role;
     public Color color = Color.white;
     public string abilityName;

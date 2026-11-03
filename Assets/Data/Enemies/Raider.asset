@@ -33,4 +33,5 @@ MonoBehaviour:
   towerAttackRange: 1.5
   towerAttackInterval: 1.5
   rangedAttackRange: 0
-  armor: 0
+  damageType: 0
+  element: 1

@@ -57,22 +57,19 @@ A tower does not shoot. Its captain's **soldiers** leave the tower, attack the c
 - Towers **draw** from the pool into their own reserve at Low (×0.5), Normal or High (×2) rates, set through requests. Approval makes Gold go further. Unspent reserves return to the pool on a win.
 - Level raises Gold costs linearly (+10% per level).
 
-### 3.5 Enemies and armor
-| Enemy | Health | Gold | Armor | Notes |
-|---|---|---|---|---|
-| Grunt | 30 | 7 | Unarmored | Basic melee |
-| Raider | 35 | 9 | Unarmored | Basic melee |
-| Slinger | 25 | 8 | Swift | Ranged (2 tiles) |
-| Brute | 120 | 15 | Armored | Heavy melee, leaks for 2 |
-| Bombard | 90 | 15 | Armored | Long ranged attack (2.75), leaks for 2 |
-| Warlord (boss) | 6000 | 200 | Armored | Very slow, leaks for 999 |
+### 3.5 Enemies and matchups
+| Enemy | Health | Gold | Damage type | Element | Notes |
+|---|---|---|---|---|---|
+| Grunt | 30 | 7 | Melee | Grass | Basic melee |
+| Raider | 35 | 9 | Melee | Fire | Basic melee |
+| Slinger | 25 | 8 | Range | Water | Ranged (2 tiles) |
+| Brute | 120 | 15 | Melee | Ice | Heavy melee, leaks for 2 |
+| Bombard | 90 | 15 | Magic | Fire | Long ranged attack (2.75), leaks for 2 |
+| Warlord (boss) | 6000 | 200 | Melee | Water | Very slow, leaks for 999 |
 
-**Armor counters** (damage multiplier by soldier class, Knight / Archer / Mage / Rogue):
-- Unarmored: 1 / 1 / 1 / 1
-- Armored: 0.65 / 1 / 0.65 / 1.4 (Rogues cut it open)
-- Swift: 1 / 0.65 / 1.4 / 0.65 (Mages' splash catches it)
+**Matchups** (`DamageTypeRules`, `ElementRules`): damage types run Melee > Range > Magic > Melee, elements Water > Fire > Ice > Grass > Water. Each matchup is ×1.5 with the advantage, ×0.75 at a disadvantage, and the two multiply (×0.5625 to ×2.25). They apply both ways: soldiers hit with their class's damage type (Knight and Rogue Melee, Archer Range, Mage Magic) and their captain's element; an ability uses its captain's damage type and element; enemies hit soldiers and towers with their own, against the soldier's class or the tower's captain. Burn damage takes no matchup.
 
-Because soldier classes can be changed live, the counter is actionable mid-match. Elements no longer change damage; they bring statuses only. Enemy health (+12% per match) and count (+8% per match) grow through the run. Elites play two layers tougher.
+Enemy health (+12% per match) and count (+8% per match) grow through the run. Elites play two layers tougher.
 
 ## 4. Captains
 
@@ -90,20 +87,20 @@ Each captain has an **element**, a **role**, one **special** with a meter, and 3
 
 ### 4.2 Roster
 
-| Captain | Element | Role | Special |
-|---|---|---|---|
-| Cinder | Fire | Attacker | Flare Volley: burst area damage |
-| Pyre | Fire | Attacker | Scorched Earth: damage zone on the path |
-| Brine | Water | Attacker | Undertow: area damage, pulls enemies back |
-| Slate | Grass | Attacker | Rockfall: single-target stun hit |
-| Skye | Ice | Attacker | Crosswind: pushes back, applies Freeze |
-| Zephyr | Ice | Attacker | Gale Strike: long-range pierce |
-| Ember | Fire | Buffer | Kindle: all towers +25% damage this wave |
-| Rill | Water | Buffer | Flow State: all towers act 25% faster this wave |
-| Boulder | Grass | Buffer | Stone Ward: all towers take 30% less damage this wave |
-| Marin | Water | Healer | Tidal Mend: heals all 35% |
-| Terra | Grass | Healer | Mend the Land: heals all 25%, +15% defense this wave |
-| Gust | Ice | Healer | Second Wind: heals all 20%, +15% act speed this wave |
+| Captain | Element | Damage type | Role | Special |
+|---|---|---|---|---|
+| Cinder | Fire | Range | Attacker | Flare Volley: burst area damage |
+| Pyre | Fire | Magic | Attacker | Scorched Earth: damage zone on the path |
+| Brine | Water | Melee | Attacker | Undertow: area damage, pulls enemies back |
+| Slate | Grass | Melee | Attacker | Rockfall: single-target stun hit |
+| Skye | Ice | Range | Attacker | Crosswind: pushes back, applies Freeze |
+| Zephyr | Ice | Melee | Attacker | Gale Strike: long-range pierce |
+| Ember | Fire | Magic | Buffer | Kindle: all towers +25% damage this wave |
+| Rill | Water | Range | Buffer | Flow State: all towers act 25% faster this wave |
+| Boulder | Grass | Melee | Buffer | Stone Ward: all towers take 30% less damage this wave |
+| Marin | Water | Magic | Healer | Tidal Mend: heals all 35% |
+| Terra | Grass | Magic | Healer | Mend the Land: heals all 25%, +15% defense this wave |
+| Gust | Ice | Magic | Healer | Second Wind: heals all 20%, +15% act speed this wave |
 
 ### 4.3 Relationships
 Each captain tracks **approval** (−100 to 100), saved between runs, and a **bond rank** D → C (40) → B (65) → A (85) → S (100).
@@ -155,7 +152,7 @@ Left-click places the next captain's tower or selects a tower (opens its captain
 
 **HUD:** slim top bar (health, Gold, wave progress, next-wave preview, speed, pause), contextual controls hint, a large request card, floating damage numbers, approval and level-up toasts, health bars, threat alerts, and a camera that pans and focuses on events.
 
-**Combat feedback** (each toggleable in Settings → Gameplay): damage numbers, armor labels, hit flash, stun stars, knockback effects, death burst, status icons, health-bar extras, leak edge flash, elite/boss banner.
+**Combat feedback** (each toggleable in Settings → Gameplay): damage numbers, matchup (Strong! / Resist) labels, hit flash, stun stars, knockback effects, death burst, status icons, health-bar extras, leak edge flash, elite/boss banner.
 
 **Menus:** Start run, Resume run, AI Run, Settings (Graphics, Audio, Gameplay tabs), Exit. HUD size is adjustable.
 
@@ -174,7 +171,7 @@ Left-click places the next captain's tower or selects a tower (opens its captain
 
 ## 9. Status
 
-Milestones M1–M7 are done (grey-box match, soldiers, roles and elements, relationships, vertical slice, world map, map stops and boss), plus main menu and settings, party bar, combat feedback, Excel tuning, AI Run, economy tuning, Android build, multi-gate layouts, armor types, walk cycles and the audio system.
+Milestones M1–M7 are done (grey-box match, soldiers, roles and elements, relationships, vertical slice, world map, map stops and boss), plus main menu and settings, party bar, combat feedback, Excel tuning, AI Run, economy tuning, Android build, multi-gate layouts, damage types and element matchups, walk cycles and the audio system.
 
 **Open / next**
 - Content toward the full ~30-match run (currently 7).
@@ -184,4 +181,4 @@ Milestones M1–M7 are done (grey-box match, soldiers, roles and elements, relat
 - Balance passes using AI Run reports.
 - Polish and release prep.
 
-*Known doc drift:* the README still mentions "weakness hits" and element weakness; the code now uses armor types (Section 3.5). Layout assets Crossroads and Harbor Split exist but are not listed in the README's six.
+*Known doc drift:* the README still mentions "weakness hits" and element weakness; the code now uses damage-type and element matchups (Section 3.5). Layout assets Crossroads and Harbor Split exist but are not listed in the README's six.

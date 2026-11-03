@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CaptainData
   displayName: Slate
   element: 3
+  damageType: 0
   role: 0
   color: {r: 0.55, g: 0.5, b: 0.45, a: 1}
   abilityName: Rockfall
