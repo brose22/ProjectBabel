@@ -335,6 +335,7 @@ public static class GreyBoxMatchBuilder
             m.waves = BuildWaves(grunt, raider, slinger, brute, bombard);
         });
         if (matchExisted) UpgradeMatch(match, templates, classes, grunt, raider, slinger, brute, bombard);
+        AssignLocations(match, grunt, raider, slinger, brute, bombard);
         return match;
     }
 
@@ -674,6 +675,57 @@ public static class GreyBoxMatchBuilder
         match.layouts = layouts;
         EditorUtility.SetDirty(match);
         Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with city layouts.");
+    }
+
+    // ---------- Locations ----------
+
+    // The three locations, in unlock order. Each drops one of the five wave enemies (its waves play
+    // the pool enemy nearest in health instead) and uses its own pair of elements, and the maps grow
+    // longer, wider and harder. A match that already lists locations keeps them.
+    static void AssignLocations(MatchData match, EnemyData grunt, EnemyData raider, EnemyData slinger, EnemyData brute, EnemyData bombard)
+    {
+        EnsureFolder(DataFolder + "/Locations");
+        var locations = new List<LocationData>
+        {
+            // Bombards are played by Brutes: a melee-heavy start.
+            Location("Greenmarch", "greenmarch", "Greenmarch", "Farmland on the border. Raiders and grunts burn the fields; no siege engines yet.",
+                new[] { grunt, raider, slinger, brute }, new[] { Element.Grass, Element.Fire },
+                matches: 7, minLanes: 2, maxLanes: 3, doubleGate: 2, tripleGate: 5, new NodeOdds(0.15f, 0.12f, 0.15f)),
+            // Raiders are played by Grunts: no tower raids, but slingers and bombards from range.
+            Location("Saltmarsh", "saltmarsh", "Saltmarsh", "Flooded coast towns. Slingers and bombards fire from the reeds.",
+                new[] { grunt, slinger, brute, bombard }, new[] { Element.Water, Element.Ice },
+                matches: 9, minLanes: 2, maxLanes: 3, doubleGate: 2, tripleGate: 5, new NodeOdds(0.18f, 0.12f, 0.15f)),
+            // Grunts are played by Raiders: every wave chips at the towers.
+            Location("Cinderpeak", "cinderpeak", "Cinderpeak", "The enemy's mountain road. Raiders, brutes and bombards, and more gates sooner.",
+                new[] { raider, slinger, brute, bombard }, new[] { Element.Fire, Element.Ice },
+                matches: 11, minLanes: 2, maxLanes: 4, doubleGate: 1, tripleGate: 4, new NodeOdds(0.22f, 0.1f, 0.15f)),
+        };
+        if (match.locations.Count > 0) return;
+        match.locations = locations;
+        EditorUtility.SetDirty(match);
+        Debug.Log($"Upgraded {AssetDatabase.GetAssetPath(match)} with locations.");
+    }
+
+    static LocationData Location(string asset, string id, string displayName, string description, EnemyData[] enemies, Element[] elements,
+        int matches, int minLanes, int maxLanes, int doubleGate, int tripleGate, NodeOdds odds)
+    {
+        return LoadOrCreate<LocationData>($"{DataFolder}/Locations/{asset}.asset", l =>
+        {
+            l.id = id;
+            l.displayName = displayName;
+            l.description = description;
+            l.enemies = new List<EnemyData>(enemies);
+            l.elements = new List<Element>(elements);
+            l.map = new LocationMapSettings
+            {
+                matchesPerRun = matches,
+                minCitiesPerLayer = minLanes,
+                maxCitiesPerLayer = maxLanes,
+                doubleGateFirstLayer = doubleGate,
+                tripleGateFirstLayer = tripleGate,
+                nodeOdds = odds,
+            };
+        });
     }
 
     // ---------- Enemy base boss ----------

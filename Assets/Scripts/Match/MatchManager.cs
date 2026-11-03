@@ -25,6 +25,10 @@ public class MatchManager : MonoBehaviour
     public CityLayout CityLayout => City != null && data.layouts.Count > 0 ? data.layouts[City.layout % data.layouts.Count] : null;
     public bool IsBaseMatch => City != null && RunState.Current.Map != null && City.id == RunState.Current.Map.BaseId;
     public bool IsEliteMatch => City != null && City.kind == NodeKind.Elite;
+    // Where this run is played, or null when the match data has no locations.
+    public LocationData Location { get; private set; }
+    // The enemy base's boss: the location's own, else the match's.
+    EnemyData BossData => Location != null && Location.boss != null ? Location.boss : data.boss;
     // The enemy base's boss once it has walked on; it stays set after it dies.
     public Enemy Boss { get; private set; }
     public bool IsBossAlive => Boss != null && Boss.IsTargetable;
@@ -102,6 +106,7 @@ public class MatchManager : MonoBehaviour
             StartRun();
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         RunState run = RunState.Current;
+        Location = LocationSelect.Of(data, run);
         City = run.Map?.Target;
         State = !run.HasParty ? MatchState.Setup : City == null ? MatchState.Map : City.IsMatch ? MatchState.Preparing : MatchState.Stop;
         waves = ScaledWaves();
@@ -178,10 +183,10 @@ public class MatchManager : MonoBehaviour
         foreach (SpawnGroup group in waves[WavesCleared].groups) WaveEnemyTotal += group.count;
         Tower.ClearWaveBoosts();
         spawner.SpawnWave(waves[WavesCleared]);
-        if (IsBaseMatch && data.boss != null && Boss == null)
+        if (IsBaseMatch && BossData != null && Boss == null)
         {
-            Boss = spawner.SpawnOne(data.boss, RunScaling.HealthMultiplier(City.layer, data.enemyHealthGrowthPerMatch),
-                RunScaling.GoldMultiplier(City.layer, data.goldGrowthPerMatch));
+            Boss = spawner.SpawnOne(BossData, RunScaling.HealthMultiplier(City.layer, data.enemyHealthGrowthPerMatch),
+                RunScaling.GoldMultiplier(City.layer, data.goldGrowthPerMatch), ElementFor(BossData));
             Boss.MarkBoss();
         }
         GameEvents.RaiseWaveStarted(WavesCleared + 1);
@@ -339,7 +344,7 @@ public class MatchManager : MonoBehaviour
         if (waves == null || WavesCleared >= WaveCount) return types;
         foreach (SpawnGroup group in waves[WavesCleared].groups)
             if (group.enemy != null && !types.Contains(group.enemy)) types.Add(group.enemy);
-        if (IsBaseMatch && data.boss != null && Boss == null) types.Add(data.boss);
+        if (IsBaseMatch && BossData != null && Boss == null) types.Add(BossData);
         return types;
     }
 
@@ -420,8 +425,13 @@ public class MatchManager : MonoBehaviour
         return Profile.Current;
     }
 
-    // A new run at the first location, with fresh health.
-    void StartRun() => RunState.StartNewRun(LoadProfile(), 0, data.startingHealth);
+    // A new run at the furthest open location, with fresh health. The Castle starts runs at the
+    // location picked instead (LocationSelect.TryStartRun).
+    void StartRun()
+    {
+        Profile profile = LoadProfile();
+        RunState.StartNewRun(profile, LocationSelect.Default(data, profile)?.id, data.startingHealth);
+    }
 
     // Back to the main menu from the setup, map or results screen. The run is already saved
     // whenever it can be resumed, so nothing is lost.
@@ -482,14 +492,17 @@ public class MatchManager : MonoBehaviour
         return counts;
     }
 
-    // Starts the run with the chosen roster captains and a fresh world map; called from the setup screen.
+    // Starts the run with the chosen roster captains and a fresh world map for its location;
+    // called from the setup screen.
     public void BeginRun(IEnumerable<Captain> party)
     {
         if (State != MatchState.Setup) return;
         RunState.Current.SetParty(party.Where(RunState.Current.Profile.Owns));
-        RunState.Current.SetMap(WorldMap.Generate(Random.Range(int.MinValue, int.MaxValue), data.matchesPerRun,
-            data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer, data.intelDepth, data.nodeOdds,
-            LayoutGateCounts(), data.doubleGateFirstLayer, data.tripleGateFirstLayer));
+        int seed = Random.Range(int.MinValue, int.MaxValue);
+        RunState.Current.SetMap(Location != null
+            ? WorldMap.Generate(seed, Location.Spec, data.layouts.Count, data.intelDepth, LayoutGateCounts())
+            : WorldMap.Generate(seed, data.matchesPerRun, data.layouts.Count, data.minCitiesPerLayer, data.maxCitiesPerLayer,
+                data.intelDepth, data.nodeOdds, LayoutGateCounts(), data.doubleGateFirstLayer, data.tripleGateFirstLayer));
         nextCaptainIndex = 0;
         State = MatchState.Map;
         RunSave.Save(RunState.Current);
@@ -638,9 +651,14 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
-    // Copies the authored waves with more and tougher enemies further into the run. Elite cities
-    // play a few layers tougher. The enemy base plays them baseWaveRepeats times over, each pass a
-    // layer tougher.
+    // The element an enemy fights with in this city: its own, or the city's when the location
+    // doesn't use its own. Null keeps the enemy's.
+    Element? ElementFor(EnemyData enemy) =>
+        Location != null && enemy != null ? Location.EnemyElement(enemy, City != null ? City.element : -1) : null;
+
+    // Copies the authored waves with more and tougher enemies further into the run, played by the
+    // location's enemies in its elements. Elite cities play a few layers tougher. The enemy base
+    // plays them baseWaveRepeats times over, each pass a layer tougher.
     List<WaveDefinition> ScaledWaves()
     {
         int layer = RunScaling.DifficultyLayer(City, data.eliteLayerBonus);
@@ -658,14 +676,18 @@ public class MatchManager : MonoBehaviour
                     goldMultiplier = wave.goldMultiplier * wave.healthMultiplier * RunScaling.GoldMultiplier(layer + pass, data.goldGrowthPerMatch),
                 };
                 foreach (SpawnGroup group in wave.groups)
+                {
+                    EnemyData enemy = Location != null ? Location.Field(group.enemy) : group.enemy;
                     copy.groups.Add(new SpawnGroup
                     {
-                        enemy = group.enemy,
+                        enemy = enemy,
+                        element = ElementFor(enemy),
                         count = RunScaling.EnemyCount(group.count, layer + pass, data.enemyCountGrowthPerMatch),
                         spawnInterval = group.spawnInterval,
                         delayBefore = group.delayBefore,
                         route = group.route,
                     });
+                }
                 scaled.Add(copy);
             }
         }
@@ -761,7 +783,8 @@ public class MatchManager : MonoBehaviour
         }
         else
         {
-            // The run is over; the profile it leaves behind is kept.
+            // The run is over; the profile it leaves behind is kept. Winning it opens the next location.
+            if (won) LocationSelect.RecordWin(data, RunState.Current.Profile, RunState.Current.Location);
             ProfileSave.Save(RunState.Current.Profile);
             RunSave.Delete();
         }
