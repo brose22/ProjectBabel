@@ -44,7 +44,9 @@ public class EnemyData : ScriptableObject
     [Tooltip("Shoots deployed soldiers within this many tiles as it walks, using the soldier attack damage and interval. 0 means melee only.")]
     public float rangedAttackRange;
 
-    [Header("Armor")]
-    [Tooltip("Counters some soldier classes: Armored resists Knights and Mages, Swift resists Archers and Rogues. See ArmorRules.")]
-    public ArmorType armor;
+    [Header("Matchups")]
+    [Tooltip("How this enemy attacks and what it is weak to: Melee beats Range, Range beats Magic, Magic beats Melee. See DamageTypeRules.")]
+    public DamageType damageType;
+    [Tooltip("Stacks with the damage type both ways: Water beats Fire, Fire beats Ice, Ice beats Grass, Grass beats Water. See ElementRules.")]
+    public Element element;
 }

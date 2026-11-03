@@ -5,7 +5,7 @@ public class Enemy : MonoBehaviour
 {
     public static readonly List<Enemy> Active = new();
 
-    const float ArmorMarkerSize = 0.15f;
+    const float ElementMarkerSize = 0.15f;
     const float ShotStreakWidth = 0.05f;
     const float ShotStreakSeconds = 0.12f;
     const float StatusIconHeight = 0.7f;
@@ -63,9 +63,9 @@ public class Enemy : MonoBehaviour
     // Game seconds each pose of the walk cycle shows.
     const float WalkPoseSeconds = 0.18f;
     float walkTime;
-    // Armor labels show at most this often so rapid hits do not stack them.
-    const float ArmorLabelGapSeconds = 0.6f;
-    float armorLabelUntil;
+    // Matchup labels show at most this often so rapid hits do not stack them.
+    const float MatchupLabelGapSeconds = 0.6f;
+    float matchupLabelUntil;
     Transform[] stars;
     const int HitFlashTint = -2;
     // Burn and zone damage arrives every frame, so it shows as one number per this many seconds.
@@ -74,7 +74,7 @@ public class Enemy : MonoBehaviour
     const float DamageNumberSpread = 0.2f;
     const float DamageNumberSize = 1.5f;
     const float StrongNumberSize = 2.25f;
-    const float ArmorLabelSize = 1.2f;
+    const float MatchupLabelSize = 1.2f;
     static readonly Color ResistedNumberColor = new(0.6f, 0.6f, 0.6f);
     float dotDamage;
     float dotNumberTimer;
@@ -104,7 +104,7 @@ public class Enemy : MonoBehaviour
         healthBar.SetFraction(1f);
         statusIcons = StatusIcons.Create(transform, new Vector3(0f, StatusIconHeight, 0f), body.sortingOrder + 1);
         AddStunStars();
-        if (data.armor != ArmorType.Unarmored) AddArmorMarker();
+        AddElementMarker();
         IsTargetable = true;
         Active.Add(this);
         if (data.elite) GameEvents.RaiseEnemyArrived(this);
@@ -135,17 +135,17 @@ public class Enemy : MonoBehaviour
         healthBar.SetTier(2);
     }
 
-    // A small square above the body in the armor's colour (steel for Armored, teal for Swift), so
-    // players can read armor in grey-box. Created at runtime so the enemy prefab needs no change.
-    void AddArmorMarker()
+    // A small square above the body in the element's colour, so players can read the matchup in
+    // grey-box. Created at runtime so the enemy prefab needs no change.
+    void AddElementMarker()
     {
-        var marker = new GameObject("Armor Marker");
+        var marker = new GameObject("Element Marker");
         marker.transform.SetParent(transform, false);
         marker.transform.localPosition = new Vector3(-0.3f, 0.45f, 0f);
-        marker.transform.localScale = Vector3.one * ArmorMarkerSize;
+        marker.transform.localScale = Vector3.one * ElementMarkerSize;
         var renderer = marker.AddComponent<SpriteRenderer>();
         renderer.sprite = SpriteUtil.Square;
-        renderer.color = Data.armor == ArmorType.Armored ? new Color(0.7f, 0.74f, 0.82f) : new Color(0.35f, 0.9f, 0.85f);
+        renderer.color = UIKit.ElementColor(Data.element);
         renderer.sortingOrder = body.sortingOrder + 1;
     }
 
@@ -158,7 +158,7 @@ public class Enemy : MonoBehaviour
         if (attackTimer > 0f) return;
         Soldier target = Soldier.FindDeployedNear(transform.position, Data.rangedAttackRange);
         if (target == null) return;
-        target.TakeDamage(Data.attackDamage);
+        target.TakeDamage(Data.attackDamage * MatchupAgainst(target.Class.damageType, target.Tower.Captain.element));
         attackTimer = Data.attackInterval * AttackIntervalMultiplier;
 
         Vector2 shot = target.transform.position - transform.position;
@@ -193,7 +193,7 @@ public class Enemy : MonoBehaviour
             attackTimer -= Time.deltaTime;
             if (attackTimer <= 0f)
             {
-                blocker.TakeDamage(Data.attackDamage);
+                blocker.TakeDamage(Data.attackDamage * MatchupAgainst(blocker.Class.damageType, blocker.Tower.Captain.element));
                 attackTimer = Data.attackInterval * AttackIntervalMultiplier;
             }
             ShowWalkPose(false);
@@ -295,7 +295,7 @@ public class Enemy : MonoBehaviour
         if (towerAttackTimer > 0f) return;
         Tower tower = Tower.FindClosestActive(transform.position, Data.towerAttackRange);
         if (tower == null) return;
-        tower.TakeDamage(Data.towerDamage);
+        tower.TakeDamage(Data.towerDamage * MatchupAgainst(tower.Captain.damageType, tower.Captain.element));
         towerAttackTimer = Mathf.Max(0.1f, Data.towerAttackInterval) * AttackIntervalMultiplier;
     }
 
@@ -303,15 +303,15 @@ public class Enemy : MonoBehaviour
     // lands the killing blow is remembered in KilledBy for XP.
     // overTime marks damage dealt a slice per frame (burn, zones), which shows as a periodic
     // number instead of one per call. The number is coloured by the source's element, or by
-    // numberElement when there is no source. soldierClass, when a soldier landed the hit, lets the
-    // enemy's armor scale it.
+    // numberElement when there is no source. damageType, when a soldier or ability landed the hit,
+    // scales it by the damage-type and element matchups against this enemy.
     public void TakeDamage(float amount, Tower source = null, bool overTime = false, Element? numberElement = null,
-        SoldierClassData soldierClass = null)
+        DamageType? damageType = null)
     {
         if (!IsTargetable) return;
-        float counter = ArmorMultiplier(soldierClass);
-        amount *= counter;
         Element? element = source != null ? source.Captain.element : numberElement;
+        float counter = MatchupMultiplier(damageType, element);
+        amount *= counter;
         GameEvents.RaiseDamageDealt(source, Mathf.Min(amount, Health), element);
         if (IsBoss && source != null) GameEvents.RaiseBossDamaged(source);
         if (source != null && !overTime) source.AddFightCharge(FightCharge(amount));
@@ -321,7 +321,7 @@ public class Enemy : MonoBehaviour
         else
         {
             ShowDamageNumber(amount, element, counter);
-            ShowArmorLabel(counter);
+            ShowMatchupLabel(counter);
             FlashHit(HitPopSeconds);
             if (GameSettings.HitFlash) hitPopUntil = Time.unscaledTime + HitPopSeconds;
         }
@@ -346,12 +346,18 @@ public class Enemy : MonoBehaviour
         return charge;
     }
 
-    // Damage multiplier this enemy's armor gives a soldier class: below 1 when the armor counters
-    // the class, above 1 when the class counters the armor. 1 for anything that is not a soldier.
-    float ArmorMultiplier(SoldierClassData soldierClass) =>
-        soldierClass != null && Relationships.TryGetClassTag(soldierClass, out CaptainTag tag)
-            ? ArmorRules.DamageMultiplier(Data.armor, (int)tag)
+    // Damage multiplier for a hit on this enemy: damage type times element, above 1 when the hit has
+    // the advantage. 1 for damage with no damage type (burn, cheats); a hit with no element only
+    // uses the damage type.
+    float MatchupMultiplier(DamageType? damageType, Element? element) =>
+        damageType.HasValue
+            ? DamageTypeRules.CombinedMultiplier(damageType.Value, element.HasValue ? (int)element.Value : -1,
+                Data.damageType, (int)Data.element)
             : 1f;
+
+    // Damage multiplier for this enemy's attacks on a soldier or tower with the given damage type and element.
+    float MatchupAgainst(DamageType targetType, Element targetElement) =>
+        DamageTypeRules.CombinedMultiplier(Data.damageType, (int)Data.element, targetType, (int)targetElement);
 
     Color NumberColor(Element? element, bool resisted = false) =>
         resisted ? ResistedNumberColor
@@ -368,15 +374,15 @@ public class Enemy : MonoBehaviour
             NumberColor(element, counter < 1f), strong ? StrongNumberSize : DamageNumberSize);
     }
 
-    // "Strong!" or "Resist" above the enemy when its armor counters the hit or is countered by it,
-    // at most once every ArmorLabelGapSeconds so rapid hits do not stack labels.
-    void ShowArmorLabel(float counter)
+    // "Strong!" or "Resist" above the enemy when the hit has the matchup advantage or disadvantage,
+    // at most once every MatchupLabelGapSeconds so rapid hits do not stack labels.
+    void ShowMatchupLabel(float counter)
     {
-        if (Mathf.Approximately(counter, 1f) || !GameSettings.ArmorLabels) return;
-        if (Time.unscaledTime < armorLabelUntil) return;
-        armorLabelUntil = Time.unscaledTime + ArmorLabelGapSeconds;
+        if (Mathf.Approximately(counter, 1f) || !GameSettings.MatchupLabels) return;
+        if (Time.unscaledTime < matchupLabelUntil) return;
+        matchupLabelUntil = Time.unscaledTime + MatchupLabelGapSeconds;
         FloatingText.Spawn(transform.position + Vector3.up * 0.65f, counter > 1f ? "Strong!" : "Resist",
-            counter > 1f ? UIKit.AccentColor : ResistedNumberColor, ArmorLabelSize, 0.9f);
+            counter > 1f ? UIKit.AccentColor : ResistedNumberColor, MatchupLabelSize, 0.9f);
     }
 
     void AccumulateDot(float amount, Element? element)

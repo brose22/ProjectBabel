@@ -89,7 +89,7 @@ public static class AbilityCaster
     static void Hit(Tower tower, Enemy enemy, float damage)
     {
         enemy.FlashHit(tower.Captain.ability.hitStopSeconds);
-        enemy.TakeDamage(damage, tower);
+        enemy.TakeDamage(damage, tower, damageType: tower.Captain.damageType);
         if (!enemy.IsTargetable) return;
         enemy.Knockback(tower.Captain.ability.knockbackDistance);
         TryApplyStatus(tower, enemy);

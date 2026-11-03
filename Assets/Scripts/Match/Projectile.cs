@@ -48,7 +48,7 @@ public class Projectile : MonoBehaviour
             : destination;
         if (Vector2.Distance(transform.position, destination) > HitDistance) return;
 
-        target.TakeDamage(damage, source, soldierClass: soldierClass);
+        target.TakeDamage(damage, source, damageType: soldierClass.damageType);
         Destroy(gameObject);
     }
 }

@@ -119,7 +119,7 @@ public class Soldier : MonoBehaviour
         }
 
         // Ranged and magic soldiers already in reach strike without stepping forward.
-        bool inReach = Class.attackStyle != SoldierClassData.AttackStyle.Melee &&
+        bool inReach = Class.damageType != DamageType.Melee &&
             Vector2.Distance(transform.position, target.transform.position) <= Class.attackRange + 0.001f;
         if (inReach || MoveTowards(target.transform.position, Class.attackRange))
         {
@@ -132,9 +132,9 @@ public class Soldier : MonoBehaviour
     void Strike(Enemy enemy)
     {
         float damage = Tower.SoldierPower * Class.damageMultiplier;
-        switch (Class.attackStyle)
+        switch (Class.damageType)
         {
-            case SoldierClassData.AttackStyle.Ranged:
+            case DamageType.Range:
                 // Fire and forget: the soldier heads home while the shot is in flight.
                 bool hasOwnSprite = projectileSprite != null;
                 Projectile.Launch(transform.position, enemy, damage, Tower, Class, Class.projectileSpeed,
@@ -142,11 +142,11 @@ public class Soldier : MonoBehaviour
                     hasOwnSprite ? 1f : body.transform.lossyScale.x * FallbackProjectileScale,
                     body.sortingOrder + 1);
                 break;
-            case SoldierClassData.AttackStyle.Magic:
+            case DamageType.Magic:
                 SplashDamage(enemy, damage);
                 break;
             default:
-                enemy.TakeDamage(damage, Tower, soldierClass: Class);
+                enemy.TakeDamage(damage, Tower, damageType: Class.damageType);
                 if (Random.value < Class.knockbackChance) enemy.Knockback(Class.knockbackDistance, Tower);
                 break;
         }
@@ -156,7 +156,7 @@ public class Soldier : MonoBehaviour
     {
         if (Class.splashRadius <= 0f)
         {
-            enemy.TakeDamage(damage, Tower, soldierClass: Class);
+            enemy.TakeDamage(damage, Tower, damageType: Class.damageType);
             return;
         }
 
@@ -167,7 +167,7 @@ public class Soldier : MonoBehaviour
         {
             if (victim != null && victim.IsTargetable &&
                 Vector2.Distance(center, victim.transform.position) <= Class.splashRadius)
-                victim.TakeDamage(damage, Tower, soldierClass: Class);
+                victim.TakeDamage(damage, Tower, damageType: Class.damageType);
         }
     }
 

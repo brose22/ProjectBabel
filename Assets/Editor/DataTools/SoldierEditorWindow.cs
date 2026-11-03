@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-// Edits soldier classes: sprite and portrait previews, only the style fields the attack style uses,
+// Edits soldier classes: sprite and portrait previews, only the style fields the damage type uses,
 // hit damage under a chosen captain, and which captains like or dislike the class.
 public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
 {
@@ -24,13 +24,13 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
 
     protected override string[] TableColumns => new[]
     {
-        nameof(SoldierClassData.attackStyle), nameof(SoldierClassData.actCost), nameof(SoldierClassData.respawnCost),
+        nameof(SoldierClassData.damageType), nameof(SoldierClassData.actCost), nameof(SoldierClassData.respawnCost),
         nameof(SoldierClassData.maxHealth), nameof(SoldierClassData.damageMultiplier), nameof(SoldierClassData.attackRange), nameof(SoldierClassData.reach),
         nameof(SoldierClassData.moveSpeed), nameof(SoldierClassData.homeTile), nameof(SoldierClassData.knockbackDistance), nameof(SoldierClassData.knockbackChance),
         nameof(SoldierClassData.projectileSpeed), nameof(SoldierClassData.splashRadius), nameof(SoldierClassData.color),
     };
 
-    protected override string SearchText(SoldierClassData soldierClass) => soldierClass.attackStyle.ToString();
+    protected override string SearchText(SoldierClassData soldierClass) => soldierClass.damageType.ToString();
 
     protected override void OnAssetsChanged() => captains = null;
 
@@ -75,18 +75,18 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
         DataToolsGUI.Field(so, nameof(SoldierClassData.homeTile));
         DrawDamagePreview(soldierClass);
 
-        SerializedProperty style = DataToolsGUI.Field(so, nameof(SoldierClassData.attackStyle));
-        // Each style reads fields of its own; the others keep their values.
-        switch ((SoldierClassData.AttackStyle)style.enumValueIndex)
+        SerializedProperty style = DataToolsGUI.Field(so, nameof(SoldierClassData.damageType));
+        // Each damage type reads fields of its own; the others keep their values.
+        switch ((DamageType)style.enumValueIndex)
         {
-            case SoldierClassData.AttackStyle.Melee:
+            case DamageType.Melee:
                 DataToolsGUI.Field(so, nameof(SoldierClassData.knockbackDistance));
                 DataToolsGUI.Field(so, nameof(SoldierClassData.knockbackChance));
                 break;
-            case SoldierClassData.AttackStyle.Ranged:
+            case DamageType.Range:
                 DataToolsGUI.Field(so, nameof(SoldierClassData.projectileSpeed));
                 break;
-            case SoldierClassData.AttackStyle.Magic:
+            case DamageType.Magic:
                 DataToolsGUI.Field(so, nameof(SoldierClassData.splashRadius));
                 break;
         }
@@ -103,7 +103,7 @@ public class SoldierEditorWindow : DataEditorWindow<SoldierClassData>
         previewCaptain = EditorGUILayout.Popup("Under Captain", previewCaptain, captains.Select(c => c.name).ToArray());
         CaptainData captain = captains[previewCaptain];
         float hit = captain.power * soldierClass.damageMultiplier;
-        string splash = soldierClass.attackStyle == SoldierClassData.AttackStyle.Magic && soldierClass.splashRadius > 0f
+        string splash = soldierClass.damageType == DamageType.Magic && soldierClass.splashRadius > 0f
             ? $" to every enemy within {soldierClass.splashRadius:0.##} tiles" : "";
         DataToolsGUI.Note($"{hit:0.#} damage per hit{splash}, at most {hit * captain.speed:0.#} per second before travel time");
     }

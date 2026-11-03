@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CaptainData
   displayName: Gust
   element: 2
+  damageType: 2
   role: 2
   color: {r: 0.75, g: 0.95, b: 0.85, a: 1}
   abilityName: Second Wind

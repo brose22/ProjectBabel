@@ -3,8 +3,6 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Babel/Soldier Class", fileName = "SoldierClass")]
 public class SoldierClassData : ScriptableObject
 {
-    public enum AttackStyle { Melee, Ranged, Magic }
-
     public string displayName = "Soldier";
     public Color color = Color.white;
     [Tooltip("Optional art, drawn at 16 px per unit. Without it the soldier is a square in its colour.")]
@@ -33,9 +31,9 @@ public class SoldierClassData : ScriptableObject
 
     // Assets made before these fields existed read Melee and zeros, which keeps the original
     // hit-and-return behaviour, so every zero below means "off".
-    [Header("Style")]
-    [Tooltip("Melee hits in person, Ranged fires a homing projectile, Magic damages every enemy in the splash radius.")]
-    public AttackStyle attackStyle = AttackStyle.Melee;
+    [Header("Damage Type")]
+    [Tooltip("Fixed by class (Knight and Rogue Melee, Archer Range, Mage Magic) and decides how the soldier attacks: Melee hits in person, Range fires a homing projectile, Magic damages every enemy in the splash radius.")]
+    public DamageType damageType = DamageType.Melee;
     [Tooltip("Tiles a melee hit pushes the enemy back along its path. 0 = no knockback.")]
     public float knockbackDistance = 0f;
     [Tooltip("Chance that a melee hit pushes the enemy back.")]

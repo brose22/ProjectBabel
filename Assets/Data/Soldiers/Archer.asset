@@ -24,7 +24,7 @@ MonoBehaviour:
   reach: 2.5
   moveSpeed: 3.5
   homeTile: 2
-  attackStyle: 1
+  damageType: 1
   knockbackDistance: 0
   knockbackChance: 0.25
   projectileSpeed: 10
