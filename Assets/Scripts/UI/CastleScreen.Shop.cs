@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // The Castle shop (item: castle shop): the Soldier Recruit tab, the Captain Recruit tab and gifts
@@ -18,6 +19,17 @@ public partial class CastleScreen
     List<SoldierItem> soldierStock;
     List<Captain> captainStock;
 
+    // Feedback after a purchase: the shelves are rebuilt, so the scroll position and the focused Buy
+    // button are carried over, a toast says what was bought and the Gold figure flashes.
+    const float ToastSeconds = 2.2f;
+    const float FlashSeconds = 0.9f;
+    static readonly Color FlashColor = new(1f, 0.97f, 0.8f, 1f);
+    readonly List<Button> buyButtons = new();
+    Text shopSummary;
+    Text toast;
+    float toastAge = float.MaxValue;
+    float flashAge = float.MaxValue;
+
     void RollStock()
     {
         if (soldierStock != null && stockSeed == profile.ShopSeed) return;
@@ -31,8 +43,9 @@ public partial class CastleScreen
     {
         RollStock();
         RectTransform column = NewScreen("Shop", InventoryWidth, BuildHome);
-        UIKit.Label(column, "SHOP", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, Summary(), 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        buyButtons.Clear();
+        UIKit.Label(column, "SHOP", UIKit.TitleSize, TextAnchor.MiddleCenter);
+        shopSummary = UIKit.Label(column, Summary(), UIKit.BodySize, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
         RectTransform tabs = Row(column, "Tabs", 6);
         foreach (ShopTab each in Enum.GetValues(typeof(ShopTab)))
@@ -53,18 +66,73 @@ public partial class CastleScreen
     }
 
     // Saves the purchase and redraws the tab.
-    void Bought()
+    void Bought(string message)
     {
         ProfileSave.Save(profile);
+        GameObject focused = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+        int index = focused != null ? buyButtons.FindIndex(b => b != null && b.gameObject == focused) : -1;
+        ScrollRect old = screen != null ? screen.GetComponentInChildren<ScrollRect>() : null;
+        float scroll = old != null ? old.verticalNormalizedPosition : 1f;
         BuildShop();
+        // A sold-out shelf is gone, so the same position holds the next one.
+        ScrollRect list = screen.GetComponentInChildren<ScrollRect>();
+        if (list != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            list.verticalNormalizedPosition = scroll;
+        }
+        buyButtons.RemoveAll(b => b == null);
+        if (index >= 0 && buyButtons.Count > 0)
+        {
+            UIFocusScope scope = screen.GetComponent<UIFocusScope>();
+            if (scope != null) scope.Remembered = buyButtons[Mathf.Min(index, buyButtons.Count - 1)];
+        }
+        ShowToast(message);
+        flashAge = 0f;
+    }
+
+    void ShowToast(string message)
+    {
+        if (toast == null)
+        {
+            toast = UIKit.Shadowed(UIKit.Label(canvas.transform, message, UIKit.HeadingSize, TextAnchor.MiddleCenter, UIKit.GoodColor));
+            toast.raycastTarget = false;
+            toast.fontStyle = FontStyle.Bold;
+            UIKit.Place(toast.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(520f, 24f));
+        }
+        toast.text = message;
+        toast.transform.SetAsLastSibling();
+        toastAge = 0f;
+    }
+
+    // Runs every frame from LateUpdate: fades the toast and settles the Gold flash.
+    void ShopFeedback()
+    {
+        float dt = Time.unscaledDeltaTime;
+        if (toast != null)
+        {
+            toastAge += dt;
+            float fade = Mathf.Clamp01((ToastSeconds - toastAge) / 0.4f);
+            toast.gameObject.SetActive(fade > 0f);
+            Color c = toast.color;
+            c.a = fade;
+            toast.color = c;
+        }
+        if (shopSummary != null && flashAge < FlashSeconds)
+        {
+            flashAge += dt;
+            shopSummary.color = Color.Lerp(FlashColor, UIKit.MutedTextColor, Mathf.Clamp01(flashAge / FlashSeconds));
+        }
     }
 
     static void SoldOut(Transform list) =>
         UIKit.Label(list, "Sold out. New stock arrives after your next run.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
+    string BuyLabel(int price) => profile.Gold >= price ? $"Buy {price}" : "Need Gold";
+
     void BuildSoldierShelves(Transform panel)
     {
-        Header(panel, $"SOLDIER RECRUIT   <color={UIKit.Hex(UIKit.MutedTextColor)}>Bought soldiers go to the inventory. New stock after each run.</color>");
+        Header(panel, "SOLDIER RECRUIT", "Bought soldiers go to the inventory. New stock after each run.", below: true);
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         int shown = 0;
@@ -75,8 +143,8 @@ public partial class CastleScreen
             SoldierItem soldier = soldierStock[i];
             int price = CastleShop.SoldierPrice(soldier.rarity, data.soldierPrices);
             RectTransform row = SoldierRow(list.content, soldier, $"{price} Gold");
-            UIKit.LiveButton(row, () => "Buy", () => BuySoldier(slot), refreshers,
-                () => CastleShop.CanBuySoldier(false, profile.Gold, price), width: 80f, height: 24f);
+            buyButtons.Add(UIKit.LiveButton(row, () => BuyLabel(price), () => BuySoldier(slot), refreshers,
+                () => CastleShop.CanBuySoldier(false, profile.Gold, price), width: 90f, height: 24f));
             shown++;
         }
         if (shown == 0) SoldOut(list.content);
@@ -90,13 +158,13 @@ public partial class CastleScreen
         if (!CastleShop.CanBuySoldier(profile.SoldSoldiers.Contains(slot), profile.Gold, price) || !profile.TrySpendGold(price)) return;
         profile.Soldiers.Add(soldier);
         profile.SoldSoldiers.Add(slot);
-        Bought();
+        Bought($"Bought {CaptainPanelParts.SoldierName(soldier, data.ClassData(soldier.soldierClass))}, -{price} Gold");
     }
 
     void BuildCaptainShelves(Transform panel)
     {
-        Header(panel, $"CAPTAIN RECRUIT   <color={UIKit.Hex(UIKit.MutedTextColor)}>Captains {profile.Roster.Count}/{Profile.MaxRoster}. " +
-                      $"Recruits join the roster with no soldiers.</color>");
+        Header(panel, "CAPTAIN RECRUIT",
+            $"Captains {profile.Roster.Count}/{Profile.MaxRoster}. Recruits join the roster with no soldiers.", below: true);
         // A full roster is said up front, since none of the shelves can sell.
         if (profile.RosterFull)
             UIKit.Label(panel, $"Your roster is full ({Profile.MaxRoster} captains). Release a captain from the inventory to recruit another.",
@@ -115,12 +183,12 @@ public partial class CastleScreen
             RectTransform card = CaptainCard(row, captainStock[i], $"{price} GOLD", () => { }, false);
             // Only the Buy button takes clicks and focus.
             card.GetComponent<Button>().enabled = false;
-            UIKit.LiveButton(row, () => CaptainBlock(price) switch
+            buyButtons.Add(UIKit.LiveButton(row, () => CaptainBlock(price) switch
                 {
                     RecruitBlock.RosterFull => "Roster full",
                     RecruitBlock.NotEnoughGold => "Need Gold",
-                    _ => "Recruit",
-                }, () => BuyCaptain(slot), refreshers, () => CaptainBlock(price) == RecruitBlock.None, width: 110f, height: 28f);
+                    _ => $"Recruit {price}",
+                }, () => BuyCaptain(slot), refreshers, () => CaptainBlock(price) == RecruitBlock.None, width: 110f, height: 28f));
             shown++;
         }
         if (shown == 0) SoldOut(list.content);
@@ -140,13 +208,13 @@ public partial class CastleScreen
             return;
         }
         profile.SoldCaptains.Add(slot);
-        Bought();
+        Bought($"Recruited {captainStock[slot].displayName}, -{price} Gold");
     }
 
     // Gifts don't sell out. They wait in the profile and go with the party when it sets out.
     void BuildGiftShelves(Transform panel)
     {
-        Header(panel, $"GIFTS   <color={UIKit.Hex(UIKit.MutedTextColor)}>Packed for your next run. Give them to captains from the party window on the map.</color>");
+        Header(panel, "GIFTS", "Packed for your next run. Give them to captains from the party window on the map.", below: true);
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         foreach (int index in ShopStock.Pick(data.shopGifts.Count, data.shopSize, CastleShop.SlotSeed(stockSeed, CastleShop.GiftShelf, 0)))
@@ -163,7 +231,8 @@ public partial class CastleScreen
             UIKit.Label(text, gift.displayName, 13).fontStyle = FontStyle.Bold;
             UIKit.LiveLabel(text, () => $"{gift.cost} Gold   (packed {profile.PackedGift(gift.name)})", refreshers, 11,
                 color: UIKit.MutedTextColor);
-            UIKit.LiveButton(row, () => "Buy", () => BuyGift(gift), refreshers, () => profile.Gold >= gift.cost, width: 80f, height: 24f);
+            buyButtons.Add(UIKit.LiveButton(row, () => BuyLabel(gift.cost), () => BuyGift(gift), refreshers,
+                () => profile.Gold >= gift.cost, width: 90f, height: 24f));
         }
     }
 
@@ -171,7 +240,7 @@ public partial class CastleScreen
     {
         if (gift == null || !profile.TrySpendGold(gift.cost)) return;
         profile.PackGift(gift.name);
-        Bought();
+        Bought($"Packed {gift.displayName}, -{gift.cost} Gold");
     }
 
     // The packed gifts go into the run's inventory, and the shop gets new stock for when the party
