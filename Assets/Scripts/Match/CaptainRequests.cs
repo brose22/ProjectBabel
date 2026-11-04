@@ -79,6 +79,10 @@ public class CaptainRequests : MonoBehaviour
     Relationships relationships;
     int wave;
     int askedThisWave;
+    // Bad requests the player refused this wave, and the penalty each cost, repaid if the wave goes clean.
+    readonly List<(Tower tower, float penalty)> refusedBad = new();
+    // A leak or a fallen tower this wave: the refusals were not proven right.
+    bool wavePoorlyDefended;
     float nextPoll;
 
     public IReadOnlyList<Request> Pending => pending;
@@ -99,7 +103,9 @@ public class CaptainRequests : MonoBehaviour
         GameEvents.SoldierDied += OnSoldierDied;
         GameEvents.EnemyArrived += OnEnemyArrived;
         GameEvents.EnemyLeaked += OnEnemyLeaked;
+        GameEvents.EnemyLeaked += MarkWaveDirty;
         GameEvents.TowerDisabled += OnTowerDisabled;
+        GameEvents.TowerDisabled += MarkWaveDirty;
     }
 
     void OnDisable()
@@ -110,13 +116,17 @@ public class CaptainRequests : MonoBehaviour
         GameEvents.SoldierDied -= OnSoldierDied;
         GameEvents.EnemyArrived -= OnEnemyArrived;
         GameEvents.EnemyLeaked -= OnEnemyLeaked;
+        GameEvents.EnemyLeaked -= MarkWaveDirty;
         GameEvents.TowerDisabled -= OnTowerDisabled;
+        GameEvents.TowerDisabled -= MarkWaveDirty;
     }
 
     void OnWaveStarted(int waveNumber)
     {
         wave = waveNumber;
         askedThisWave = 0;
+        refusedBad.Clear();
+        wavePoorlyDefended = false;
         watches.Clear();
         foreach (Tower tower in Tower.All)
             watches[tower] = new Watch { LastEnemyInRange = Time.time, SpecialWasReady = tower.IsSpecialReady };
@@ -126,6 +136,7 @@ public class CaptainRequests : MonoBehaviour
     {
         // Requests still open are dismissed without a verdict; only their own countdown refuses them.
         foreach (Tower tower in Tower.All) tower.ClearRequestLocks();
+        PayBackRefusals();
         foreach (Request request in pending.ToArray())
             Expire(request);
     }
@@ -204,7 +215,7 @@ public class CaptainRequests : MonoBehaviour
         }
 
         Request active = Active;
-        if (active != null && !match.IsOver && Time.unscaledTime >= active.Deadline) Answer(active, RequestAnswer.No);
+        if (active != null && !match.IsOver && Time.unscaledTime >= active.Deadline) Answer(active, RequestAnswer.No, timedOut: true);
     }
 
     void Poll()
@@ -377,7 +388,7 @@ public class CaptainRequests : MonoBehaviour
         if (!match.MoveTower(tower, cell.Value)) tower.ClearMoveDiscount();
     }
 
-    public void Answer(Request request, RequestAnswer answer)
+    public void Answer(Request request, RequestAnswer answer, bool timedOut = false)
     {
         if (!pending.Remove(request)) return;
         ShowNext();
@@ -387,11 +398,27 @@ public class CaptainRequests : MonoBehaviour
         {
             float penalty = RefusalPenalty * RefusalWeight(request.Kind) * tower.Captain.refusalTemper;
             relationships.Change(tower, RequestRules.ApprovalChange(RequestOutcome.Refused, ApprovalReward, penalty), "was refused");
+            // Only an explicit No to a bad request can be proven right; a timeout is an ordinary refusal.
+            if (!timedOut && Evaluate(request).IsBad) refusedBad.Add((tower, penalty));
             return;
         }
 
         Grant(request);
         relationships.Change(tower, RequestRules.ApprovalChange(RequestOutcome.Granted, ApprovalReward, 0f), "got their way");
+    }
+
+    void MarkWaveDirty(Enemy _) => wavePoorlyDefended = true;
+    void MarkWaveDirty(Tower _) => wavePoorlyDefended = true;
+
+    // The wave is over: captains whose bad request you refused admit you were right if nothing leaked or fell.
+    void PayBackRefusals()
+    {
+        foreach ((Tower tower, float penalty) in refusedBad)
+        {
+            float back = RequestRules.Payback(penalty, !wavePoorlyDefended);
+            if (back > 0f && tower != null) relationships.Change(tower, back, "admits you were right");
+        }
+        refusedBad.Clear();
     }
 
     // Approval a Yes or a No would change by, for the request card.

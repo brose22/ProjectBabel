@@ -9,6 +9,13 @@ public enum RequestOutcome { Refused, Granted, Expired }
 
 public static class RequestRules
 {
+    // Extra approval a captain gives on top of the refunded penalty when you were right to refuse.
+    public const float PaybackBonus = 1f;
+
+    // What a captain gives back after an explicit No to a bad request: the whole penalty and the bonus when the
+    // wave ended with no leaks and no fallen towers, nothing otherwise.
+    public static float Payback(float refusalPenalty, bool cleanWave) => cleanWave ? refusalPenalty + PaybackBonus : 0f;
+
     // The approval change for an outcome, given the reward for a full yes and the refusal penalty.
     public static float ApprovalChange(RequestOutcome outcome, float reward, float refusalPenalty) => outcome switch
     {

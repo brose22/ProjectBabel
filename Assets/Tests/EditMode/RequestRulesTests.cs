@@ -85,3 +85,12 @@ public class CaptainTraitTests
         Assert.That(CaptainTraits.ForLegacyId("abc"), Is.EqualTo(CaptainTraits.ForLegacyId("abc")));
     }
 }
+
+public class RequestPaybackTests
+{
+    [Test]
+    public void CleanWave_RefundsPenaltyPlusBonus() => Assert.That(RequestRules.Payback(3f, true), Is.EqualTo(4f));
+
+    [Test]
+    public void DirtyWave_RefundsNothing() => Assert.That(RequestRules.Payback(3f, false), Is.EqualTo(0f));
+}

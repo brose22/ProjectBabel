@@ -77,3 +77,5 @@ _Avoid:_ Earth, Air.
 **Personality trait** — A captain's rolled temperament, saved with the captain and shown on the profile and info panel: Steady (only sound requests), Glory-seeker (asks to fire the special at weak enemies while an elite or the boss is still to come), Greedy (asks for High draw when Gold is short), Cautious (asks to Retreat when hurt). Non-Steady traits make bad requests on purpose; the card's cons show it. Captains saved before traits existed get one worked out from their id.
 
 **Retreat** — The request kind a Cautious captain makes: fall back away from the gate, free, locking their place for the wave. May leave road uncovered.
+
+**Proven right (payback)** — When the player explicitly refuses a bad request and the wave then ends with no leaks and no fallen towers, the captain gives back the whole refusal penalty plus 1 approval ("admits you were right"). A dirty wave refunds nothing; a request that times out or expires never pays back.
