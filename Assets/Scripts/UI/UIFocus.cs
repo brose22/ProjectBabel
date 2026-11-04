@@ -117,10 +117,11 @@ public class UIFocus : MonoBehaviour
     // window closing hands it back; anything new starts at its default or first button.
     Selectable Pick(UIFocusScope top)
     {
-        if (lastName == top.name) return Nearest(top, lastPosition);
+        if (lastName == top.name) return Nearest(top, lastPosition) ?? First(top, true);
         if (CanFocus(top.Remembered, top, true)) return top.Remembered;
         Selectable preferred = top.Default?.Invoke();
-        return CanFocus(preferred, top, true) ? preferred : First(top);
+        // A window with nothing but its badged Close (an empty list) lands on Close, so the ring shows.
+        return CanFocus(preferred, top, true) ? preferred : First(top) ?? First(top, true);
     }
 
     // Dismiss layers and window backs are buttons too, but with no transition; scrollbars are left to
@@ -135,12 +136,12 @@ public class UIFocus : MonoBehaviour
         return centre.x >= 0f && centre.y >= 0f && centre.x <= Screen.width && centre.y <= Screen.height;
     }
 
-    static Selectable First(UIFocusScope scope)
+    static Selectable First(UIFocusScope scope, bool mapped = false)
     {
         Selectable best = null;
         foreach (Selectable selectable in Selectable.allSelectablesArray)
         {
-            if (!CanFocus(selectable, scope)) continue;
+            if (!CanFocus(selectable, scope, mapped)) continue;
             if (best == null || IsBefore(Centre(selectable), Centre(best))) best = selectable;
         }
         return best;
