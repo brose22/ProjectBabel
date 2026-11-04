@@ -23,7 +23,10 @@ public class RunScreens : MonoBehaviour
     // Party slots and roster cards: a party card's height, portrait and all.
     const float SlotHeight = 84f;
     const int RosterColumns = 2;
-    static readonly Vector2 MapArea = new(900f, 330f);
+    static readonly Vector2 MapArea = new(790f, 330f);
+    // The world map's buttons, in a column down the left edge; the map sits to their right.
+    const float MapMenuWidth = 120f;
+    const float MapMenuGap = 12f;
     static readonly Vector2 CitySize = new(100f, 40f);
     static readonly Vector2 BaseSize = new(124f, 52f);
     const float BadgeSize = 24f;
@@ -36,7 +39,6 @@ public class RunScreens : MonoBehaviour
     const float DrawerSlideSeconds = 0.2f;
     // Light, so the map stays readable behind an open drawer.
     const float DrawerDim = 0.18f;
-    static readonly Vector2 DrawerTabSize = new(30f, 110f);
     // Art drawn at whole multiples so its pixels stay square: 32 px portraits at 2x, 16 px icons at 1x.
     const float PortraitSize = 64f;
     const float IconSize = 16f;
@@ -122,7 +124,7 @@ public class RunScreens : MonoBehaviour
         if (step == 0 || shopOpen || screen == null) return;
         if (screen.Find("Captain Details") != null || screen.Find("Gift") != null) return;
         string id = step > 0 ? "Party" : "Inventory";
-        openDrawer = openDrawer == id ? null : id;
+        ToggleDrawer(id);
     }
 
     void OnDestroy()
@@ -380,7 +382,8 @@ public class RunScreens : MonoBehaviour
 
         RectTransform root = NewScreen("World Map");
         RectTransform column = UIKit.Group(root, "Column");
-        UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(MapArea.x, 0f));
+        // Centred in the space right of the button column.
+        UIKit.Place(column, new Vector2(0.5f, 0.5f), new Vector2((UIKit.Pad + MapMenuWidth + MapMenuGap) / 2f, 0f), new Vector2(MapArea.x, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 8, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
 
@@ -423,31 +426,45 @@ public class RunScreens : MonoBehaviour
 
         BuildLegend(column);
 
-        RectTransform buttons = UIKit.Group(column, "Buttons");
-        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Button(buttons, "Shop", () => SetShopOpen(true), 160f, 24f);
-        UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 160f, 24f);
-        UIKit.Size(UIKit.Group(buttons, "Spacer"), 60f, 24f);
+        // The button column down the left edge; Inventory and Party open the drawers, which slide
+        // out over it.
+        RectTransform menu = UIKit.Group(root, "Menu");
+        UIKit.Place(menu, new Vector2(0f, 0.5f), new Vector2(UIKit.Pad, 0f), new Vector2(MapMenuWidth, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(menu, 0, UIKit.Gap, fitContent: true);
+        Button MenuButton(string text, Action onClick)
+        {
+            Button button = UIKit.Button(menu, text, onClick, MapMenuWidth, 28f);
+            UIKit.Size(button, MapMenuWidth, 28f);
+            return button;
+        }
+        // The shoulder button that toggles each drawer, shown while a gamepad is in use.
+        UIKit.PadBadge(MenuButton("Inventory", () => ToggleDrawer("Inventory")), PadGlyph.LeftShoulder, () => GameInput.UsingGamepad,
+            new Vector2(1f, 0.5f), Vector2.left * 12f);
+        UIKit.PadBadge(MenuButton("Party", () => ToggleDrawer("Party")), PadGlyph.RightShoulder, () => GameInput.UsingGamepad,
+            new Vector2(1f, 0.5f), Vector2.left * 12f);
+        MenuButton("Shop", () => SetShopOpen(true));
+        MenuButton("Main menu", match.ReturnToMenu);
+        UIKit.Size(UIKit.Group(menu, "Spacer"), MapMenuWidth, 16f);
         // Abandoning loses the run, so it takes a second press.
-        Button abandon = UIKit.Button(buttons, abandonArmed ? "Press again to abandon" : "Abandon run", () =>
+        Button abandon = MenuButton(abandonArmed ? "Confirm abandon" : "Abandon run", () =>
         {
             if (abandonArmed) { match.ReturnToCastle(); return; }
             this.abandonArmed = true;
             shownFor = (MatchState)(-1);
-        }, 160f, 24f);
+        });
         if (abandonArmed) abandon.GetComponent<Image>().color = UIKit.BadColor;
 
-        // Two drawers share the left edge, the inventory's tab under the party's. Only one is open
-        // at a time; each is built over the last, so the later one's blocker covers the earlier.
+        // Two drawers share the left edge. Only one is open at a time; each is built over the
+        // last, so the later one's blocker covers the earlier.
         openDrawer = null;
-        BuildDrawer(root, "Party", "PARTY", 0f,
+        BuildDrawer(root, "Party",
             $"PARTY   <color={UIKit.Hex(UIKit.MutedTextColor)}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>",
             list =>
             {
                 foreach (Captain captain in run.Party)
                     PartyCard(list.content, run, captain);
             });
-        BuildDrawer(root, "Inventory", "INVENTORY", -(DrawerTabSize.y + UIKit.Gap), "INVENTORY",
+        BuildDrawer(root, "Inventory", "INVENTORY",
             list =>
             {
                 // Rebuilt when a gift is given from a captain's window.
@@ -473,6 +490,8 @@ public class RunScreens : MonoBehaviour
     bool shopOpen;
 
     // Opens or closes the shop over the map by rebuilding the map screen.
+    void ToggleDrawer(string id) => openDrawer = openDrawer == id ? null : id;
+
     void SetShopOpen(bool open)
     {
         shopOpen = open;
@@ -497,10 +516,9 @@ public class RunScreens : MonoBehaviour
         return string.Join(",", parts);
     }
 
-    // A drawer that slides in from the left. Its tab stays on the screen edge while it's closed,
-    // tabOffsetY below the middle; the tab, the Close button or a click beside the drawer toggles
-    // it. fill adds the contents to the scrolling list.
-    void BuildDrawer(RectTransform root, string id, string tabText, float tabOffsetY, string headerText, Action<ScrollRect> fill)
+    // A drawer that slides in from the left, opened from the map's button column; the Close button
+    // or a click beside the drawer closes it. fill adds the contents to the scrolling list.
+    void BuildDrawer(RectTransform root, string id, string headerText, Action<ScrollRect> fill)
     {
         float shown = 0f;
         Action<bool> setOpen = open => openDrawer = open ? id : null;
@@ -532,19 +550,6 @@ public class RunScreens : MonoBehaviour
         UIKit.Focus(blocker, () => setOpen(false), drawer, DrawerSlideSeconds).Default =
             () => list.content.GetComponentInChildren<Button>();
 
-        // The tab hangs off the drawer's right edge, so it rides along as the drawer slides.
-        Button tab = UIKit.Button(drawer, "", () => setOpen(openDrawer != id), DrawerTabSize.x, DrawerTabSize.y);
-        tab.GetComponent<LayoutElement>().ignoreLayout = true;
-        UIKit.Place((RectTransform)tab.transform, new Vector2(1f, 0.5f), new Vector2(0f, tabOffsetY), DrawerTabSize);
-        ((RectTransform)tab.transform).pivot = new Vector2(0f, 0.5f);
-        Text tabLabel = tab.GetComponentInChildren<Text>();
-        tabLabel.fontStyle = FontStyle.Bold;
-        UIKit.Place(tabLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, UIKit.Gap / 2f), new Vector2(DrawerTabSize.y, DrawerTabSize.x));
-        tabLabel.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-        // The shoulder button that toggles this drawer, shown while a gamepad is in use.
-        UIKit.PadBadge(tab, id == "Party" ? PadGlyph.RightShoulder : PadGlyph.LeftShoulder, () => GameInput.UsingGamepad,
-            new Vector2(0.5f, 1f), Vector2.down * 10f);
-
         refreshers.Add(() =>
         {
             bool open = openDrawer == id;
@@ -554,9 +559,7 @@ public class RunScreens : MonoBehaviour
             drawer.anchoredPosition = new Vector2(Mathf.Round(Mathf.Lerp(-DrawerWidth, 0f, eased)), 0f);
             blocker.gameObject.SetActive(shown > 0f);
             blockerFade.alpha = eased;
-            tabLabel.text = open ? "CLOSE" : tabText;
-            // While the other drawer is open its tab would sit on top of this one, so this one waits.
-            drawer.gameObject.SetActive(shown > 0f || openDrawer == null);
+            drawer.gameObject.SetActive(shown > 0f);
         });
     }
 
