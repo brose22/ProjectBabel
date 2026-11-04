@@ -19,6 +19,7 @@ public partial class CastleScreen
 
     RectTransform town;
     RectTransform hud;
+    RectTransform titleBanner;
     Text hudGold;
     readonly List<Action> hudRefreshers = new();
 
@@ -94,7 +95,7 @@ public partial class CastleScreen
     {
         hud = UIKit.Stretch(UIKit.Group(canvas.transform, "Hud"));
 
-        RectTransform banner = UIKit.Box(hud, "Title Banner", BannerColor, blocksClicks: false);
+        RectTransform banner = titleBanner = UIKit.Box(hud, "Title Banner", BannerColor, blocksClicks: false);
         UIKit.Place(banner, new Vector2(0.5f, 1f), new Vector2(0f, -HudMargin), new Vector2(230f, 40f));
         UIKit.Outline(banner, UIKit.AccentColor);
         Text title = Title(banner, "THE CASTLE");
@@ -124,6 +125,7 @@ public partial class CastleScreen
     // Home is the town itself: whatever panel was open over it closes.
     void BuildHome()
     {
+        titleBanner.gameObject.SetActive(true);
         refreshers.Clear();
         if (screen != null) Destroy(screen.gameObject);
         screen = null;

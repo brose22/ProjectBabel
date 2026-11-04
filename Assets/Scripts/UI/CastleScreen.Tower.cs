@@ -31,6 +31,8 @@ public partial class CastleScreen
     {
         RectTransform column = NewScreen("Locations", 0f, BuildParty);
         column.gameObject.SetActive(false);
+        // The tower is outside the Castle, so its title banner is hidden here.
+        titleBanner.gameObject.SetActive(false);
         screen.GetComponent<Image>().color = Color.black;
 
         RectTransform map = UIKit.Panel(screen, "Tower", Color.white, blocksClicks: false);
