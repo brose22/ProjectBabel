@@ -159,4 +159,36 @@ public class SoldierRulesTests
         inventory.Add(new SoldierItem { id = "a" });
         Assert.That(inventory.Items.Count, Is.EqualTo(1));
     }
+
+    [Test]
+    public void RollOffer_GivesCountDistinctSoldiers_AndTheSameForTheSameSeed()
+    {
+        List<SoldierItem> a = SoldierRules.RollOffer(42, 3, 1), b = SoldierRules.RollOffer(42, 3, 1);
+        Assert.That(a.Count, Is.EqualTo(3));
+        Assert.That(new HashSet<string>(a.ConvertAll(s => s.id)).Count, Is.EqualTo(3));
+        Assert.That(a.ConvertAll(s => s.id), Is.EqualTo(b.ConvertAll(s => s.id)));
+    }
+
+    [Test]
+    public void Roll_OneRarityRollMatchesTheCastleRoll()
+    {
+        for (int seed = 0; seed < 200; seed++)
+        {
+            SoldierItem castle = SoldierRules.Roll(seed), one = SoldierRules.Roll(seed, 1);
+            Assert.That((one.id, one.soldierClass, one.rarity), Is.EqualTo((castle.id, castle.soldierClass, castle.rarity)));
+        }
+    }
+
+    [Test]
+    public void Roll_MoreRarityRolls_NeverWorseAndRareOnAverage()
+    {
+        int better = 0;
+        for (int seed = 0; seed < 2000; seed++)
+        {
+            SoldierRarity once = SoldierRules.Roll(seed, 1).rarity, twice = SoldierRules.Roll(seed, 2).rarity;
+            Assert.That(twice, Is.GreaterThanOrEqualTo(once));
+            if (twice > once) better++;
+        }
+        Assert.That(better, Is.GreaterThan(500));
+    }
 }

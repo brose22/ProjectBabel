@@ -105,21 +105,21 @@ public class RunState
     // Captains who leave are taken out of the party, so every party member is active.
     public int ActivePartyCount => Party.Count;
 
-    // Captains offered to join after a won city; empty when there's nothing to choose.
-    public List<Captain> RecruitOffer { get; } = new();
+    // Soldiers offered as the reward for a won city; empty when there's nothing to choose.
+    public List<SoldierItem> SoldierOffer { get; } = new();
 
-    public void OfferRecruits(IEnumerable<Captain> captains)
+    public void OfferSoldiers(IEnumerable<SoldierItem> soldiers)
     {
-        RecruitOffer.Clear();
-        RecruitOffer.AddRange(captains);
+        SoldierOffer.Clear();
+        SoldierOffer.AddRange(soldiers);
     }
 
-    // Takes one of the offered captains into the roster and the party, or none when captain is
-    // null. Nobody joins while the roster is full.
-    public void Recruit(Captain captain)
+    // Takes one of the offered soldiers into the soldier inventory, or none when soldier is null
+    // (skipped). Either way the offer is over.
+    public void TakeSoldier(SoldierItem soldier)
     {
-        if (captain != null && RecruitOffer.Contains(captain) && !Party.Contains(captain) && Profile.TryAdd(captain)) Party.Add(captain);
-        RecruitOffer.Clear();
+        if (soldier != null && SoldierOffer.Contains(soldier)) Soldiers.Add(soldier);
+        SoldierOffer.Clear();
     }
 
     // A captain an event recruited while the roster was full, waiting for the player to release

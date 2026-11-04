@@ -42,7 +42,7 @@ MonoBehaviour:
   maxTowers: 5
   partySize: 3
   maxPartySize: 8
-  recruitChoices: 3
+  rewardSoldierChoices: 3
   captainTemplates:
   - {fileID: 11400000, guid: 29882dd47103e6d4a907c7ae034ab99f, type: 2}
   - {fileID: 11400000, guid: 5e6a561190843f742aa54e07b3c9a033, type: 2}
@@ -90,7 +90,7 @@ MonoBehaviour:
   enemyCountGrowthPerMatch: 0.08
   eliteLayerBonus: 2
   eliteGoldMultiplier: 2
-  eliteExtraRecruitChoices: 1
+  eliteRewardRarityRolls: 2
   baseWaveRepeats: 2
   boss: {fileID: 11400000, guid: 3aa8be080f4c4667b8946576716da8b3, type: 2}
   supportXpCapPerWave: 60

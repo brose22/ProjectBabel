@@ -56,7 +56,11 @@ public static class SoldierRules
     static readonly float[] RarityWeights = { 0.5f, 0.25f, 0.14f, 0.08f, 0.03f };
 
     // A random soldier of any class. The same seed gives the same soldier.
-    public static SoldierItem Roll(int seed)
+    public static SoldierItem Roll(int seed) => Roll(seed, 1);
+
+    // The same, rolling rarity rarityRolls times and keeping the best, so more rolls give better odds
+    // (elite match rewards). One roll is the Castle Soldier Recruit odds.
+    public static SoldierItem Roll(int seed, int rarityRolls)
     {
         var random = new Random(seed);
         var bytes = new byte[16];
@@ -65,15 +69,36 @@ public static class SoldierRules
         {
             id = new Guid(bytes).ToString("N"),
             soldierClass = (SoldierClass)random.Next(Enum.GetValues(typeof(SoldierClass)).Length),
+            rarity = RollRarity(random),
         };
+        for (int extra = 1; extra < rarityRolls; extra++)
+        {
+            SoldierRarity again = RollRarity(random);
+            if (again > item.rarity) item.rarity = again;
+        }
+        return item;
+    }
+
+    static SoldierRarity RollRarity(Random random)
+    {
         double pick = random.NextDouble();
+        var rarity = SoldierRarity.Common;
         for (int tier = 0; tier < RarityWeights.Length; tier++)
         {
-            item.rarity = (SoldierRarity)tier;
+            rarity = (SoldierRarity)tier;
             pick -= RarityWeights[tier];
             if (pick < 0) break;
         }
-        return item;
+        return rarity;
+    }
+
+    // The soldiers a won match offers to pick from: count of them, each rolled with rarityRolls.
+    public static List<SoldierItem> RollOffer(int seed, int count, int rarityRolls)
+    {
+        var random = new Random(seed);
+        var offer = new List<SoldierItem>();
+        for (int i = 0; i < count; i++) offer.Add(Roll(random.Next(int.MinValue, int.MaxValue), rarityRolls));
+        return offer;
     }
 }
 
