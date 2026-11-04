@@ -67,15 +67,27 @@ public class MainMenu : MonoBehaviour
         UIKit.Size(UIKit.Group(column, "Gap"), height: 16f);
 
         // Resume lands on the world map when a run is in progress, otherwise at the Castle.
+        // Coming back from a screen, the gamepad lands on the button that opened it.
+        string back = opener;
+        opener = null;
+        Button Opener(Transform parent, string label, Action open, float width, float height)
+        {
+            Button button = UIKit.Button(parent, label, () => { opener = label; open(); }, width, height);
+            if (label == back) screenScope.Default = () => button;
+            return button;
+        }
         UIKit.Button(column, "Resume", Resume, 240f, 34f);
-        UIKit.Button(column, "New game", () => { if (ProfileSave.Exists) BuildConfirmNewGame(); else NewGame(); }, 240f, 34f);
-        UIKit.Button(column, "Settings", BuildSettings, 240f, 34f);
+        Opener(column, "New game", () => { if (ProfileSave.Exists) BuildConfirmNewGame(); else NewGame(); }, 240f, 34f);
+        Opener(column, "Settings", BuildSettings, 240f, 34f);
         UIKit.Button(column, "Exit", Quit, 240f, 34f);
 
         // AI Run: a small square button in the bottom left corner.
-        Button ai = UIKit.Button(screen, "AI", BuildAiRun, 48f, 48f);
+        Button ai = Opener(screen, "AI", BuildAiRun, 48f, 48f);
         UIKit.Place((RectTransform)ai.transform, Vector2.zero, new Vector2(24f, 24f), new Vector2(48f, 48f));
     }
+
+    // The label of the Main button whose screen is open, for landing back on it.
+    string opener;
 
     // ---------- AI Run ----------
 

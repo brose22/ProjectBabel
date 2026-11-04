@@ -75,7 +75,9 @@ public partial class CastleScreen
             building.anchorMin = building.anchorMax = at;
             building.pivot = new Vector2(0.5f, 0.5f);
             building.sizeDelta = new Vector2(BuildingSize, BuildingSize);
-            Button button = UIKit.Clickable(building, open);
+            // Remembered by hand too, for a building opened by mouse or by script rather than by focus.
+            Button button = null;
+            button = UIKit.Clickable(building, () => { townScope.Remembered = button; open(); });
             if (sprite == "gate") townScope.Default = () => button;
             UIKit.HoverTip(building, name, tip);
 

@@ -495,7 +495,9 @@ public class RunScreens : MonoBehaviour
             new Vector2(1f, 0.5f), Vector2.left * 12f);
         UIKit.PadBadge(MenuButton("Party", () => ToggleDrawer("Party")), PadGlyph.RightShoulder, () => GameInput.UsingGamepad,
             new Vector2(1f, 0.5f), Vector2.left * 12f);
-        MenuButton("Shop", () => SetShopOpen(true));
+        Button shop = MenuButton("Shop", () => SetShopOpen(true));
+        if (shopClosed) screenFocus.Default = () => shop;
+        shopClosed = false;
         MenuButton("Main menu", match.ReturnToMenu);
         UIKit.Size(UIKit.Group(menu, "Spacer"), MapMenuWidth, 16f);
         // Abandoning ends the run and costs Gold and a soldier, so it takes a second press, and the
@@ -659,8 +661,12 @@ public class RunScreens : MonoBehaviour
     static int[] SoldierValues(RunState run, SoldierItem soldier) =>
         ListFilterBar.ValuesOf(soldier, soldier.IsEquipped ? run.Profile.Find(soldier.equippedTo) : null);
 
+    // Set when the Shop window closes, so the rebuilt map lands on its Shop button.
+    bool shopClosed;
+
     void SetShopOpen(bool open)
     {
+        shopClosed = shopOpen && !open;
         shopOpen = open;
         shownFor = (MatchState)(-1);
     }
