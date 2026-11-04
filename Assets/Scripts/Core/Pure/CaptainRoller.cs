@@ -49,6 +49,7 @@ public class CaptainRoll
     public int element;
     public DamageType damageType;
     public float power, range, speed, defense, defensePerLevel, refusalTemper;
+    public CaptainTrait trait;
     public int health;
     public List<int> likes = new(), dislikes = new(), likedGifts = new(), dislikedGifts = new();
     public int greetingLine, likedLine, neutralLine, dislikedLine;
@@ -106,6 +107,8 @@ public static class CaptainRoller
         roll.likedLine = Index(spec.likedLineCount, random);
         roll.neutralLine = Index(spec.neutralLineCount, random);
         roll.dislikedLine = Index(spec.dislikedLineCount, random);
+        // Last, so every other roll stays the same for a given seed.
+        roll.trait = CaptainTraits.Roll(random);
         return roll;
     }
 

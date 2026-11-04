@@ -553,6 +553,7 @@ public class MatchHUD : MonoBehaviour
         RequestKind.LowerDraw => "draw set to Low, captain keeps half the reserve",
         RequestKind.Relocate => "moves closer to the gate, free",
         RequestKind.UseSpecial => $"uses {request.Tower.Captain.Ability.displayName} now",
+        RequestKind.Retreat => "falls back away from the gate, free",
         RequestKind.Reinforce => request.Fallen != null ? $"moves in beside {request.Fallen.Captain.displayName}, free" : "moves in to cover, free",
         _ => "granted",
     };

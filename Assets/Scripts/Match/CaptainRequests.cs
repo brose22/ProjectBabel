@@ -57,6 +57,10 @@ public class CaptainRequests : MonoBehaviour
     const float MoveCloserFraction = 0.1f;
     // Game seconds between checks of the conditions that have no event of their own.
     const float PollSeconds = 0.5f;
+    // Chance a poll lets a captain act on their personality; polls are twice a second.
+    const float TraitAskChancePerPoll = 0.05f;
+    // A cautious captain asks to fall back once their health drops below this share.
+    const float CautiousHealthFraction = 0.6f;
 
     class Watch
     {
@@ -223,10 +227,33 @@ public class CaptainRequests : MonoBehaviour
             else if (Time.time - watch.ReserveFullSince >= FullReserveSeconds && tower.DrawRate != DrawRate.Low)
                 TryAsk(tower, RequestKind.LowerDraw, "My reserve is overflowing. Ease off my draw?");
 
+            AskFromTrait(tower);
+
             if (!enemiesOnField || tower.FindClosestEnemy(tower.transform.position) != null)
                 watch.LastEnemyInRange = Time.time;
             else if (Time.time - watch.LastEnemyInRange >= IdleSeconds && FindCellNearerSpawner(tower) != null)
                 TryAsk(tower, RequestKind.Relocate, "Nothing comes this way. Let me move closer to the gate?");
+        }
+    }
+
+    // A personality asks on its own cue, and the cue is a match state that makes the request a bad idea.
+    void AskFromTrait(Tower tower)
+    {
+        if (UnityEngine.Random.value > TraitAskChancePerPoll) return;
+        switch (tower.Captain.Trait)
+        {
+            case CaptainTrait.GlorySeeker:
+                if (tower.IsSpecialReady && Enemy.Active.Count > 0 && match.SpawnsToElite >= 0)
+                    TryAsk(tower, RequestKind.UseSpecial, $"Let me use {tower.Captain.Ability.displayName} on these weaklings. Glory awaits!", fromTrait: true);
+                break;
+            case CaptainTrait.Greedy:
+                if (tower.DrawRate != DrawRate.High && RunState.Current.Gold < RequestEvaluator.GoldComfortPerDrawer)
+                    TryAsk(tower, RequestKind.MoreDraw, "I'm worth a bigger cut of the Gold. High draw?", fromTrait: true);
+                break;
+            case CaptainTrait.Cautious:
+                if (tower.Health < tower.MaxHealth * CautiousHealthFraction)
+                    TryAsk(tower, RequestKind.Retreat, "It's getting too hot here. Let me fall back?", fromTrait: true);
+                break;
         }
     }
 
@@ -242,22 +269,27 @@ public class CaptainRequests : MonoBehaviour
 
     // Shows the request unless one is already up (nothing is queued behind it), the wave is out of
     // requests, or the captain asked for the same thing too recently.
-    void TryAsk(Tower tower, RequestKind kind, string text, Tower fallen = null, bool threat = false)
+    void TryAsk(Tower tower, RequestKind kind, string text, Tower fallen = null, bool threat = false, bool fromTrait = false)
     {
         if (match.State != MatchState.WaveActive || match.IsOver || tower.IsDisabled) return;
         if (askedThisWave >= MaxRequestsPerWave || pending.Count > 0) return;
         if (lastAsked.TryGetValue((tower, kind), out int last) && wave - last < CooldownWaves) return;
         // A captain whose draw or place was just granted is locked until the wave ends, so there is nothing to ask.
-        bool movesTower = kind == RequestKind.Relocate || kind == RequestKind.Reinforce;
+        bool movesTower = kind == RequestKind.Relocate || kind == RequestKind.Reinforce || kind == RequestKind.Retreat;
         if ((movesTower && tower.MoveLocked) || ((kind == RequestKind.MoreDraw || kind == RequestKind.LowerDraw) && tower.DrawLocked)) return;
 
         Vector2Int? target = kind == RequestKind.Relocate ? FindCellNearerSpawner(tower)
+            : kind == RequestKind.Retreat ? FindCellNearerSpawner(tower, retreat: true)
             : kind == RequestKind.Reinforce && fallen != null ? FindCellNear(tower, fallen.transform.position) : null;
+
+        var request = new Request { Tower = tower, Kind = kind, Text = text, Fallen = fallen, ThreatPresent = threat, Target = target };
+        if (target != null) MeasureUncovered(request);
+        // A steady captain only makes sound requests; a personality ask only comes when the match makes it a mistake.
+        bool bad = Evaluate(request).IsBad;
+        if (fromTrait ? !bad : bad && tower.Captain.Trait == CaptainTrait.Steady) return;
 
         lastAsked[(tower, kind)] = wave;
         askedThisWave++;
-        var request = new Request { Tower = tower, Kind = kind, Text = text, Fallen = fallen, ThreatPresent = threat, Target = target };
-        if (target != null) MeasureUncovered(request);
         pending.Add(request);
         ShowNext();
     }
@@ -268,13 +300,14 @@ public class CaptainRequests : MonoBehaviour
     // Among free cells by the captain's own road, nearer its gate than the captain is now, and still
     // reaching at least as much road as now, the one whose road distance is closest to
     // MoveCloserFraction less than the captain's current one. Null when there is none.
-    Vector2Int? FindCellNearerSpawner(Tower tower)
+    // With retreat the cell is farther from the gate instead, and the captain may reach less road.
+    Vector2Int? FindCellNearerSpawner(Tower tower, bool retreat = false)
     {
         GridMap grid = match.Grid;
         if (grid.RoadCells.Count == 0) return null;
         (int route, int current) = NearestRoad(tower.transform.position);
         int currentCoverage = CountRoadInRange(tower.transform.position, tower.Range);
-        float target = current * (1f - MoveCloserFraction);
+        float target = current * (retreat ? 1f + MoveCloserFraction : 1f - MoveCloserFraction);
         float bestError = float.MaxValue;
         Vector2Int? pick = null;
         for (int x = 0; x < grid.Size.x; x++)
@@ -285,7 +318,8 @@ public class CaptainRequests : MonoBehaviour
                 if (!match.CanMoveTo(tower, cell)) continue;
                 Vector3 center = grid.CellCenter(cell);
                 (int cellRoute, int distance) = NearestRoad(center);
-                if (cellRoute != route || distance >= current || !RoadReach.KeepsCoverage(CountRoadInRange(center, tower.Range), currentCoverage)) continue;
+                if (cellRoute != route) continue;
+                if (retreat ? distance <= current : distance >= current || !RoadReach.KeepsCoverage(CountRoadInRange(center, tower.Range), currentCoverage)) continue;
                 float error = Mathf.Abs(distance - target);
                 if (error >= bestError) continue;
                 bestError = error;
@@ -421,6 +455,10 @@ public class CaptainRequests : MonoBehaviour
             case RequestKind.UseSpecial:
                 // Fires now, or the moment it can if nothing is in reach yet.
                 if (!tower.TryUseAbility()) tower.FireAbilityWhenAble(AutoFireTimeoutSeconds);
+                break;
+            case RequestKind.Retreat:
+                MoveFreeTo(tower, FindCellNearerSpawner(tower, retreat: true));
+                tower.LockMove();
                 break;
             case RequestKind.Reinforce:
                 if (request.Fallen != null) MoveFreeTo(tower, FindCellNear(tower, request.Fallen.transform.position));

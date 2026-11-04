@@ -63,6 +63,7 @@ public class CaptainPanelParts
         string element = $"<color={UIKit.Hex(UIKit.ElementColor(captain.element))}>{captain.element}</color>";
         UIKit.LiveLabel(panel, () => $"{element} {captain.ClassName}   ·   Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})",
             refreshers, 12, color: UIKit.MutedTextColor);
+        UIKit.Label(panel, $"{CaptainTraits.Name(captain.Trait)}: {CaptainTraits.Description(captain.Trait)}", 11, color: UIKit.MutedTextColor);
     }
 
     // Health, or why the tower is disabled and a Restore button once it can be restored.
