@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -41,6 +42,10 @@ public partial class CastleScreen : MonoBehaviour
     // (-1 while none is).
     Captain selected;
     int pickingSlot = -1;
+    // The Great Hall's right side, its slot buttons, and each roster card's soldier line.
+    RectTransform hallSide;
+    readonly List<Button> hallSlots = new();
+    readonly Dictionary<Captain, Text> hallCards = new();
     readonly List<Captain> party = new();
 
     public static void Open() => SceneManager.LoadScene(SceneName);
@@ -135,9 +140,9 @@ public partial class CastleScreen : MonoBehaviour
     {
         if (selected != null && !profile.Owns(selected)) selected = null;
         if (selected == null && profile.Roster.Count > 0) selected = profile.Roster[0];
-        // Cancel steps back out of the soldier picker first.
-        RectTransform column = NewScreen(pickingSlot >= 0 ? "Inventory Picker" : "Inventory", InventoryWidth,
-            pickingSlot >= 0 ? () => { pickingSlot = -1; BuildInventory(); } : BuildHome);
+        pickingSlot = -1;
+        // In the Great Hall, Back and cancel step out of the soldier picker first.
+        RectTransform column = NewScreen("Inventory", InventoryWidth, tab == Tab.Captains ? HallBack : BuildHome);
         UIKit.Label(column, tab == Tab.Captains ? "GREAT HALL" : "BARRACKS", UIKit.TitleSize, TextAnchor.MiddleCenter);
 
         RectTransform body = UIKit.Group(column, "Body");
@@ -147,8 +152,9 @@ public partial class CastleScreen : MonoBehaviour
         else BuildSoldiersTab(body);
     }
 
-    // The roster on the left; the picked captain's soldier slots (or the soldier picker for one of
-    // them) on the right.
+    // The roster on the left; the shown captain's soldier slots (or the soldier picker for one of
+    // them) on the right. Only the right side is rebuilt as you work, so the roster keeps its scroll
+    // and gamepad focus stays where it was. With the gamepad, the captain under focus is the one shown.
     void BuildCaptainsTab(Transform body)
     {
         RectTransform panel = UIKit.Box(body, "Roster");
@@ -157,25 +163,74 @@ public partial class CastleScreen : MonoBehaviour
         Header(panel, $"CAPTAINS", $"{profile.Roster.Count}/{Profile.MaxRoster}");
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        hallCards.Clear();
         foreach (Captain captain in profile.Roster)
         {
             Captain each = captain;
-            CaptainCard(list.content, captain, captain == selected ? "SHOWN" : $"LV {Level(captain)}", () =>
+            RectTransform card = CaptainCard(list.content, captain, "", () =>
             {
-                selected = each;
-                pickingSlot = -1;
-                BuildInventory();
-            }, captain == selected);
+                ShowCaptain(each);
+                // On the pad the captain is already shown, so A goes on into their slots.
+                if (GameInput.UsingGamepad && hallSlots.Count > 0) screenScope.Request(hallSlots[0]);
+            }, false, out Text name, out Text tag, out Text soldiers);
+            Image image = card.GetComponent<Image>();
+            GameObject cardObject = card.gameObject;
+            hallCards[each] = soldiers;
+            if (captain == selected) screenScope.Default = () => card.GetComponent<Button>();
+            refreshers.Add(() =>
+            {
+                if (GameInput.UsingGamepad && selected != each && EventSystem.current != null &&
+                    EventSystem.current.currentSelectedGameObject == cardObject) ShowCaptain(each);
+                bool shown = selected == each;
+                image.color = shown ? PickedCardColor : CardColor;
+                name.color = shown ? UIKit.AccentColor : UIKit.TextColor;
+                tag.text = shown ? "SHOWN" : $"LV {Level(each)}";
+            });
         }
         if (profile.Roster.Count == 0)
             UIKit.Label(list.content, "No captains in the roster.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
-        RectTransform side = UIKit.Box(body, "Captain");
-        UIKit.Size(side, height: InventoryBodyHeight, flexibleWidth: 1f);
-        UIKit.Layout<VerticalLayoutGroup>(side, UIKit.Pad, 6);
+        hallSide = UIKit.Box(body, "Captain");
+        UIKit.Size(hallSide, height: InventoryBodyHeight, flexibleWidth: 1f);
+        UIKit.Layout<VerticalLayoutGroup>(hallSide, UIKit.Pad, 6);
+        BuildHallSide();
+    }
+
+    void ShowCaptain(Captain captain)
+    {
+        selected = captain;
+        pickingSlot = -1;
+        BuildHallSide();
+    }
+
+    // Back out of the soldier picker to its slot, or out of the Great Hall.
+    void HallBack()
+    {
+        if (pickingSlot < 0)
+        {
+            BuildHome();
+            return;
+        }
+        int slot = pickingSlot;
+        pickingSlot = -1;
+        BuildHallSide();
+        if (slot < hallSlots.Count) screenScope.Request(hallSlots[slot]);
+    }
+
+    // Empties the right side and builds the loadout or the picker in it. It can run inside a
+    // refresher, so it adds no refreshers itself.
+    void BuildHallSide()
+    {
+        if (hallSide == null) return;
+        foreach (Transform child in hallSide)
+        {
+            child.gameObject.SetActive(false);
+            Destroy(child.gameObject);
+        }
+        hallSlots.Clear();
         if (selected == null) return;
-        if (pickingSlot >= 0) BuildSoldierPicker(side, selected, pickingSlot);
-        else BuildLoadout(side, selected);
+        if (pickingSlot >= 0) BuildSoldierPicker(hallSide, selected, pickingSlot);
+        else BuildLoadout(hallSide, selected);
     }
 
     // The captain's 4 slots, each a button that opens the soldier picker, and Release.
@@ -197,10 +252,11 @@ public partial class CastleScreen : MonoBehaviour
             Button button = UIKit.Button(row, soldier != null ? SoldierSummary(soldier) : "Empty", () =>
             {
                 pickingSlot = slot;
-                BuildInventory();
+                BuildHallSide();
             }, height: 28f);
             UIKit.Size(button, height: 28f, flexibleWidth: 1f);
             if (soldier == null) button.GetComponentInChildren<Text>().color = UIKit.DisabledTextColor;
+            hallSlots.Add(button);
         }
 
         UIKit.Size(UIKit.Group(side, "Spacer"), flexibleWidth: 1f).flexibleHeight = 1f;
@@ -210,7 +266,8 @@ public partial class CastleScreen : MonoBehaviour
     }
 
     // Every soldier owned, those in the inventory first, rarest first. Equip puts one in the slot,
-    // moving it from another captain if it was theirs; Remove sends the slot's soldier back.
+    // moving it from another captain if it was theirs; Remove sends the slot's soldier back. Focus
+    // starts on the list and goes back to the slot afterwards.
     void BuildSoldierPicker(Transform side, Captain captain, int slot)
     {
         Header(side, $"{captain.displayName.ToUpperInvariant()}", $"{CaptainPanelParts.SlotLabel(slot)}");
@@ -218,22 +275,26 @@ public partial class CastleScreen : MonoBehaviour
         {
             change();
             ProfileSave.Save(profile);
-            pickingSlot = -1;
-            BuildInventory();
+            // Soldiers can move between captains, so every card's soldier line is redone.
+            foreach (var (each, line) in hallCards) line.text = SoldiersLine(each);
+            HallBack();
         }
 
         ScrollRect list = UIKit.ScrollList(side, "Soldiers", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        Button first = null;
         foreach (SoldierItem soldier in SortedSoldiers())
         {
             SoldierItem chosen = soldier;
             bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
             RectTransform row = SoldierRow(list.content, soldier, here ? "In this slot" : WhereIs(soldier));
-            if (here) RowAction(row, "Remove", () => Change(() => profile.Soldiers.Unequip(chosen.id)));
-            else RowAction(row, "Equip", () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
+            Button action = here ? RowAction(row, "Remove", () => Change(() => profile.Soldiers.Unequip(chosen.id)))
+                : RowAction(row, "Equip", () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
+            first ??= action;
         }
         if (profile.Soldiers.Items.Count == 0)
             UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        if (first != null) screenScope.Request(first);
     }
 
     // Every soldier owned and who has it; an equipped one can be sent back to the inventory.
@@ -427,10 +488,14 @@ public partial class CastleScreen : MonoBehaviour
     static void Header(Transform parent, string title, string hint = null, bool below = false) => UIKit.Header(parent, title, hint, below);
 
     RectTransform CaptainCard(Transform parent, Captain captain, string tagText, Action onClick, bool highlighted) =>
-        CaptainCard(parent, captain, tagText, onClick, highlighted, out _, out _);
+        CaptainCard(parent, captain, tagText, onClick, highlighted, out _, out _, out _);
 
     // Portrait on the left; name and tag, element and role, bond and soldiers on the right.
     RectTransform CaptainCard(Transform parent, Captain captain, string tagText, Action onClick, bool highlighted, out Text name, out Text tag)
+        => CaptainCard(parent, captain, tagText, onClick, highlighted, out name, out tag, out _);
+
+    RectTransform CaptainCard(Transform parent, Captain captain, string tagText, Action onClick, bool highlighted, out Text name, out Text tag,
+        out Text soldiers)
     {
         RectTransform card = UIKit.Box(parent, captain.displayName, highlighted ? PickedCardColor : CardColor, blocksClicks: false);
         UIKit.Size(card, height: CardHeight, flexibleWidth: 1f);
@@ -463,7 +528,7 @@ public partial class CastleScreen : MonoBehaviour
 
         string muted = UIKit.Hex(UIKit.MutedTextColor);
         UIKit.Label(info, $"<color={muted}>Lv</color> {Level(captain)}   <color={muted}>Bond</color> {BondMath.RankName(ApprovalStore.RankOf(captain))}", 12);
-        UIKit.Label(info, SoldiersLine(captain), 11);
+        soldiers = UIKit.Label(info, SoldiersLine(captain), 11);
         return card;
     }
 
