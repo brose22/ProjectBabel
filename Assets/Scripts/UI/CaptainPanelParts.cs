@@ -64,6 +64,7 @@ public class CaptainPanelParts
         UIKit.LiveLabel(panel, () => $"{element} {captain.ClassName}   ·   Bond {BondMath.RankName(tower.BondRank)} ({tower.Approval:0})",
             refreshers, 12, color: UIKit.MutedTextColor);
         UIKit.Label(panel, $"{CaptainTraits.Name(captain.Trait)}: {CaptainTraits.Description(captain.Trait)}", 11, color: UIKit.MutedTextColor);
+        if (RunState.Current?.RivalOf(captain) is { } rival) UIKit.Label(panel, $"Rival: {rival.displayName}. Granting one's requests costs the other approval.", 11, color: UIKit.BadColor);
     }
 
     // Health, or why the tower is disabled and a Restore button once it can be restored.

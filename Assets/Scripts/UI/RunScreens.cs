@@ -1018,6 +1018,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Icon(elementRow, match.Data.RoleIcon(captain.role), IconSize);
         UIKit.Label(elementRow, captain.ClassName, 12);
         UIKit.Label(info, $"Trait: {CaptainTraits.Name(captain.Trait)} - {CaptainTraits.Description(captain.Trait)}", 11, color: UIKit.MutedTextColor);
+        if (RunState.Current?.RivalOf(captain) is { } rival) UIKit.Label(info, $"Rival: {rival.displayName}. Granting one's requests costs the other approval.", 11, color: UIKit.BadColor);
 
         UIKit.LiveBar(info, () => (ApprovalStore.ApprovalOf(captain) - BondMath.MinApproval) / (BondMath.MaxApproval - BondMath.MinApproval),
             () => $"Bond {BondMath.RankName(ApprovalStore.RankOf(captain))}   Approval {ApprovalStore.ApprovalOf(captain):0}", BondBarColor, drawOnce);

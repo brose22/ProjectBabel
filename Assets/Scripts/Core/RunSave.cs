@@ -45,6 +45,9 @@ public static class RunSave
         public int matchesPlayed;
         // Ids of roster captains; those who walked out have left the roster and aren't kept.
         public List<string> party = new();
+        // The rival pair's captain ids; empty in saves from before rivals.
+        public string rivalA;
+        public string rivalB;
         public List<SoldierItem> soldierOffer = new();
         public List<CaptainApproval> bestApproval = new();
         public List<CaptainRank> startRanks = new();
@@ -76,6 +79,8 @@ public static class RunSave
             maxHealth = run.MaxHealth,
             matchesPlayed = run.MatchesPlayed,
             map = run.Map,
+            rivalA = run.RivalA,
+            rivalB = run.RivalB,
         };
         foreach (Captain captain in run.Party) file.party.Add(captain.id);
         file.soldierOffer.AddRange(run.SoldierOffer);
@@ -122,6 +127,7 @@ public static class RunSave
 
         RunState run = RunState.Resume(profile, file.location, file.health, file.maxHealth, file.matchesPlayed);
         run.SetParty(party);
+        if (!string.IsNullOrEmpty(file.rivalA)) run.SetRivals(file.rivalA, file.rivalB);
         run.SetMap(file.map);
         run.OfferSoldiers(offer);
         foreach (CaptainApproval entry in file.bestApproval ?? new List<CaptainApproval>())
