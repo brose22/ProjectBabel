@@ -70,7 +70,14 @@ public class UIFocus : MonoBehaviour
             lastTop = top;
             lastName = top.name;
         }
-        else if (!CanFocus(Current, top)) Focus(Nearest(top, lastPosition));
+        else if (top.HasRequest)
+        {
+            // A screen that rebuilt part of itself names the button to land on, once its layout settles.
+            Selectable requested = top.TakeRequest();
+            if (requested == null) return;
+            Focus(CanFocus(requested, top, true) ? requested : Nearest(top, lastPosition));
+        }
+        else if (!CanFocus(Current, top, true)) Focus(Nearest(top, lastPosition));
 
         Selectable current = Current;
         Vector2Int step = repeat.Update(PadMath.ToStep(GameInput.PadMove), Time.unscaledTime);
@@ -111,16 +118,18 @@ public class UIFocus : MonoBehaviour
     Selectable Pick(UIFocusScope top)
     {
         if (lastName == top.name) return Nearest(top, lastPosition);
-        if (CanFocus(top.Remembered, top)) return top.Remembered;
+        if (CanFocus(top.Remembered, top, true)) return top.Remembered;
         Selectable preferred = top.Default?.Invoke();
-        return CanFocus(preferred, top) ? preferred : First(top);
+        return CanFocus(preferred, top, true) ? preferred : First(top);
     }
 
     // Dismiss layers and window backs are buttons too, but with no transition; scrollbars are left to
-    // the right stick. Closed drawers wait off screen.
-    static bool CanFocus(Selectable selectable, UIFocusScope scope)
+    // the right stick. Closed drawers wait off screen. A button with its own pad button (Back on B, a
+    // drawer tab on a shoulder) is skipped, unless the screen picked it (mapped: a confirm's Cancel).
+    static bool CanFocus(Selectable selectable, UIFocusScope scope, bool mapped = false)
     {
         if (selectable == null || selectable is not Button || selectable.transition == Selectable.Transition.None) return false;
+        if (!mapped && PadIcon.IsMapped(selectable)) return false;
         if (!selectable.IsActive() || !selectable.IsInteractable() || !selectable.transform.IsChildOf(scope.Root)) return false;
         Vector2 centre = Centre(selectable);
         return centre.x >= 0f && centre.y >= 0f && centre.x <= Screen.width && centre.y <= Screen.height;

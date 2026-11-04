@@ -23,11 +23,32 @@ public class UIFocusScope : MonoBehaviour
     // Where focus was, for coming back when the window above closes.
     public Selectable Remembered { get; set; }
 
+    Selectable requested;
+    int requestedFrame;
     int enabledFrame;
     float enabledTime;
 
     // Layout only settles at the end of the frame a screen is built in.
     public bool Ready => Time.frameCount > enabledFrame && Time.unscaledTime >= enabledTime + Delay;
+
+    // Moves focus to a button next frame, after the layout it was built in settles: for a screen that
+    // rebuilds part of itself rather than the whole screen.
+    public void Request(Selectable selectable)
+    {
+        requested = selectable;
+        requestedFrame = Time.frameCount;
+    }
+
+    public bool HasRequest => requested != null;
+
+    // The requested button once its frame has passed, or null while it waits.
+    public Selectable TakeRequest()
+    {
+        if (Time.frameCount <= requestedFrame) return null;
+        Selectable selectable = requested;
+        requested = null;
+        return selectable;
+    }
 
     void OnEnable()
     {
