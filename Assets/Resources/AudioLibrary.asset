@@ -31,14 +31,16 @@ MonoBehaviour:
   - key: ui.click
     channel: 1
     clips:
-    - {fileID: 8300000, guid: e63e886fae32de04d89ea4dac76e594e, type: 3}
+    - {fileID: 8300000, guid: abc73a852fea9814f95d7cbf703efd7e, type: 3}
     volume: 1
     pitchVariance: 0
     cooldown: 0.03
   - key: enemy.killed
     channel: 0
     clips:
-    - {fileID: 8300000, guid: 7193543f3fd5a404bbad6ff0f84e8e2a, type: 3}
+    - {fileID: 8300000, guid: bb366f385819591488d788bc7ffabaab, type: 3}
+    - {fileID: 8300000, guid: 90b0371262ba11e45be5f4e27d88fe91, type: 3}
+    - {fileID: 8300000, guid: ae8f0cd3a87878c49acc18b0235ef51c, type: 3}
     volume: 0.6
     pitchVariance: 0.1
     cooldown: 0.06
@@ -68,7 +70,8 @@ MonoBehaviour:
   - key: tower.placed
     channel: 0
     clips:
-    - {fileID: 8300000, guid: c9ce97442de02ac46912ee2abe651abe, type: 3}
+    - {fileID: 8300000, guid: 44f4b1ab9eff13447bf6b9b3a3d1d7df, type: 3}
+    - {fileID: 8300000, guid: dfbb1f6c10739394eb5fadacd1333139, type: 3}
     volume: 1
     pitchVariance: 0.05
     cooldown: 0
@@ -100,7 +103,9 @@ MonoBehaviour:
   - key: ability.used
     channel: 0
     clips:
-    - {fileID: 8300000, guid: 3e2d17b3bd657c24a91dface3afe53e8, type: 3}
+    - {fileID: 8300000, guid: eafdf7c78ddc73740b160566893e40f8, type: 3}
+    - {fileID: 8300000, guid: 551b49fadab114c478790f93e71909be, type: 3}
+    - {fileID: 8300000, guid: 1a37ce963baf805418e414cffe15e726, type: 3}
     volume: 1
     pitchVariance: 0.05
     cooldown: 0.1
