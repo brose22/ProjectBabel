@@ -19,5 +19,8 @@ public static class ElementRules
         return 1f;
     }
 
+    // The element that beats this one (what a target of this element is weak to); -1 for none.
+    public static int WeakTo(int target) => IsElement(target) ? (target + ElementCount - 1) % ElementCount : -1;
+
     static bool IsElement(int element) => element >= 0 && element < ElementCount;
 }

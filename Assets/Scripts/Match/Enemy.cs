@@ -5,7 +5,11 @@ public class Enemy : MonoBehaviour
 {
     public static readonly List<Enemy> Active = new();
 
-    const float ElementMarkerSize = 0.15f;
+    // Weak-to icons (16px art at 16 pixels per unit) sit in a row right of the health bar.
+    // 0.2 is 16 screen pixels at 1080p with the match camera, so the art draws 1:1.
+    const float WeakIconSize = 0.2f;
+    const float WeakIconGap = 0.03f;
+    const float WeakIconHeight = 0.45f;
     const float ShotStreakWidth = 0.05f;
     const float ShotStreakSeconds = 0.12f;
     const float StatusIconHeight = 0.7f;
@@ -42,6 +46,7 @@ public class Enemy : MonoBehaviour
     float burnDamagePerSecond;
     Tower burnSource;
     StatusIcons statusIcons;
+    Transform weakIcons;
     int tintedStatus = -1;
     // The body colour with no status: white for drawn art, or the data colour for squares.
     Color baseColor = Color.white;
@@ -107,7 +112,7 @@ public class Enemy : MonoBehaviour
         healthBar.SetFraction(1f);
         statusIcons = StatusIcons.Create(transform, new Vector3(0f, StatusIconHeight, 0f), body.sortingOrder + 1);
         AddStunStars();
-        AddElementMarker();
+        AddWeakIcons();
         IsTargetable = true;
         Active.Add(this);
         if (data.elite) GameEvents.RaiseEnemyArrived(this);
@@ -136,21 +141,35 @@ public class Enemy : MonoBehaviour
         IsBoss = true;
         GameEvents.RaiseEnemyArrived(this);
         healthBar.SetTier(2);
+        PlaceWeakIcons();
     }
 
-    // A small square above the body in the element's colour, so players can read the matchup in
-    // grey-box. Created at runtime so the enemy prefab needs no change.
-    void AddElementMarker()
+    // What beats this enemy, its damage type then its element (Advantage), as two icons just right
+    // of the health bar. They stay up when the bar hides at full health. Created at runtime so the
+    // enemy prefab needs no change.
+    void AddWeakIcons()
     {
-        var marker = new GameObject("Element Marker");
-        marker.transform.SetParent(transform, false);
-        marker.transform.localPosition = new Vector3(-0.3f, 0.45f, 0f);
-        marker.transform.localScale = Vector3.one * ElementMarkerSize;
-        var renderer = marker.AddComponent<SpriteRenderer>();
-        renderer.sprite = SpriteUtil.Square;
-        renderer.color = UIKit.ElementColor(Element);
-        renderer.sortingOrder = body.sortingOrder + 1;
+        weakIcons = new GameObject("Weak To").transform;
+        weakIcons.SetParent(transform, false);
+        AddWeakIcon(WeaknessIcons.For(DamageTypeRules.WeakTo(Data.damageType)), 0);
+        AddWeakIcon(WeaknessIcons.For(WeaknessIcons.WeakElement(Element)), 1);
+        PlaceWeakIcons();
     }
+
+    void AddWeakIcon(Sprite sprite, int slot)
+    {
+        var icon = new GameObject(slot == 0 ? "Type" : "Element");
+        icon.transform.SetParent(weakIcons, false);
+        icon.transform.localPosition = new Vector3(slot * (WeakIconSize + WeakIconGap), 0f, 0f);
+        icon.transform.localScale = Vector3.one * WeakIconSize;
+        var renderer = icon.AddComponent<SpriteRenderer>();
+        renderer.sprite = sprite;
+        renderer.sortingOrder = body.sortingOrder + 3;
+    }
+
+    // Elites and bosses have wider bars, so the row moves out with the bar's right end.
+    void PlaceWeakIcons() =>
+        weakIcons.localPosition = new Vector3(healthBar.HalfWidth + WeakIconGap + WeakIconSize * 0.5f, WeakIconHeight, 0f);
 
     // Instant shot at the closest deployed soldier in range while walking, on the soldier attack
     // timer. A thin streak shows the shot. Only runs while the enemy walks, like tower attacks.
@@ -509,6 +528,7 @@ public class Enemy : MonoBehaviour
         {
             healthBar.gameObject.SetActive(false);
             statusIcons.gameObject.SetActive(false);
+            weakIcons.gameObject.SetActive(false);
         }
         else
             Destroy(gameObject);

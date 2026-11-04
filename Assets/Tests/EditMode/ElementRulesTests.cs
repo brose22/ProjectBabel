@@ -43,4 +43,17 @@ public class ElementRulesTests
             Assert.That(losesTo, Is.EqualTo(1), $"element {e} loses to");
         }
     }
+
+    [Test]
+    public void EachElementIsWeakToTheElementThatBeatsIt()
+    {
+        // Water > Fire > Ice > Grass > Water, indexed Water 0, Fire 1, Ice 2, Grass 3.
+        Assert.That(ElementRules.WeakTo(1), Is.EqualTo(0));
+        Assert.That(ElementRules.WeakTo(2), Is.EqualTo(1));
+        Assert.That(ElementRules.WeakTo(3), Is.EqualTo(2));
+        Assert.That(ElementRules.WeakTo(0), Is.EqualTo(3));
+        Assert.That(ElementRules.WeakTo(-1), Is.EqualTo(-1));
+        for (int e = 0; e < ElementRules.ElementCount; e++)
+            Assert.That(ElementRules.Beats(ElementRules.WeakTo(e), e));
+    }
 }
