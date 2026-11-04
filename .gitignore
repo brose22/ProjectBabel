@@ -115,3 +115,6 @@ InitTestScene*.unity*
 
 # AI Run reports
 /Reports/
+
+# In-game F11 screenshots
+/Screenshots/
