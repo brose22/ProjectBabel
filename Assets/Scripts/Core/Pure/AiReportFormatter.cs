@@ -16,6 +16,8 @@ public class AiWaveRow
     public int goldStart;
     public int goldEarned;
     public int goldBonus;
+    // Reserves handed back by towers sold during the wave; not netted into goldSpent.
+    public int goldRefunded;
     public int goldSpent;
     // Drained from the pool between the last wave and this one: reserve top-ups, restores, moves.
     public int goldBetween;
@@ -170,7 +172,7 @@ public static class AiReportFormatter
         return value.IndexOfAny(new[] { ',', '"', '\n', '\r' }) >= 0 ? "\"" + value.Replace("\"", "\"\"") + "\"" : value;
     }
 
-    public const string CsvHeader = "run,seed,result,match,node,kind,layer,layout,match_result,wave,seconds,kills,leaks,casualties,abilities,damage,gold_start,gold_earned,gold_bonus,gold_spent,gold_between,gold_end,health_end,kills_by";
+    public const string CsvHeader = "run,seed,result,match,node,kind,layer,layout,match_result,wave,seconds,kills,leaks,casualties,abilities,damage,gold_start,gold_earned,gold_bonus,gold_refunded,gold_spent,gold_between,gold_end,health_end,kills_by";
 
     // One row per wave per run.
     public static string Csv(IReadOnlyList<AiRunRecord> runs)
@@ -186,7 +188,7 @@ public static class AiReportFormatter
                         run.index.ToString(), run.seed.ToString(), run.result, match.index.ToString(), match.nodeId.ToString(),
                         match.kind, match.layer.ToString(), match.layout.ToString(), match.result, w.wave.ToString(),
                         F(w.seconds), w.kills.ToString(), w.leaks.ToString(), w.casualties.ToString(), w.abilities.ToString(),
-                        F(w.damage), w.goldStart.ToString(), w.goldEarned.ToString(), w.goldBonus.ToString(), w.goldSpent.ToString(), w.goldBetween.ToString(),
+                        F(w.damage), w.goldStart.ToString(), w.goldEarned.ToString(), w.goldBonus.ToString(), w.goldRefunded.ToString(), w.goldSpent.ToString(), w.goldBetween.ToString(),
                         w.goldEnd.ToString(), w.healthEnd.ToString(), CsvField(kills),
                     })).Append('\n');
                 }
@@ -338,10 +340,10 @@ public static class AiReportFormatter
             md.Append($"| {m.index} | {m.nodeId} | {m.kind} | {m.layer} | {m.result} | {m.wavesCleared}/{m.waveCount} | {m.kills} | {m.leaks} | {m.casualties} | {m.healthStart} > {m.healthEnd} | {m.goldStart} > {m.goldEnd} | {m.towersPlaced} | {m.towersDisabled} | {m.towersRestored} | {m.towersSold} |\n");
         md.Append('\n');
 
-        md.Append("### Waves\n\n| Match | Wave | Seconds | Kills | Leaks | Casualties | Specials | Damage | Gold in | Gold spent | Drawn between | Health | Kills by |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
+        md.Append("### Waves\n\n| Match | Wave | Seconds | Kills | Leaks | Casualties | Specials | Damage | Gold in | Refunded | Gold spent | Drawn between | Health | Kills by |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n");
         foreach (AiMatchRow m in run.matches)
             foreach (AiWaveRow w in m.waves)
-                md.Append($"| {m.index} | {w.wave} | {F(w.seconds)} | {w.kills} | {w.leaks} | {w.casualties} | {w.abilities} | {F(w.damage)} | {w.goldEarned + w.goldBonus} | {w.goldSpent} | {w.goldBetween} | {w.healthEnd} | {string.Join(", ", w.killsByCaptain.Select(p => $"{p.Key} {p.Value}"))} |\n");
+                md.Append($"| {m.index} | {w.wave} | {F(w.seconds)} | {w.kills} | {w.leaks} | {w.casualties} | {w.abilities} | {F(w.damage)} | {w.goldEarned + w.goldBonus} | {w.goldRefunded} | {w.goldSpent} | {w.goldBetween} | {w.healthEnd} | {string.Join(", ", w.killsByCaptain.Select(p => $"{p.Key} {p.Value}"))} |\n");
         md.Append('\n');
 
         md.Append("### Captains\n\n| Captain | Element | Role | Level | XP | Kills | Damage | Specials | Approval | Gained | Lost | Bond rank |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n");

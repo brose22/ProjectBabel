@@ -46,6 +46,9 @@ public class MatchManager : MonoBehaviour
     // Gold the win paid into the pool: the flat bonus plus the towers' unspent reserves.
     public int WinGoldEarned { get; private set; }
     public int ReserveRefunded { get; private set; }
+    // Reserves handed back by towers sold this match, and the extra Gold elite kills paid, for MatchStats.
+    public int SellRefunded { get; private set; }
+    public int EliteGoldEarned { get; private set; }
     // What a lost run cost the profile: Gold, and the deployed captains with their soldiers.
     public int GoldLost { get; private set; }
     public List<Captain> CaptainsLost { get; private set; } = new();
@@ -325,6 +328,7 @@ public class MatchManager : MonoBehaviour
     public void SellTower(Tower tower)
     {
         grid.ClearOccupant(tower.Cell);
+        SellRefunded += tower.Reserve;
         tower.Sell();
     }
 
@@ -950,7 +954,12 @@ public class MatchManager : MonoBehaviour
     {
         Kills++;
         if (enemy == Boss && !IsOver && BossRules.IsMatchWon(WavesCleared, WaveCount, false)) Finish(MatchState.Won);
-        if (IsEliteMatch) RunState.Current.AddGold(Mathf.RoundToInt(enemy.GoldReward * (data.eliteGoldMultiplier - 1f)));
+        if (IsEliteMatch)
+        {
+            int extra = Mathf.Max(0, Mathf.RoundToInt(enemy.GoldReward * (data.eliteGoldMultiplier - 1f)));
+            RunState.Current.AddGold(extra);
+            EliteGoldEarned += extra;
+        }
         if (enemy.KilledBy != null) enemy.KilledBy.GainXp(enemy.Data.xpReward);
     }
 
