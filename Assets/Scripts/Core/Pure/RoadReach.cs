@@ -12,6 +12,15 @@ public static class RoadReach
         return count;
     }
 
+    // Road tiles reached from one spot but not from another: what a move leaves uncovered.
+    public static int CountLost(Vector2 from, Vector2 to, IReadOnlyList<Vector2> roadCenters, float range)
+    {
+        int count = 0;
+        for (int i = 0; i < roadCenters.Count; i++)
+            if (Vector2.Distance(from, roadCenters[i]) <= range && Vector2.Distance(to, roadCenters[i]) > range) count++;
+        return count;
+    }
+
     // A new spot is acceptable when it reaches some road and at least as much as the current one.
     public static bool KeepsCoverage(int candidate, int current) => candidate > 0 && candidate >= current;
 }

@@ -486,9 +486,17 @@ public class Tower : MonoBehaviour
         return true;
     }
 
-    public void SetDrawRate(DrawRate rate)
+    // A draw rate or move granted to a captain stays until the wave ends.
+    public bool DrawLocked { get; private set; }
+    public bool MoveLocked { get; private set; }
+    public void LockDraw() => DrawLocked = true;
+    public void LockMove() => MoveLocked = true;
+    public void ClearRequestLocks() { DrawLocked = false; MoveLocked = false; }
+
+    // A locked draw only changes when the request that locked it does the setting.
+    public void SetDrawRate(DrawRate rate, bool ignoreLock = false)
     {
-        if (rate == DrawRate) return;
+        if (rate == DrawRate || (DrawLocked && !ignoreLock)) return;
         DrawRate = rate;
         GameEvents.RaiseDrawRateChanged(this);
     }

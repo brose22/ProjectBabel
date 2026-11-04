@@ -140,7 +140,7 @@ public class CaptainPanelParts
             Flexible(UIKit.Button(actions, "Cancel move", placement.CancelMove));
         else
         {
-            Button move = UIKit.LiveButton(actions, () => match.MoveCost(tower) > 0 ? $"Move ({match.MoveCost(tower)} Gold)" : "Move (free)",
+            Button move = UIKit.LiveButton(actions, () => tower.MoveLocked ? "Move (locked)" : match.MoveCost(tower) > 0 ? $"Move ({match.MoveCost(tower)} Gold)" : "Move (free)",
                 placement.BeginMove, refreshers, () => match.CanMove(tower) && match.CanAffordMove(tower));
             Flexible(move);
             UIKit.PadBadge(move, PadGlyph.West, () => GameInput.PadInMatch);

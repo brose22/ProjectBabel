@@ -103,7 +103,7 @@ public class CaptainWidget
         parts.Ability(panel, tower);
         BuildSoldiers(tower);
         string accent = UIKit.Hex(UIKit.AccentColor);
-        UIKit.LiveLabel(panel, () => $"Gold draw  <color={accent}>{DrawRateLabels[(int)tower.DrawRate]}</color>",
+        UIKit.LiveLabel(panel, () => $"Gold draw  <color={accent}>{DrawRateLabels[(int)tower.DrawRate]}</color>{(tower.DrawLocked ? "  (locked until the wave ends)" : "")}",
             refreshers, 12, color: UIKit.MutedTextColor);
         parts.Actions(panel, tower);
     }
