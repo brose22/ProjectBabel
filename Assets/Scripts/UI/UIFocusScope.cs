@@ -41,6 +41,21 @@ public class UIFocusScope : MonoBehaviour
 
     public bool HasRequest => requested != null;
 
+    // Hands focus back to a button once the window over it closes: the newest layer holding the
+    // button remembers it and lands on it.
+    public static void Return(Selectable selectable)
+    {
+        if (selectable == null) return;
+        for (int i = active.Count - 1; i >= 0; i--)
+        {
+            UIFocusScope scope = active[i];
+            if (scope.Root == null || !selectable.transform.IsChildOf(scope.Root)) continue;
+            scope.Remembered = selectable;
+            scope.Request(selectable);
+            return;
+        }
+    }
+
     // The requested button once its frame has passed, or null while it waits.
     public Selectable TakeRequest()
     {

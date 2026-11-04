@@ -239,6 +239,42 @@ public static class UIKit
         return (RectTransform)panel.transform;
     }
 
+    // Popup windows: one dimming, one opaque colour, one padding and spacing for all of them.
+    public static readonly Color BackdropColor = new(0f, 0f, 0f, 0.55f);
+    public static readonly Color WindowColor = new(PanelColor.r, PanelColor.g, PanelColor.b, 1f);
+    public const int WindowPadding = 12;
+    public const float WindowSpacing = 6f;
+
+    // A popup: a backdrop over parent, a focus layer, and a window placed on it (see Window). A
+    // click on the backdrop or the gamepad's cancel button runs onCancel, or closes the window when
+    // there is none. Closing puts focus back on returnFocusTo, if it is given and still there. A
+    // height of 0 fits the window to its content; a clear backdrop adds no second dimming.
+    public static ModalWindow Modal(Transform parent, string name, float width, Vector2 anchor, Vector2 offset,
+        Action onCancel = null, Selectable returnFocusTo = null, float height = 0f, Color? backdrop = null)
+    {
+        var modal = new ModalWindow(returnFocusTo);
+        Action cancel = onCancel ?? (() => modal.Close());
+        RectTransform back = Stretch(Panel(parent, name, backdrop ?? BackdropColor));
+        var dismiss = back.gameObject.AddComponent<Button>();
+        dismiss.transition = Selectable.Transition.None;
+        dismiss.onClick.AddListener(() => cancel());
+        modal.Backdrop = back;
+        modal.Scope = Focus(back, cancel);
+        modal.Window = Window(back, "Window", anchor, offset, new Vector2(width, height));
+        return modal;
+    }
+
+    // A framed, opaque window that swallows clicks (so they don't reach a backdrop under it), with a
+    // vertical layout. A height of 0 fits it to its content.
+    public static RectTransform Window(Transform parent, string name, Vector2 anchor, Vector2 offset, Vector2 size)
+    {
+        RectTransform window = Box(parent, name, WindowColor);
+        window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
+        Place(window, anchor, offset, size);
+        Layout<VerticalLayoutGroup>(window, WindowPadding, WindowSpacing, fitContent: size.y <= 0f);
+        return window;
+    }
+
     // A panel with a pixel-art frame, for windows and cards.
     public static RectTransform Box(Transform parent, string name, Color? color = null, bool blocksClicks = true)
     {
@@ -654,5 +690,27 @@ public static class UIKit
     public static void Refresh(List<Action> refreshers)
     {
         foreach (Action refresh in refreshers) refresh();
+    }
+}
+
+// An open popup from UIKit.Modal.
+public sealed class ModalWindow
+{
+    readonly Selectable returnFocusTo;
+
+    public RectTransform Backdrop { get; internal set; }
+    public RectTransform Window { get; internal set; }
+    public UIFocusScope Scope { get; internal set; }
+    public bool IsOpen => Backdrop != null;
+
+    public ModalWindow(Selectable returnFocusTo) => this.returnFocusTo = returnFocusTo;
+
+    // Removes the window. restoreFocus off is for a window drawn again in its place.
+    public void Close(bool restoreFocus = true)
+    {
+        if (Backdrop == null) return;
+        UnityEngine.Object.Destroy(Backdrop.gameObject);
+        Backdrop = null;
+        if (restoreFocus && returnFocusTo != null) UIFocusScope.Return(returnFocusTo);
     }
 }
