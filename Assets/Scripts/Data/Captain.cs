@@ -26,6 +26,8 @@ public class Captain
     public float defense;
     public float defensePerLevel;
     public float refusalTemper = 1f;
+    // -1 on captains saved before traits existed; Trait then works one out from the id.
+    public int traitId = -1;
 
     public CaptainTag[] likes = new CaptainTag[0];
     public CaptainTag[] dislikes = new CaptainTag[0];
@@ -71,6 +73,7 @@ public class Captain
             defense = roll.defense,
             defensePerLevel = roll.defensePerLevel,
             refusalTemper = roll.refusalTemper,
+            traitId = (int)roll.trait,
             likes = roll.likes.ConvertAll(t => (CaptainTag)t).ToArray(),
             dislikes = roll.dislikes.ConvertAll(t => (CaptainTag)t).ToArray(),
             likedGifts = GiftNames(template, roll.likedGifts),
@@ -88,6 +91,15 @@ public class Captain
         ids.ConvertAll(id => template.GiftForId(id)).FindAll(g => g != null).ConvertAll(g => g.name).ToArray();
 
     static string Line(string[] lines, int index) => index >= 0 && index < lines.Length ? lines[index] : "";
+
+    public CaptainTrait Trait
+    {
+        get
+        {
+            if (traitId < 0) traitId = (int)CaptainTraits.ForLegacyId(id);
+            return (CaptainTrait)traitId;
+        }
+    }
 
     // A Melee Mage, a Magic Knight: a damage type that isn't the role's usual one.
     public bool IsSpecialClass => CaptainRoller.IsSpecialClass(role, damageType);

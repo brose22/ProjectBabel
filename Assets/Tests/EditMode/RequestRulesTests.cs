@@ -60,4 +60,28 @@ public class RequestRulesTests
         var road = new System.Collections.Generic.List<UnityEngine.Vector2> { new(0, 0), new(1, 0), new(5, 0) };
         Assert.That(RoadReach.CountLost(new UnityEngine.Vector2(0, 0), new UnityEngine.Vector2(5, 0), road, 1.5f), Is.EqualTo(2));
     }
+
+    [Test]
+    public void GreedyAndGloryAsksAreBad_WhenMatchMakesThemSo()
+    {
+        RequestSnapshot greedy = Snap(RequestKind.MoreDraw); greedy.Gold = 40;
+        RequestSnapshot glory = Snap(RequestKind.UseSpecial); glory.SpawnsToElite = 5;
+        RequestSnapshot cautious = Snap(RequestKind.Retreat); cautious.UncoveredRoadTiles = 8;
+        Assert.That(RequestEvaluator.Evaluate(greedy).IsBad, Is.True);
+        Assert.That(RequestEvaluator.Evaluate(glory).IsBad, Is.True);
+        Assert.That(RequestEvaluator.Evaluate(glory).Cons.Exists(c => c.Text.Contains("weak enemies")), Is.True);
+        Assert.That(RequestEvaluator.Evaluate(cautious).IsBad, Is.True);
+    }
+}
+
+public class CaptainTraitTests
+{
+    [Test]
+    public void Roll_GivesEveryTrait_AndIsDeterministic()
+    {
+        var seen = new System.Collections.Generic.HashSet<CaptainTrait>();
+        for (int i = 0; i < 200; i++) seen.Add(CaptainTraits.Roll(new System.Random(i)));
+        Assert.That(seen.Count, Is.EqualTo(CaptainTraits.Count));
+        Assert.That(CaptainTraits.ForLegacyId("abc"), Is.EqualTo(CaptainTraits.ForLegacyId("abc")));
+    }
 }

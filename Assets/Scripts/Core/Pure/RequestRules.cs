@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 
 // New kinds go at the end: AiAbilityRules mirrors this order.
-public enum RequestKind { MoreDraw, Relocate, UseSpecial, Reinforce, LowerDraw }
+public enum RequestKind { MoreDraw, Relocate, UseSpecial, Reinforce, LowerDraw, Retreat }
 
 // How a captain's request ends. Expired is a request still open when its wave ended: it is dismissed
 // without a verdict, so it neither pleases nor angers the captain.
@@ -70,6 +70,8 @@ public static class RequestEvaluator
     public const float PocketGoldPerPoint = 10f;
     // Weight of a lock-in (the answer can't be undone until the wave ends).
     public const float LockWeight = 0.5f;
+    // Firing at nothing worth it while an elite or the boss is still to come.
+    public const float WeakTargetWeight = 1f;
 
     public static RequestEvaluation Evaluate(RequestSnapshot s)
     {
@@ -92,10 +94,14 @@ public static class RequestEvaluator
                     ? new RequestEffect($"Elite in {s.SpawnsToElite} spawn{(s.SpawnsToElite == 1 ? "" : "s")}: special on cooldown when it arrives",
                         Clamp(3.5f - 0.25f * s.SpawnsToElite, 1f, 3.5f))
                     : new RequestEffect("Special on cooldown for the rest of the wave", 0.5f));
+                if (!s.ThreatPresent && s.SpawnsToElite >= 0)
+                    e.Cons.Add(new RequestEffect("Only weak enemies in reach", WeakTargetWeight));
                 break;
             case RequestKind.Relocate:
             case RequestKind.Reinforce:
-                e.Pros.Add(s.Kind == RequestKind.Reinforce ? new RequestEffect("Covers the fallen captain", 1f) : new RequestEffect("Closer to the gate", 0.5f));
+            case RequestKind.Retreat:
+                e.Pros.Add(s.Kind == RequestKind.Reinforce ? new RequestEffect("Covers the fallen captain", 1f)
+                    : s.Kind == RequestKind.Retreat ? new RequestEffect("Out of harm's way", 1f) : new RequestEffect("Closer to the gate", 0.5f));
                 if (s.UncoveredRoadTiles > 0)
                     e.Cons.Add(new RequestEffect($"Leaves {s.UncoveredRoadTiles} road tile{(s.UncoveredRoadTiles == 1 ? "" : "s")} uncovered{(string.IsNullOrEmpty(s.Area) ? "" : " near " + s.Area)}",
                         Clamp(UncoveredTileWeight * s.UncoveredRoadTiles, 0f, MaxConWeight)));
