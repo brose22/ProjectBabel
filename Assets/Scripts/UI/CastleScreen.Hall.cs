@@ -28,6 +28,8 @@ public partial class CastleScreen
     Captain hallCaptain;
     int hallSlot = -1;
     RectTransform hallOverlay, hallWindow, hallPicker;
+    // The "GREAT HALL" title and the roster cards, hidden while a captain window is open.
+    RectTransform hallColumn;
     CanvasGroup hallPickerFade;
     UIFocusScope hallWindowScope;
     // 0 with the captain window centred, 1 with it moved left and the soldier list beside it.
@@ -92,6 +94,7 @@ public partial class CastleScreen
         selected = hallCaptain = captain;
         hallSlot = -1;
         hallSlide = 0f;
+        if (hallColumn != null) hallColumn.gameObject.SetActive(false);
 
         hallOverlay = UIKit.Stretch(UIKit.Panel(screen, "Captain Window", HallOverlayColor));
         hallOverlay.offsetMax = new Vector2(0f, -HudHeight);
@@ -124,6 +127,7 @@ public partial class CastleScreen
         DestroyHallWindow();
         hallCaptain = null;
         hallSlot = -1;
+        if (hallColumn != null) hallColumn.gameObject.SetActive(true);
         if (captain != null && hallCardButtons.TryGetValue(captain, out Button card) && card != null) screenScope.Request(card);
     }
 
@@ -272,8 +276,9 @@ public partial class CastleScreen
     // ---------- The soldier list ----------
 
     // Every soldier owned, those in the inventory first, rarest first, in a window that slides in
-    // beside the captain's. Equip puts one in the slot, moving it from another captain if it was
-    // theirs; Remove sends the slot's soldier back to the inventory. Either closes the list.
+    // beside the captain's. Picking a row puts that soldier in the slot, moving it from another captain
+    // if it was theirs; picking the slot's own soldier sends it back to the inventory. Either closes
+    // the list.
     void OpenHallPicker(int slot)
     {
         if (hallOverlay == null || hallCaptain == null) return;
@@ -313,9 +318,12 @@ public partial class CastleScreen
         {
             SoldierItem chosen = soldier;
             bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
-            RectTransform row = SoldierRow(list.content, soldier, here ? "In this slot" : WhereIs(soldier));
-            Button action = here ? RowAction(row, "Remove", () => Change(() => profile.Soldiers.Unequip(chosen.id)))
-                : RowAction(row, "Equip", () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
+            RectTransform row = SoldierRow(list.content, soldier, here ? "In this slot. Select to remove." : WhereIs(soldier));
+            Button action = UIKit.Clickable(row, here ? () => Change(() => profile.Soldiers.Unequip(chosen.id))
+                : () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
+            // Who has the soldier now, at the row's right end; not on the row that removes it.
+            Captain owner = here || !soldier.IsEquipped ? null : profile.Find(soldier.equippedTo);
+            if (owner != null) HallOwnerPortrait(row, owner);
             first ??= action;
         }
         if (profile.Soldiers.Items.Count == 0)
@@ -326,6 +334,14 @@ public partial class CastleScreen
         UIKit.PadBadge(back, PadGlyph.East);
         scope.Default = () => first != null ? first : back;
         PositionHall();
+    }
+
+    // A small framed portrait; the row's flexible text pushes it to the right end.
+    static void HallOwnerPortrait(RectTransform row, Captain owner)
+    {
+        RectTransform frame = UIKit.Box(row, "Owner", UIKit.InsetColor, blocksClicks: false);
+        UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
+        UIKit.Icon(frame, owner.Portrait, UIKit.ItemIconSize);
     }
 
     // Starts the list sliding out and the captain window back to the middle, with focus on the slot.
