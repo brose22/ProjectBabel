@@ -123,21 +123,57 @@ public partial class CastleScreen
         }
         RectTransform window = OpenPurchaseWindow(row, out UIFocusScope scope);
         UIKit.Size(UIKit.Header(window, "RECRUIT SOLDIER", $"{price} Gold"), flexibleWidth: 1f);
+        SoldierDetails(window, soldier);
+        UIKit.Label(window, $"Goes to the inventory. You have {profile.Gold} Gold.", 11, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        PurchaseButtons(window, scope, $"Buy {price}", () => BuySoldier(slot));
+    }
+
+    // Portrait, name, what it gives its captain and its damage type, then its class's stats.
+    void SoldierDetails(Transform window, SoldierItem soldier)
+    {
+        SoldierClassData soldierClass = data.ClassData(soldier.soldierClass);
         PurchaseHeader(window, soldierClass != null ? soldierClass.portrait : null,
             CaptainPanelParts.SoldierName(soldier, soldierClass),
             $"Gives its captain {CaptainPanelParts.SoldierBonus(soldier, soldierClass)}",
             soldierClass != null ? $"{soldierClass.damageType} damage" : "");
-        if (soldierClass != null)
+        if (soldierClass == null) return;
+        RectTransform stats = PurchaseStats(window);
+        HallStat(stats, "HEALTH", $"{soldierClass.maxHealth:0}");
+        HallStat(stats, "DAMAGE", $"x{soldierClass.damageMultiplier:0.##}");
+        HallStat(stats, "REACH", $"{soldierClass.reach:0.#}");
+        HallStat(stats, "SPEED", $"{soldierClass.moveSpeed:0.#}");
+        HallStat(stats, "RESPAWN", $"{soldierClass.respawnCost}");
+    }
+
+    // A Barracks row's window: the soldier's stats and who has it, with Unequip for an equipped one.
+    void OpenSoldierInfo(Button row, SoldierItem soldier)
+    {
+        RectTransform window = OpenPurchaseWindow(row, out UIFocusScope scope);
+        UIKit.Size(UIKit.Header(window, "SOLDIER"), flexibleWidth: 1f);
+        SoldierDetails(window, soldier);
+        UIKit.Label(window, WhereIs(soldier), 12, TextAnchor.MiddleCenter);
+
+        RectTransform buttons = UIKit.Group(window, "Buttons");
+        UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, UIKit.Gap);
+        UIKit.Size(buttons, flexibleWidth: 1f);
+        Button unequip = null;
+        if (soldier.IsEquipped)
         {
-            RectTransform stats = PurchaseStats(window);
-            HallStat(stats, "HEALTH", $"{soldierClass.maxHealth:0}");
-            HallStat(stats, "DAMAGE", $"x{soldierClass.damageMultiplier:0.##}");
-            HallStat(stats, "REACH", $"{soldierClass.reach:0.#}");
-            HallStat(stats, "SPEED", $"{soldierClass.moveSpeed:0.#}");
-            HallStat(stats, "RESPAWN", $"{soldierClass.respawnCost}");
+            unequip = UIKit.Button(buttons, "Unequip", () =>
+            {
+                DestroyPurchaseWindow();
+                purchaseRow = null;
+                purchaseRowIndex = -1;
+                profile.Soldiers.Unequip(soldier.id);
+                ProfileSave.Save(profile);
+                BuildInventory();
+            }, height: 26f);
+            UIKit.Size(unequip, height: 26f, flexibleWidth: 1f);
         }
-        UIKit.Label(window, $"Goes to the inventory. You have {profile.Gold} Gold.", 11, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-        PurchaseButtons(window, scope, $"Buy {price}", () => BuySoldier(slot));
+        Button close = UIKit.Button(buttons, "Close", ClosePurchaseWindow, height: 26f);
+        UIKit.Size(close, height: 26f, flexibleWidth: 1f);
+        UIKit.PadBadge(close, PadGlyph.East);
+        scope.Default = () => unequip != null ? unequip : close;
     }
 
     void OpenCaptainPurchase(Button row, int slot)
