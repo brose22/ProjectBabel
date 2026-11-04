@@ -166,8 +166,8 @@ public partial class CastleScreen
         Transform buttons = UIKit.Group(hallWindow, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 6);
         UIKit.Size(buttons, flexibleWidth: 1f);
-        Button release = UIKit.Button(buttons, $"Release {captain.displayName}", () => BuildConfirmRelease(captain), height: 26f);
-        UIKit.Size(release, height: 26f, flexibleWidth: 1f);
+        Button release = UIKit.Button(buttons, $"Release {captain.displayName}", () => BuildConfirmRelease(captain), height: UIKit.ButtonHeight);
+        UIKit.Size(release, height: UIKit.ButtonHeight, flexibleWidth: 1f);
         release.GetComponent<Image>().color = UIKit.BadColor;
         UIKit.CloseButton(buttons, "Close", CloseHallWindow);
     }

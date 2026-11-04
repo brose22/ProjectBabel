@@ -864,7 +864,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(buttons, flexibleWidth: 1f);
         Button gift = null;
         gift = UIKit.Button(buttons, "Gift", () => ShowGiftWindow(run, captain, gift, () => UIKit.Refresh(detailRefreshers)));
-        UIKit.Size(gift, height: 26f, flexibleWidth: 1f);
+        UIKit.Size(gift, height: UIKit.ButtonHeight, flexibleWidth: 1f);
         UIKit.CloseButton(buttons, "Close", () => details.Close());
     }
 

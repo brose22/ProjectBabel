@@ -135,7 +135,7 @@ public class MainMenu : MonoBehaviour
             step => aiSpeed = AiSpeeds[Wrap(Array.IndexOf(AiSpeeds, aiSpeed) + step, AiSpeeds.Length)]);
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Button(buttons, "Start", StartAiRun, 180f, 32f);
+        UIKit.Button(buttons, "Start", StartAiRun, 180f, UIKit.ButtonHeight);
         UIKit.CloseButton(buttons, "Back", BuildMain);
     }
 
@@ -175,7 +175,7 @@ public class MainMenu : MonoBehaviour
             TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Button(buttons, "Go to the Castle", GoToCastle, 180f, 32f);
+        UIKit.Button(buttons, "Go to the Castle", GoToCastle, 180f, UIKit.ButtonHeight);
         Button cancel = UIKit.CloseButton(buttons, "Cancel", BuildMain);
         // Cancel takes focus first, so a stray confirm press doesn't throw anything away.
         screenScope.Default = () => cancel;
@@ -189,7 +189,7 @@ public class MainMenu : MonoBehaviour
             TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Button(buttons, "Start new game", NewGame, 180f, 32f);
+        UIKit.Button(buttons, "Start new game", NewGame, 180f, UIKit.ButtonHeight);
         Button cancel = UIKit.CloseButton(buttons, "Cancel", BuildMain);
         // Cancel takes focus first, so a stray confirm press doesn't throw anything away.
         screenScope.Default = () => cancel;

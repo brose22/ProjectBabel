@@ -484,7 +484,9 @@ public static class UIKit
         return button;
     }
 
-    public static readonly Vector2 CloseButtonSize = new(140f, 28f);
+    // The height of a button in a row with a close button, so the row lines up.
+    public const float ButtonHeight = 28f;
+    public static readonly Vector2 CloseButtonSize = new(140f, ButtonHeight);
 
     // The button that closes or backs out of a window or screen, always the same size and marked
     // with the gamepad's cancel button. Label it Close for a window that only shows something,
