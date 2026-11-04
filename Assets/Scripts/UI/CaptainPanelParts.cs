@@ -31,13 +31,17 @@ public class CaptainPanelParts
 
     public static void Flexible(Button button, float height = 24f) => UIKit.Size(button, height: height, flexibleWidth: 1f);
 
-    // Slots 3 and 4 open at bond ranks B and S (GDD).
-    public static string SlotLabel(int slot) => slot switch
+    // Slots past the starting ones name the bond rank that opens them, e.g. "Slot 3 (C)".
+    public static string SlotLabel(int slot) =>
+        slot < BondMath.SoldierCount(0) ? $"Slot {slot + 1}" : $"Slot {slot + 1} ({BondMath.RankName(RankOpening(slot))})";
+
+    // The lowest bond rank whose soldier count reaches the slot.
+    public static int RankOpening(int slot)
     {
-        2 => "Slot 3 (B)",
-        3 => "Slot 4 (S)",
-        _ => $"Slot {slot + 1}",
-    };
+        for (int rank = 0; rank < BondMath.MaxRank; rank++)
+            if (BondMath.SoldierCount(rank) > slot) return rank;
+        return BondMath.MaxRank;
+    }
 
     // "Rare Knight", in the rarity's colour.
     public static string SoldierName(SoldierItem item, SoldierClassData soldierClass) =>
