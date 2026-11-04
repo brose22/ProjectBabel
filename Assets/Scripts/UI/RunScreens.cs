@@ -513,8 +513,9 @@ public class RunScreens : MonoBehaviour
                 $"({RunEndRules.AbandonGoldLost(run.Gold)}) and one soldier of your choice. Your captains are kept.",
                 11, TextAnchor.UpperLeft, UIKit.BadColor);
             UIKit.Size(warning, MapMenuWidth);
-            // The gamepad lands on the confirm press, next to the warning.
-            screenFocus.Default = () => abandon;
+            // Rebuilding disarms. The gamepad lands on Cancel, so a stray confirm press doesn't abandon.
+            Button cancel = MenuButton("Cancel", () => shownFor = (MatchState)(-1));
+            screenFocus.Default = () => cancel;
         }
 
         // Two drawers share the left edge. Only one is open at a time; each is built over the
