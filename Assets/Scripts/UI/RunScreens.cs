@@ -445,14 +445,24 @@ public class RunScreens : MonoBehaviour
         MenuButton("Shop", () => SetShopOpen(true));
         MenuButton("Main menu", match.ReturnToMenu);
         UIKit.Size(UIKit.Group(menu, "Spacer"), MapMenuWidth, 16f);
-        // Abandoning loses the run, so it takes a second press.
+        // Abandoning ends the run and costs Gold and a soldier, so it takes a second press, and the
+        // first one says what it costs.
         Button abandon = MenuButton(abandonArmed ? "Confirm abandon" : "Abandon run", () =>
         {
-            if (abandonArmed) { match.ReturnToCastle(); return; }
+            if (abandonArmed) { Abandon(run); return; }
             this.abandonArmed = true;
             shownFor = (MatchState)(-1);
         });
-        if (abandonArmed) abandon.GetComponent<Image>().color = UIKit.BadColor;
+        if (abandonArmed)
+        {
+            abandon.GetComponent<Image>().color = UIKit.BadColor;
+            Text warning = UIKit.Label(menu, $"You will lose {RunEndRules.AbandonGoldPercent}% of your Gold " +
+                $"({RunEndRules.AbandonGoldLost(run.Gold)}) and one soldier of your choice. Your captains are kept.",
+                11, TextAnchor.UpperLeft, UIKit.BadColor);
+            UIKit.Size(warning, MapMenuWidth);
+            // The gamepad lands on the confirm press, next to the warning.
+            screenFocus.Default = () => abandon;
+        }
 
         // Two drawers share the left edge. Only one is open at a time; each is built over the
         // last, so the later one's blocker covers the earlier.
@@ -478,10 +488,70 @@ public class RunScreens : MonoBehaviour
                 });
             });
         if (shopOpen) BuildMapShop(root);
+        if (abandonPicking) BuildAbandonPicker(root, run);
+    }
+
+    // The confirmed abandon: the Gold goes at once, then the player picks the soldier to lose.
+    // With no soldiers there is nothing to pick, and the run ends straight away.
+    void Abandon(RunState run)
+    {
+        run.Profile.AbandonRun();
+        ProfileSave.Save(run.Profile);
+        if (run.Soldiers.Items.Count == 0) { match.ReturnToCastle(); return; }
+        abandonPicking = true;
+        shownFor = (MatchState)(-1);
+    }
+
+    // Over the map, with no way back: every soldier owned, commonest first, each with a Lose button.
+    // The chosen one is unequipped and removed, and the run ends at the Castle.
+    void BuildAbandonPicker(RectTransform root, RunState run)
+    {
+        RectTransform overlay = UIKit.Stretch(UIKit.Panel(root, "Abandon", DimColor));
+        UIFocusScope focus = UIKit.Focus(overlay);
+        RectTransform panel = UIKit.Box(overlay, "Panel", WindowColor);
+        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(GiftWindowWidth, 0f));
+        UIKit.Layout<VerticalLayoutGroup>(panel, 12, 6, fitContent: true);
+        UIKit.Size(UIKit.Header(panel, "Choose a soldier to lose"), flexibleWidth: 1f);
+        Text note = UIKit.Label(panel, "Abandoning the run costs one soldier. They leave for good, even if a captain has them.",
+            12, color: UIKit.MutedTextColor);
+        UIKit.Size(note, flexibleWidth: 1f);
+
+        ScrollRect list = UIKit.ScrollList(panel, "Soldiers", UIKit.Gap);
+        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
+        var soldiers = new List<SoldierItem>(run.Soldiers.Items);
+        soldiers.Sort((a, b) => b.rarity != a.rarity ? a.rarity.CompareTo(b.rarity) : a.soldierClass.CompareTo(b.soldierClass));
+        Button first = null;
+        foreach (SoldierItem soldier in soldiers)
+        {
+            RectTransform row = UIKit.Box(list.content, soldier.id, CardColor, blocksClicks: false);
+            UIKit.Size(row, flexibleWidth: 1f);
+            UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
+            SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
+            UIKit.Icon(row, soldierClass != null ? soldierClass.portrait : null, 32f);
+
+            RectTransform text = UIKit.Group(row, "Text");
+            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
+            UIKit.Size(text, flexibleWidth: 1f);
+            UIKit.Label(text, $"{CaptainPanelParts.SoldierName(soldier, soldierClass)}  {CaptainPanelParts.SoldierBonus(soldier, soldierClass)}", 13);
+            UIKit.Label(text, WhereIs(run, soldier), 11, color: UIKit.MutedTextColor);
+            string chosen = soldier.id;
+            Button lose = UIKit.Button(row, "Lose", () =>
+            {
+                run.Profile.LoseSoldier(chosen);
+                abandonPicking = false;
+                match.ReturnToCastle();
+            }, 70f, 24f);
+            first ??= lose;
+        }
+        // The gamepad starts on the first soldier's button, the commonest one.
+        focus.Default = () => first;
     }
 
     // Whether "Abandon run" has been clicked once and now waits for a second click.
     bool abandonArmed;
+
+    // Whether the run was abandoned and the player is picking the soldier to lose.
+    bool abandonPicking;
 
     // The id of the map drawer that is open, or null when none is.
     string openDrawer;

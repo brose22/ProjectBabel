@@ -10,6 +10,13 @@ public static class RunEndRules
     // The Gold a lost run takes, rounded down.
     public static int GoldLost(int gold) => gold <= 0 ? 0 : gold * LossGoldPercent / 100;
 
+    // Abandoning a run costs a quarter of the Gold and one soldier the player picks; the party's
+    // captains are kept.
+    public const int AbandonGoldPercent = 25;
+
+    // The Gold abandoning takes, rounded to the nearest coin (halves up).
+    public static int AbandonGoldLost(int gold) => gold <= 0 ? 0 : (gold * AbandonGoldPercent + 50) / 100;
+
     // The captains a lost run takes from the roster: those deployed in the losing match who are
     // still in it, so walkouts aren't counted twice.
     public static List<T> CaptainsLost<T>(IEnumerable<T> deployed, ICollection<T> roster)

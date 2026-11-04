@@ -11,6 +11,29 @@ public class RunEndRulesTests
     public void GoldLost_IsAFifthRoundedDown(int gold, int lost) =>
         Assert.That(RunEndRules.GoldLost(gold), Is.EqualTo(lost));
 
+    [TestCase(1000, 250)]
+    [TestCase(99, 25)]
+    [TestCase(10, 3)]
+    [TestCase(2, 1)]
+    [TestCase(1, 0)]
+    [TestCase(0, 0)]
+    [TestCase(-50, 0)]
+    public void AbandonGoldLost_IsAQuarterRounded(int gold, int lost) =>
+        Assert.That(RunEndRules.AbandonGoldLost(gold), Is.EqualTo(lost));
+
+    [Test]
+    public void Remove_TakesOneSoldierEvenWhenEquipped()
+    {
+        var soldiers = new SoldierInventory();
+        foreach (string id in new[] { "s1", "s2" }) soldiers.Add(new SoldierItem { id = id });
+        soldiers.Equip("s1", "cap", 0);
+        Assert.That(soldiers.Remove("s1"), Is.True);
+        Assert.That(soldiers.Find("s1"), Is.Null);
+        Assert.That(soldiers.InSlot("cap", 0), Is.Null);
+        Assert.That(soldiers.Find("s2"), Is.Not.Null);
+        Assert.That(soldiers.Remove("nope"), Is.False);
+    }
+
     [Test]
     public void CaptainsLost_AreThePartyMembersStillInTheRoster()
     {
