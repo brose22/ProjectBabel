@@ -391,6 +391,15 @@ public class MatchManager : MonoBehaviour
         return types;
     }
 
+    // The element an enemy type of the next wave fights with: its group's, or the boss's location element.
+    public Element NextWaveElement(EnemyData enemy)
+    {
+        if (waves != null && WavesCleared < WaveCount)
+            foreach (SpawnGroup group in waves[WavesCleared].groups)
+                if (group.enemy == enemy) return group.element ?? enemy.element;
+        return enemy == BossData ? ElementFor(BossData) ?? enemy.element : enemy.element;
+    }
+
     public const float MaxGameSpeed = 8f;
     // AI Run batches for tuning may go faster than a player can; frames get shorter with the frame cap off.
     public const float MaxAiGameSpeed = 32f;

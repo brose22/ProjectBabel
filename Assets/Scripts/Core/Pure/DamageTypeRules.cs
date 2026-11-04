@@ -23,5 +23,8 @@ public static class DamageTypeRules
     public static float CombinedMultiplier(DamageType attackerType, int attackerElement, DamageType targetType, int targetElement) =>
         DamageMultiplier(attackerType, targetType) * ElementRules.DamageMultiplier(attackerElement, targetElement);
 
+    // The damage type that beats this one: what a target of this type is weak to.
+    public static DamageType WeakTo(DamageType target) => (DamageType)(((int)target + TypeCount - 1) % TypeCount);
+
     static bool IsType(DamageType type) => type >= 0 && (int)type < TypeCount;
 }

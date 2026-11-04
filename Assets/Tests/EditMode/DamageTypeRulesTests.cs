@@ -64,4 +64,14 @@ public class DamageTypeRulesTests
         Assert.That(min, Is.EqualTo(0.5625f).Within(1e-5f));
         Assert.That(max, Is.EqualTo(2.25f).Within(1e-5f));
     }
+
+    [Test]
+    public void EachTypeIsWeakToTheTypeThatBeatsIt()
+    {
+        Assert.That(DamageTypeRules.WeakTo(DamageType.Range), Is.EqualTo(DamageType.Melee));
+        Assert.That(DamageTypeRules.WeakTo(DamageType.Magic), Is.EqualTo(DamageType.Range));
+        Assert.That(DamageTypeRules.WeakTo(DamageType.Melee), Is.EqualTo(DamageType.Magic));
+        for (int t = 0; t < DamageTypeRules.TypeCount; t++)
+            Assert.That(DamageTypeRules.Beats(DamageTypeRules.WeakTo((DamageType)t), (DamageType)t));
+    }
 }

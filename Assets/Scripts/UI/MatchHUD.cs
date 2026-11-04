@@ -290,7 +290,8 @@ public class MatchHUD : MonoBehaviour
             if (art == null) continue;
             Image icon = UIKit.Icon(wavePreview, art, 32f);
             icon.raycastTarget = true;
-            UIKit.HoverTip(icon.rectTransform, enemy.displayName, null, 120f);
+            RectTransform tip = UIKit.HoverTip(icon.rectTransform, enemy.displayName, null, 140f);
+            WeaknessIcons.Row(tip, enemy, match.NextWaveElement(enemy));
         }
     }
 

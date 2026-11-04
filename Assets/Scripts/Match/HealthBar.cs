@@ -19,6 +19,9 @@ public class HealthBar : MonoBehaviour
     [SerializeField] float width = 0.8f;
     [SerializeField] bool hideWhenFull;
 
+    // Half the bar's length in its parent's space, tier scale included.
+    public float HalfWidth => width * 0.5f * transform.localScale.x;
+
     bool enemyStyle;
     Transform ghost;
     Transform marker;
