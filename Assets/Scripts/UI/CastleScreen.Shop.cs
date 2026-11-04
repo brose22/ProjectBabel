@@ -11,7 +11,8 @@ public partial class CastleScreen
 {
     enum ShopTab { Soldiers, Captains, Gifts }
 
-    static readonly string[] ShopTabNames = { "Soldier Recruit", "Captain Recruit", "Gifts" };
+    // Each shelf has its own building in the town.
+    static readonly string[] ShopTitles = { "TRAINING YARD", "TAVERN", "MARKET" };
 
     ShopTab shopTab;
     // The stock rolled for stockSeed, kept for the visit so the same captains stay on the shelves.
@@ -25,7 +26,7 @@ public partial class CastleScreen
     const float FlashSeconds = 0.9f;
     static readonly Color FlashColor = new(1f, 0.97f, 0.8f, 1f);
     readonly List<Button> buyButtons = new();
-    Text shopSummary;
+
     Text toast;
     float toastAge = float.MaxValue;
     float flashAge = float.MaxValue;
@@ -44,16 +45,7 @@ public partial class CastleScreen
         RollStock();
         RectTransform column = NewScreen("Shop", InventoryWidth, BuildHome);
         buyButtons.Clear();
-        UIKit.Label(column, "SHOP", UIKit.TitleSize, TextAnchor.MiddleCenter);
-        shopSummary = UIKit.Label(column, Summary(), UIKit.BodySize, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-
-        RectTransform tabs = Row(column, "Tabs", 6);
-        foreach (ShopTab each in Enum.GetValues(typeof(ShopTab)))
-        {
-            ShopTab chosen = each;
-            UIKit.LiveButton(tabs, () => ShopTabNames[(int)chosen], () => { shopTab = chosen; BuildShop(); }, refreshers,
-                selected: () => chosen == shopTab, width: 170f, height: 30f);
-        }
+        UIKit.Label(column, ShopTitles[(int)shopTab], UIKit.TitleSize, TextAnchor.MiddleCenter);
 
         RectTransform panel = UIKit.Box(column, "Shelves");
         UIKit.Size(panel, InventoryWidth, InventoryBodyHeight);
@@ -96,7 +88,7 @@ public partial class CastleScreen
             toast = UIKit.Shadowed(UIKit.Label(canvas.transform, message, UIKit.HeadingSize, TextAnchor.MiddleCenter, UIKit.GoodColor));
             toast.raycastTarget = false;
             toast.fontStyle = FontStyle.Bold;
-            UIKit.Place(toast.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(520f, 24f));
+            UIKit.Place(toast.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -HudHeight - 8f), new Vector2(520f, 24f));
         }
         toast.text = message;
         toast.transform.SetAsLastSibling();
@@ -116,10 +108,10 @@ public partial class CastleScreen
             c.a = fade;
             toast.color = c;
         }
-        if (shopSummary != null && flashAge < FlashSeconds)
+        if (hudGold != null && flashAge < FlashSeconds)
         {
             flashAge += dt;
-            shopSummary.color = Color.Lerp(FlashColor, UIKit.MutedTextColor, Mathf.Clamp01(flashAge / FlashSeconds));
+            hudGold.color = Color.Lerp(FlashColor, UIKit.AccentColor, Mathf.Clamp01(flashAge / FlashSeconds));
         }
     }
 
