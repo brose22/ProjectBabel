@@ -28,7 +28,7 @@ public partial class CastleScreen
         ("Great Hall", "great_hall", new(0.13f, 0.73f), "Your captains, their soldiers and their loadouts.", () => OpenRoster(Tab.Captains)),
         ("Barracks", "barracks", new(0.32f, 0.73f), "Every soldier you own, and who leads them.", () => OpenRoster(Tab.Soldiers)),
         ("Tavern", "tavern", new(0.66f, 0.73f), "Hire new captains.", () => OpenShop(ShopTab.Captains)),
-        ("Training Yard", "training_yard", new(0.91f, 0.75f), "Recruit new soldiers.", () => OpenShop(ShopTab.Soldiers)),
+        ("Training Yard", "training_yard", new(0.91f, 0.73f), "Recruit new soldiers.", () => OpenShop(ShopTab.Soldiers)),
         ("Storehouse", "storehouse", new(0.2f, 0.3f), "The items packed for your next run.", BuildStorehouse),
         ("Market", "market", new(0.8f, 0.3f), "Buy gifts for your next run.", () => OpenShop(ShopTab.Gifts)),
         ("Gate", "gate", new(0.5f, 0.17f), "Choose a party and set out.", BuildParty),
@@ -54,7 +54,8 @@ public partial class CastleScreen
     void BuildTown()
     {
         town = UIKit.Stretch(UIKit.Panel(canvas.transform, "Town", Color.black));
-        UIKit.Focus(town);
+        // The pad starts on the Gate, the way out; coming back, it returns to the building it left.
+        UIFocusScope townScope = UIKit.Focus(town);
         RectTransform map = UIKit.Panel(town, "Map", Color.white, blocksClicks: false);
         map.GetComponent<Image>().sprite = TownSprite("town_map");
         map.anchorMin = map.anchorMax = map.pivot = new Vector2(0.5f, 0.5f);
@@ -71,7 +72,8 @@ public partial class CastleScreen
             building.anchorMin = building.anchorMax = at;
             building.pivot = new Vector2(0.5f, 0.5f);
             building.sizeDelta = new Vector2(BuildingSize, BuildingSize);
-            UIKit.Clickable(building, open);
+            Button button = UIKit.Clickable(building, open);
+            if (sprite == "gate") townScope.Default = () => button;
             UIKit.HoverTip(building, name, tip);
 
             RectTransform sign = UIKit.Box(building, "Sign", SignColor, blocksClicks: false);
