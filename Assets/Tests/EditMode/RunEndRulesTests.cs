@@ -21,6 +21,16 @@ public class RunEndRulesTests
     }
 
     [Test]
+    public void CaptainsLost_AreOnlyTheDeployedCaptains()
+    {
+        var roster = new List<string> { "a", "b", "c", "d" };
+        // The party was a, b, c; only a and c were placed on the field, so b goes home safely.
+        var deployed = new List<string> { "a", "c" };
+        Assert.That(RunEndRules.CaptainsLost(deployed, roster), Is.EqualTo(new[] { "a", "c" }));
+        Assert.That(RunEndRules.CaptainsLost(new List<string>(), roster), Is.Empty);
+    }
+
+    [Test]
     public void LosingTheParty_TakesTheirSoldiersButNotTheOthers()
     {
         var soldiers = new SoldierInventory();

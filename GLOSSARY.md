@@ -13,7 +13,7 @@ _Avoid:_ using "run" for the whole game; that is the **profile**.
 
 **Profile** — Everything that lasts between runs: the roster, the soldier inventory, Gold, unlocked locations, and each captain's level and bond rank.
 
-**Roster** — Every captain the player owns, up to 12. Captains join through the Captain Recruit tab and events, and leave by release, by walkout, or by being lost with the party when a run is lost. The shop won't sell a captain while the roster is full. When an event would add a 13th captain during a run, the player releases either the newcomer or an existing captain.
+**Roster** — Every captain the player owns, up to 12. Captains join through the Captain Recruit tab and events, and leave by release, by walkout, or by being lost on the field when a run is lost: only the captains placed in the losing match are lost, with their equipped soldiers, while undeployed party captains go home safely. The shop won't sell a captain while the roster is full. When an event would add a 13th captain during a run, the player releases either the newcomer or an existing captain.
 
 **Party** — The captains taken on a run, up to 5, picked from the roster at the Castle. A captain who leaves (walkout or release) is taken out of the party, not kept as an inactive entry.
 
