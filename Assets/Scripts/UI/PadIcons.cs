@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,6 +34,8 @@ public static class PadIcons
 // is the active device, and it follows the gamepad in hand. Added with UIKit.PadBadge.
 public class PadIcon : MonoBehaviour
 {
+    static readonly List<PadIcon> active = new();
+
     public PadGlyph Glyph { get; set; }
     // Extra condition for showing, if any.
     public Func<bool> Shown { get; set; }
@@ -47,5 +50,15 @@ public class PadIcon : MonoBehaviour
         if (show) Image.sprite = PadIcons.Get(Glyph);
     }
 
+    void OnEnable() => active.Add(this);
+    void OnDisable() => active.Remove(this);
     void LateUpdate() => Refresh();
+
+    // Whether a pad button already presses this widget, so gamepad focus needn't stop on it.
+    public static bool IsMapped(Selectable widget)
+    {
+        foreach (PadIcon icon in active)
+            if (icon.Widget == widget && (icon.Shown == null || icon.Shown())) return true;
+        return false;
+    }
 }
