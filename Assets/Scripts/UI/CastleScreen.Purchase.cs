@@ -93,8 +93,8 @@ public partial class CastleScreen
             DestroyPurchaseWindow();
             purchaseRow = null;
             buy();
-        }, height: 26f);
-        UIKit.Size(confirm, height: 26f, flexibleWidth: 1f);
+        }, height: UIKit.ButtonHeight);
+        UIKit.Size(confirm, height: UIKit.ButtonHeight, flexibleWidth: 1f);
         UIKit.CloseButton(row, "Cancel", ClosePurchaseWindow);
         scope.Default = () => confirm;
     }
@@ -157,8 +157,8 @@ public partial class CastleScreen
                 profile.Soldiers.Unequip(soldier.id);
                 ProfileSave.Save(profile);
                 BuildInventory();
-            }, height: 26f);
-            UIKit.Size(unequip, height: 26f, flexibleWidth: 1f);
+            }, height: UIKit.ButtonHeight);
+            UIKit.Size(unequip, height: UIKit.ButtonHeight, flexibleWidth: 1f);
         }
         Button close = UIKit.CloseButton(buttons, "Close", ClosePurchaseWindow);
         scope.Default = () => unequip != null ? unequip : close;

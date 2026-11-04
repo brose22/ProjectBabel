@@ -235,7 +235,7 @@ public partial class CastleScreen : MonoBehaviour
             ProfileSave.Save(profile);
             selected = hallCaptain = null;
             BuildInventory();
-        }, UIKit.CloseButtonSize.x, UIKit.CloseButtonSize.y);
+        }, UIKit.CloseButtonSize.x, UIKit.ButtonHeight);
         release.GetComponent<Image>().color = UIKit.BadColor;
         release.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
         // Cancel takes focus first, so a stray confirm press doesn't release anyone.
