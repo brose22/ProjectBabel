@@ -20,8 +20,8 @@ public partial class CastleScreen
     List<SoldierItem> soldierStock;
     List<Captain> captainStock;
 
-    // Feedback after a purchase: the shelves are rebuilt, so the scroll position and the focused Buy
-    // button are carried over, a toast says what was bought and the Gold figure flashes.
+    // Feedback after a purchase: the shelves are rebuilt, so the scroll position and the focused row
+    // (or Buy button) are carried over, a toast says what was bought and the Gold figure flashes.
     const float ToastSeconds = 2.2f;
     const float FlashSeconds = 0.9f;
     static readonly Color FlashColor = new(1f, 0.97f, 0.8f, 1f);
@@ -60,7 +60,10 @@ public partial class CastleScreen
     {
         ProfileSave.Save(profile);
         GameObject focused = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
-        int index = focused != null ? buyButtons.FindIndex(b => b != null && b.gameObject == focused) : -1;
+        // A purchase window's row keeps its place; otherwise the focused Buy button does.
+        int index = purchaseRowIndex >= 0 ? purchaseRowIndex
+            : focused != null ? buyButtons.FindIndex(b => b != null && b.gameObject == focused) : -1;
+        purchaseRowIndex = -1;
         ScrollRect old = screen != null ? screen.GetComponentInChildren<ScrollRect>() : null;
         float scroll = old != null ? old.verticalNormalizedPosition : 1f;
         BuildShop();
@@ -133,8 +136,9 @@ public partial class CastleScreen
             SoldierItem soldier = soldierStock[i];
             int price = CastleShop.SoldierPrice(soldier.rarity, data.soldierPrices);
             RectTransform row = SoldierRow(list.content, soldier, $"{price} Gold");
-            buyButtons.Add(UIKit.LiveButton(row, () => BuyLabel(price), () => BuySoldier(slot), refreshers,
-                () => CastleShop.CanBuySoldier(false, profile.Gold, price), width: UIKit.ItemActionWidth, height: UIKit.ItemActionHeight));
+            Button pick = null;
+            pick = UIKit.Clickable(row, () => OpenSoldierPurchase(pick, slot));
+            buyButtons.Add(pick);
             shown++;
         }
         if (shown == 0) SoldOut(list.content);
@@ -170,13 +174,9 @@ public partial class CastleScreen
             Captain captain = captainStock[i];
             RectTransform row = UIKit.ItemRow(list.content, captain.displayName, captain.Portrait, captain.displayName, UIKit.TextColor,
                 CaptainDetail(captain, price));
-            buyButtons.Add(UIKit.LiveButton(row, () => CaptainBlock(price) switch
-                {
-                    RecruitBlock.RosterFull => "Roster full",
-                    RecruitBlock.NotEnoughGold => "Need Gold",
-                    _ => $"Recruit {price}",
-                }, () => BuyCaptain(slot), refreshers, () => CaptainBlock(price) == RecruitBlock.None,
-                width: UIKit.ItemActionWidth, height: UIKit.ItemActionHeight));
+            Button pick = null;
+            pick = UIKit.Clickable(row, () => OpenCaptainPurchase(pick, slot));
+            buyButtons.Add(pick);
             shown++;
         }
         if (shown == 0) SoldOut(list.content);
