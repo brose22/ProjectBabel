@@ -45,6 +45,9 @@ public class AiPlayer : MonoBehaviour
     // Real seconds with no progress before a run is given up as stalled.
     const float StallSeconds = 120f;
     const int MaxConsecutiveErrors = 3;
+    // Gold the AI keeps back from the shop for restores and moves in the matches ahead.
+    const int GiftReserve = 200;
+    const int MaxGiftsPerVisit = 8;
     // Think ticks to let towers draw their first Gold before the first wave starts.
     const int PrepTicks = 3;
 
@@ -292,6 +295,8 @@ public class AiPlayer : MonoBehaviour
             return;
         }
 
+        BuyGifts();
+
         List<MapNode> choices = run.Map.Choices();
         var roads = choices.ConvertAll(n => new AiRouteOption { id = n.id, kind = n.kind, revealed = n.revealed });
         int best = AiRoutePicker.Pick(roads, (float)run.Health / run.MaxHealth, run.Gold, match.Data.GiftCost, out string reason);
@@ -306,6 +311,44 @@ public class AiPlayer : MonoBehaviour
         recorder.NoteRoute(node.revealed ? node.kind : NodeKind.City);
         match.ChooseCity(node.id);
         pendingLoad = true;
+    }
+
+    // At the map shop, buys gifts for the least-approving captains who can still gain approval this
+    // run, keeping GiftReserve Gold back, and gives each one straight away.
+    void BuyGifts()
+    {
+        if (!match.ShopOpen) return;
+        RunState run = RunState.Current;
+        List<GiftData> stock = match.ShopStock;
+        if (stock.Count == 0) return;
+        int cheapest = stock.Min(g => g.cost);
+        for (int bought = 0; bought < MaxGiftsPerVisit; bought++)
+        {
+            List<Captain> party = run.Party;
+            var approvals = party.ConvertAll(c => c.approval);
+            var canTake = party.ConvertAll(c => c.approval < BondMath.RunApprovalCap(run.StartRankOf(c)) && BestGift(stock, c) != null);
+            int target = AiStopChoice.PickGiftTarget(approvals, canTake, run.Gold, cheapest, GiftReserve);
+            if (target < 0) return;
+            Captain captain = party[target];
+            GiftData gift = BestGift(stock, captain);
+            if (run.Gold - gift.cost < GiftReserve || !match.CanBuyGift(gift)) return;
+            int goldBefore = run.Gold;
+            match.BuyGift(gift);
+            if (run.Gold >= goldBefore) return;
+            recorder.NoteGold(false, "Gifts", goldBefore - run.Gold);
+            float approvalBefore = captain.approval;
+            GiftReaction? reaction = match.GiveGift(captain, gift);
+            Decide("Shop", $"bought {gift.name} for {goldBefore - run.Gold} Gold and gave it to {captain.displayName} ({reaction}, approval {approvalBefore:0}->{captain.approval:0})");
+        }
+    }
+
+    // The gift to give a captain: the cheapest they like, else the cheapest they don't dislike.
+    // Null when the shop has nothing for them within reserve.
+    GiftData BestGift(List<GiftData> stock, Captain captain)
+    {
+        int budget = RunState.Current.Gold - GiftReserve;
+        var options = stock.Where(g => g.cost <= budget && captain.ReactionTo(g) != GiftReaction.Disliked).OrderBy(g => g.cost).ToList();
+        return options.FirstOrDefault(g => captain.ReactionTo(g) == GiftReaction.Liked) ?? options.FirstOrDefault();
     }
 
     void ThinkStop()
