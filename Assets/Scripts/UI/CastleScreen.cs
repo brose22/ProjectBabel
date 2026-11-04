@@ -149,7 +149,7 @@ public partial class CastleScreen : MonoBehaviour
         if (tab == Tab.Captains && hallCaptain != null) OpenHallWindow(hallCaptain);
     }
 
-    // Every soldier owned and who has it; picking an equipped one sends it back to the inventory.
+    // Every soldier owned and who has it; picking one opens its stats, where an equipped one can be unequipped.
     void BuildSoldiersTab(Transform body)
     {
         RectTransform panel = UIKit.Box(body, "Soldiers");
@@ -162,18 +162,9 @@ public partial class CastleScreen : MonoBehaviour
         foreach (SoldierItem soldier in SortedSoldiers())
         {
             SoldierItem chosen = soldier;
-            if (!soldier.IsEquipped)
-            {
-                SoldierRow(list.content, soldier, WhereIs(soldier));
-                continue;
-            }
-            RectTransform row = SoldierRow(list.content, soldier, $"{WhereIs(soldier)}. Select to unequip.");
-            UIKit.Clickable(row, () =>
-            {
-                profile.Soldiers.Unequip(chosen.id);
-                ProfileSave.Save(profile);
-                BuildInventory();
-            });
+            RectTransform row = SoldierRow(list.content, soldier, WhereIs(soldier));
+            Button pick = null;
+            pick = UIKit.Clickable(row, () => OpenSoldierInfo(pick, chosen));
         }
         if (profile.Soldiers.Items.Count == 0)
             UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
