@@ -155,7 +155,7 @@ public partial class CastleScreen : MonoBehaviour
         UIKit.Size(panel, height: InventoryBodyHeight, flexibleWidth: 1f);
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
         int free = profile.Soldiers.Unequipped.Count;
-        Header(panel, $"SOLDIERS", $"{profile.Soldiers.Items.Count} owned, {free} in the inventory");
+        Header(panel, "Soldiers", $"{profile.Soldiers.Items.Count} owned, {free} in the inventory");
         ScrollRect list = null;
         void Fill()
         {

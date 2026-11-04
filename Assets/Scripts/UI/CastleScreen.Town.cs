@@ -143,7 +143,7 @@ public partial class CastleScreen
         RectTransform panel = UIKit.Box(column, "Items");
         UIKit.Size(panel, InventoryWidth, InventoryBodyHeight);
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
-        Header(panel, "ITEMS", "Packed for your next run. They go with the party when it sets out.", below: true);
+        Header(panel, "Items", "Packed for your next run. They go with the party when it sets out.", below: true);
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         var listed = new HashSet<string>();

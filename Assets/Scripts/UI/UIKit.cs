@@ -317,7 +317,8 @@ public static class UIKit
         return graphic;
     }
 
-    // A section title in accent capitals with a rule running to the right edge. The hint, if any,
+    // A section title in accent capitals (callers write it in sentence case; every header is ALL
+    // CAPS) with a rule running to the right edge. The hint, if any, is left as written: it
     // sits muted after the title, or on a line of its own under the rule when below is set.
     public static RectTransform Header(Transform parent, string title, string hint = null, bool below = false)
     {

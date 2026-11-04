@@ -44,7 +44,7 @@ public partial class CastleScreen
         RectTransform panel = UIKit.Box(body, "Roster");
         UIKit.Size(panel, height: InventoryBodyHeight, flexibleWidth: 1f);
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
-        Header(panel, "CAPTAINS", $"{profile.Roster.Count}/{Profile.MaxRoster}");
+        Header(panel, "Captains", $"{profile.Roster.Count}/{Profile.MaxRoster}");
         ScrollRect list = null;
         void Fill()
         {
@@ -159,7 +159,7 @@ public partial class CastleScreen
         RunScreens.TagLine(hallWindow, "Likes", captain.likes, UIKit.GoodColor);
         RunScreens.TagLine(hallWindow, "Dislikes", captain.dislikes, UIKit.BadColor);
 
-        UIKit.Size(UIKit.Header(hallWindow, "SOLDIERS", $"{open}/{SoldierInventory.SlotsPerCaptain} open"), flexibleWidth: 1f);
+        UIKit.Size(UIKit.Header(hallWindow, "Soldiers", $"{open}/{SoldierInventory.SlotsPerCaptain} open"), flexibleWidth: 1f);
         for (int i = 0; i < SoldierInventory.SlotsPerCaptain; i++) HallSlotRow(hallWindow, captain, i, open);
 
         UIKit.Size(UIKit.Group(hallWindow, "Spacer"), flexibleWidth: 1f).flexibleHeight = 1f;
@@ -274,7 +274,7 @@ public partial class CastleScreen
         // Focus waits for the slide, then stays in the list until it closes.
         UIFocusScope scope = UIKit.Focus(hallPicker, CloseHallPicker, delay: HallSlideSeconds);
 
-        UIKit.Size(UIKit.Header(hallPicker, "SOLDIERS", CaptainPanelParts.SlotLabel(slot)), flexibleWidth: 1f);
+        UIKit.Size(UIKit.Header(hallPicker, "Soldiers", CaptainPanelParts.SlotLabel(slot)), flexibleWidth: 1f);
         UIKit.Label(hallPicker, $"Choose who fights in {captain.displayName}'s {CaptainPanelParts.SlotLabel(slot)}. " +
                                 "A soldier with another captain moves over.", 11, color: UIKit.MutedTextColor);
 

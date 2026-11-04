@@ -125,7 +125,7 @@ public partial class CastleScreen
 
     void BuildSoldierShelves(Transform panel)
     {
-        Header(panel, "SOLDIER RECRUIT", "Bought soldiers go to the inventory. New stock after each run.", below: true);
+        Header(panel, "Soldier recruit", "Bought soldiers go to the inventory. New stock after each run.", below: true);
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         int shown = 0;
@@ -157,7 +157,7 @@ public partial class CastleScreen
 
     void BuildCaptainShelves(Transform panel)
     {
-        Header(panel, "CAPTAIN RECRUIT",
+        Header(panel, "Captain recruit",
             $"Captains {profile.Roster.Count}/{Profile.MaxRoster}. Recruits join the roster with no soldiers.", below: true);
         // A full roster is said up front, since none of the shelves can sell.
         if (profile.RosterFull)
@@ -212,7 +212,7 @@ public partial class CastleScreen
     // Gifts don't sell out. They wait in the profile and go with the party when it sets out.
     void BuildGiftShelves(Transform panel)
     {
-        Header(panel, "GIFTS", "Packed for your next run. Give them to captains from the party window on the map.", below: true);
+        Header(panel, "Gifts", "Packed for your next run. Give them to captains from the party window on the map.", below: true);
         ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         foreach (int index in ShopStock.Pick(data.shopGifts.Count, data.shopSize, CastleShop.SlotSeed(stockSeed, CastleShop.GiftShelf, 0)))

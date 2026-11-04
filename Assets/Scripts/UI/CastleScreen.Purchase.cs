@@ -112,7 +112,7 @@ public partial class CastleScreen
             return;
         }
         RectTransform window = OpenPurchaseWindow(row, out UIFocusScope scope);
-        UIKit.Size(UIKit.Header(window, "RECRUIT SOLDIER", $"{price} Gold"), flexibleWidth: 1f);
+        UIKit.Size(UIKit.Header(window, "Recruit soldier", $"{price} Gold"), flexibleWidth: 1f);
         SoldierDetails(window, soldier);
         UIKit.Label(window, $"Goes to the inventory. You have {profile.Gold} Gold.", 11, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         PurchaseButtons(window, scope, $"Buy {price}", () => BuySoldier(slot));
@@ -139,7 +139,7 @@ public partial class CastleScreen
     void OpenSoldierInfo(Button row, SoldierItem soldier)
     {
         RectTransform window = OpenPurchaseWindow(row, out UIFocusScope scope);
-        UIKit.Size(UIKit.Header(window, "SOLDIER"), flexibleWidth: 1f);
+        UIKit.Size(UIKit.Header(window, "Soldier"), flexibleWidth: 1f);
         SoldierDetails(window, soldier);
         UIKit.Label(window, WhereIs(soldier), 12, TextAnchor.MiddleCenter);
 
@@ -180,7 +180,7 @@ public partial class CastleScreen
                 return;
         }
         RectTransform window = OpenPurchaseWindow(row, out UIFocusScope scope);
-        UIKit.Size(UIKit.Header(window, "RECRUIT CAPTAIN", $"{price} Gold"), flexibleWidth: 1f);
+        UIKit.Size(UIKit.Header(window, "Recruit captain", $"{price} Gold"), flexibleWidth: 1f);
         int level = Level(captain);
         ElementData element = data.ElementInfo(captain.element);
         string elementName = element != null ? element.displayName : captain.element.ToString();
