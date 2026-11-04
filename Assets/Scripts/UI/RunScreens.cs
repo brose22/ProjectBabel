@@ -55,8 +55,6 @@ public class RunScreens : MonoBehaviour
     // The captain window sits on the right edge and the gift window takes the room to its left.
     const float GiftWindowWidth = UIKit.ReferenceWidth - DetailsWidth - 3f * UIKit.Pad;
     const float GiftListHeight = 220f;
-    // Opaque, so the map never shows through the window.
-    static readonly Color WindowColor = new(UIKit.PanelColor.r, UIKit.PanelColor.g, UIKit.PanelColor.b, 1f);
     // Darker than the accent gold, so the meter's white text stays readable on it.
     static readonly Color BondBarColor = new(0.62f, 0.45f, 0.16f, 1f);
     static readonly Color RoadColor = new(0.55f, 0.45f, 0.3f, 1f);
@@ -579,11 +577,11 @@ public class RunScreens : MonoBehaviour
     // The chosen one is unequipped and removed, and the run ends at the Castle.
     void BuildAbandonPicker(RectTransform root, RunState run)
     {
-        RectTransform overlay = UIKit.Stretch(UIKit.Panel(root, "Abandon", DimColor));
-        UIFocusScope focus = UIKit.Focus(overlay);
-        RectTransform panel = UIKit.Box(overlay, "Panel", WindowColor);
-        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(GiftWindowWidth, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(panel, 12, 6, fitContent: true);
+        // No way back: the backdrop and the cancel button do nothing.
+        ModalWindow modal = UIKit.Modal(root, "Abandon", GiftWindowWidth, new Vector2(0.5f, 0.5f), Vector2.zero,
+            onCancel: () => { }, backdrop: DimColor);
+        UIFocusScope focus = modal.Scope;
+        RectTransform panel = modal.Window;
         UIKit.Size(UIKit.Header(panel, "Choose a soldier to lose"), flexibleWidth: 1f);
         Text note = UIKit.Label(panel, "Abandoning the run costs one soldier. They leave for good, even if a captain has them.",
             12, color: UIKit.MutedTextColor);
@@ -668,11 +666,9 @@ public class RunScreens : MonoBehaviour
 
     void BuildMapShop(RectTransform root)
     {
-        RectTransform overlay = UIKit.Stretch(UIKit.Panel(root, "Shop", DimColor));
-        UIKit.Focus(overlay, () => SetShopOpen(false));
-        RectTransform panel = UIKit.Box(overlay, "Panel");
-        UIKit.Place(panel, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(panel, 16, 8, fitContent: true).childAlignment = TextAnchor.UpperCenter;
+        RectTransform panel = UIKit.Modal(root, "Shop", 520f, new Vector2(0.5f, 0.5f), Vector2.zero,
+            () => SetShopOpen(false), backdrop: DimColor).Window;
+        panel.GetComponent<VerticalLayoutGroup>().childAlignment = TextAnchor.UpperCenter;
         BuildShop(panel, () => SetShopOpen(false));
     }
 
@@ -736,7 +732,8 @@ public class RunScreens : MonoBehaviour
     {
         RectTransform card = UIKit.Box(list, captain.displayName, CardColor, blocksClicks: false);
         UIKit.Size(card, flexibleWidth: 1f);
-        UIKit.Clickable(card, () => ShowCaptainDetails(run, captain));
+        Button cardButton = null;
+        cardButton = UIKit.Clickable(card, () => ShowCaptainDetails(run, captain, cardButton));
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
         PartyCardBody(card, captain, $"LV {level}", UIKit.AccentColor, out _, out _, live: true);
         return card;
@@ -806,20 +803,12 @@ public class RunScreens : MonoBehaviour
     }
 
     // A window over the map with everything about one captain. A click beside it, or Close,
-    // dismisses it; rebuilding the screen does too.
-    void ShowCaptainDetails(RunState run, Captain captain)
+    // dismisses it and hands focus back to opener; rebuilding the screen dismisses it too.
+    void ShowCaptainDetails(RunState run, Captain captain, Selectable opener)
     {
-        RectTransform overlay = UIKit.Stretch(UIKit.Panel(screen, "Captain Details", new Color(0f, 0f, 0f, 0.55f)));
-        var dismiss = overlay.gameObject.AddComponent<Button>();
-        dismiss.transition = Selectable.Transition.None;
-        dismiss.onClick.AddListener(() => Destroy(overlay.gameObject));
-        UIKit.Focus(overlay, () => Destroy(overlay.gameObject));
-
-        RectTransform window = UIKit.Box(overlay, "Window", WindowColor);
-        // Swallows clicks on the window, which would otherwise bubble up to the overlay and close it.
-        window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(window, new Vector2(1f, 0.5f), new Vector2(-UIKit.Pad, 0f), new Vector2(DetailsWidth, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
+        ModalWindow details = UIKit.Modal(screen, "Captain Details", DetailsWidth, new Vector2(1f, 0.5f),
+            new Vector2(-UIKit.Pad, 0f), returnFocusTo: opener);
+        RectTransform window = details.Window;
 
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
         var detailRefreshers = new List<Action>();
@@ -858,48 +847,36 @@ public class RunScreens : MonoBehaviour
         // The stats follow the soldiers, so the window is drawn again whenever one is changed.
         BuildLoadout(window, run, captain, () =>
         {
-            Destroy(overlay.gameObject);
-            ShowCaptainDetails(run, captain);
+            details.Close(restoreFocus: false);
+            ShowCaptainDetails(run, captain, opener);
         });
 
         UIKit.Size(UIKit.Group(window, "Gap"), height: UIKit.Gap);
         Transform buttons = UIKit.Group(window, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 6);
         UIKit.Size(buttons, flexibleWidth: 1f);
-        UIKit.Size(UIKit.Button(buttons, "Gift", () => ShowGiftWindow(run, captain, () => UIKit.Refresh(detailRefreshers))),
-            height: 26f, flexibleWidth: 1f);
-        Button close = UIKit.Button(buttons, "Close", () => Destroy(overlay.gameObject));
+        Button gift = null;
+        gift = UIKit.Button(buttons, "Gift", () => ShowGiftWindow(run, captain, gift, () => UIKit.Refresh(detailRefreshers)));
+        UIKit.Size(gift, height: 26f, flexibleWidth: 1f);
+        Button close = UIKit.Button(buttons, "Close", () => details.Close());
         UIKit.Size(close, height: 26f, flexibleWidth: 1f);
         UIKit.PadBadge(close, PadGlyph.East);
     }
 
     // ---------- Inventory and gifts ----------
 
-    // A window over the map. A click beside it dismisses it, and so does rebuilding the screen.
-    RectTransform OpenWindow(string name, float width, Vector2 anchor, Vector2 offset, float dim)
-    {
-        RectTransform backdrop = UIKit.Stretch(UIKit.Panel(screen, name, new Color(0f, 0f, 0f, dim)));
-        var dismiss = backdrop.gameObject.AddComponent<Button>();
-        dismiss.transition = Selectable.Transition.None;
-        dismiss.onClick.AddListener(() => Destroy(backdrop.gameObject));
-        UIKit.Focus(backdrop, () => Destroy(backdrop.gameObject));
-
-        RectTransform window = UIKit.Box(backdrop, "Window", WindowColor);
-        // Swallows clicks on the window, which would otherwise bubble up to the backdrop and close it.
-        window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(window, anchor, offset, new Vector2(width, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(window, 12, 6, fitContent: true);
-        return window;
-    }
+    // A window beside the captain window, not over it, with no second dimming layer. A click
+    // beside it dismisses it and hands focus back to opener; rebuilding the screen dismisses it too.
+    ModalWindow OpenSideWindow(string name, Selectable opener) =>
+        UIKit.Modal(screen, name, GiftWindowWidth, new Vector2(1f, 0.5f), new Vector2(-(DetailsWidth + 2f * UIKit.Pad), 0f),
+            returnFocusTo: opener, backdrop: Color.clear);
 
     // The window for giving a captain a gift: their portrait, what they say, and the items you
     // carry, each marked liked, disliked or neutral. onGiven runs after each gift.
-    void ShowGiftWindow(RunState run, Captain captain, Action onGiven)
+    void ShowGiftWindow(RunState run, Captain captain, Selectable opener, Action onGiven)
     {
-        // Beside the captain window, not over it, and no second dimming layer.
-        RectTransform window = OpenWindow("Gift", GiftWindowWidth, new Vector2(1f, 0.5f),
-            new Vector2(-(DetailsWidth + 2f * UIKit.Pad), 0f), 0f);
-        GameObject backdrop = window.parent.gameObject;
+        ModalWindow modal = OpenSideWindow("Gift", opener);
+        RectTransform window = modal.Window;
 
         RectTransform top = UIKit.Group(window, "Top");
         UIKit.Layout<HorizontalLayoutGroup>(top, 0, 12).childAlignment = TextAnchor.UpperLeft;
@@ -933,7 +910,7 @@ public class RunScreens : MonoBehaviour
         };
         BuildGiftRows(list.content, run, captain, give);
         UIKit.Refresh(live);
-        Button close = UIKit.Button(window, "Close", () => Destroy(backdrop));
+        Button close = UIKit.Button(window, "Close", () => modal.Close());
         UIKit.Size(close, height: 26f, flexibleWidth: 1f);
         UIKit.PadBadge(close, PadGlyph.East);
     }
@@ -1073,8 +1050,9 @@ public class RunScreens : MonoBehaviour
             }
 
             SoldierItem soldier = run.Soldiers.InSlot(captain.id, slot);
-            Button button = UIKit.Button(row, soldier != null ? SoldierSummary(captain, soldier) : "Empty", () =>
-                ShowSoldierPicker(run, captain, slot, onChanged), height: 22f);
+            Button button = null;
+            button = UIKit.Button(row, soldier != null ? SoldierSummary(captain, soldier) : "Empty", () =>
+                ShowSoldierPicker(run, captain, slot, button, onChanged), height: 22f);
             UIKit.Size(button, height: 22f, flexibleWidth: 1f);
             Text text = button.GetComponentInChildren<Text>();
             text.fontSize = 12;
@@ -1096,18 +1074,17 @@ public class RunScreens : MonoBehaviour
     // Beside the captain window: every soldier owned, those in the inventory first, rarest first.
     // Equip puts one in the slot, moving it from another captain if it was theirs, and Remove sends
     // the slot's soldier back to the inventory. Either closes the picker and runs onChanged.
-    void ShowSoldierPicker(RunState run, Captain captain, int slot, Action onChanged)
+    void ShowSoldierPicker(RunState run, Captain captain, int slot, Selectable opener, Action onChanged)
     {
-        RectTransform window = OpenWindow("Soldiers", GiftWindowWidth, new Vector2(1f, 0.5f),
-            new Vector2(-(DetailsWidth + 2f * UIKit.Pad), 0f), 0f);
-        GameObject backdrop = window.parent.gameObject;
+        ModalWindow modal = OpenSideWindow("Soldiers", opener);
+        RectTransform window = modal.Window;
         UIKit.Size(UIKit.Header(window, $"{captain.displayName}  Slot {slot + 1}"), flexibleWidth: 1f);
 
         void Change(Action change)
         {
             change();
             RunSave.Save(run);
-            Destroy(backdrop);
+            modal.Close();
             onChanged?.Invoke();
         }
 
@@ -1144,7 +1121,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
         Fill();
 
-        Button close = UIKit.Button(window, "Close", () => Destroy(backdrop));
+        Button close = UIKit.Button(window, "Close", () => modal.Close());
         UIKit.Size(close, height: 26f, flexibleWidth: 1f);
         UIKit.PadBadge(close, PadGlyph.East);
     }

@@ -18,9 +18,6 @@ public partial class CastleScreen
     const float HallSlideSeconds = 0.18f;
     // How far right of where it settles the soldier list starts its slide.
     const float HallPickerTravel = 60f;
-    // Opaque, so the cards never show through the windows.
-    static readonly Color HallWindowColor = new(UIKit.PanelColor.r, UIKit.PanelColor.g, UIKit.PanelColor.b, 1f);
-    static readonly Color HallOverlayColor = new(0f, 0f, 0f, 0.55f);
     static readonly Color HallBondBarColor = new(0.62f, 0.45f, 0.16f, 1f);
 
     // The captain whose window is open (null when none is), and the slot whose soldier is being
@@ -85,18 +82,13 @@ public partial class CastleScreen
         hallSlide = 0f;
         if (hallColumn != null) hallColumn.gameObject.SetActive(false);
 
-        hallOverlay = UIKit.Stretch(UIKit.Panel(screen, "Captain Window", HallOverlayColor));
+        // CloseHallWindow puts focus back on the captain's card itself.
+        ModalWindow modal = UIKit.Modal(screen, "Captain Window", HallWindowWidth, new Vector2(0.5f, 0.5f), Vector2.zero,
+            HallCancel, height: HallWindowHeight);
+        hallOverlay = modal.Backdrop;
         hallOverlay.offsetMax = new Vector2(0f, -HudHeight);
-        var dismiss = hallOverlay.gameObject.AddComponent<Button>();
-        dismiss.transition = Selectable.Transition.None;
-        dismiss.onClick.AddListener(HallCancel);
-        hallWindowScope = UIKit.Focus(hallOverlay, HallCancel);
-
-        hallWindow = UIKit.Box(hallOverlay, "Window", HallWindowColor);
-        // Swallows clicks on the window, which would otherwise reach the overlay and close it.
-        hallWindow.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(hallWindow, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(HallWindowWidth, HallWindowHeight));
-        UIKit.Layout<VerticalLayoutGroup>(hallWindow, 10, 5);
+        hallWindowScope = modal.Scope;
+        hallWindow = modal.Window;
         BuildHallWindow();
         hallWindowScope.Default = () => hallSlots.Count > 0 ? hallSlots[0] : null;
     }
@@ -277,12 +269,10 @@ public partial class CastleScreen
         hallSlot = slot;
         for (int i = 0; i < hallSlotRings.Count; i++) hallSlotRings[i].enabled = i == slot;
 
-        hallPicker = UIKit.Box(hallOverlay, "Soldier List", HallWindowColor);
-        hallPicker.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(hallPicker, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(HallPickerWidth, HallWindowHeight));
+        hallPicker = UIKit.Window(hallOverlay, "Soldier List", new Vector2(0.5f, 0.5f), Vector2.zero,
+            new Vector2(HallPickerWidth, HallWindowHeight));
         hallPickerFade = hallPicker.gameObject.AddComponent<CanvasGroup>();
         hallPickerFade.alpha = 0f;
-        UIKit.Layout<VerticalLayoutGroup>(hallPicker, 10, 5);
         // Focus waits for the slide, then stays in the list until it closes.
         UIFocusScope scope = UIKit.Focus(hallPicker, CloseHallPicker, delay: HallSlideSeconds);
 

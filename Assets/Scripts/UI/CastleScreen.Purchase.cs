@@ -20,19 +20,13 @@ public partial class CastleScreen
         DestroyPurchaseWindow();
         purchaseRow = row;
         purchaseRowIndex = buyButtons.IndexOf(row);
-        purchaseOverlay = UIKit.Stretch(UIKit.Panel(screen, "Purchase", HallOverlayColor));
+        // Closing puts focus back itself (ClosePurchaseWindow), as a purchase redraws the shelves.
+        ModalWindow modal = UIKit.Modal(screen, "Purchase", PurchaseWidth, new Vector2(0.5f, 0.5f), Vector2.zero,
+            ClosePurchaseWindow);
+        purchaseOverlay = modal.Backdrop;
         purchaseOverlay.offsetMax = new Vector2(0f, -HudHeight);
-        var dismiss = purchaseOverlay.gameObject.AddComponent<Button>();
-        dismiss.transition = Selectable.Transition.None;
-        dismiss.onClick.AddListener(ClosePurchaseWindow);
-        scope = UIKit.Focus(purchaseOverlay, ClosePurchaseWindow);
-
-        RectTransform window = UIKit.Box(purchaseOverlay, "Window", HallWindowColor);
-        // Swallows clicks on the window, which would otherwise reach the overlay and close it.
-        window.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;
-        UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(PurchaseWidth, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(window, 12, 8, fitContent: true);
-        return window;
+        scope = modal.Scope;
+        return modal.Window;
     }
 
     void DestroyPurchaseWindow()
