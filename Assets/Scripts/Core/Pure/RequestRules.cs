@@ -11,6 +11,8 @@ public static class RequestRules
 {
     // Extra approval a captain gives on top of the refunded penalty when you were right to refuse.
     public const float PaybackBonus = 1f;
+    // The approval message a payback shows, and the AI report counts.
+    public const string PaybackReason = "admits you were right";
 
     // What a captain gives back after an explicit No to a bad request: the whole penalty and the bonus when the
     // wave ended with no leaks and no fallen towers, nothing otherwise.

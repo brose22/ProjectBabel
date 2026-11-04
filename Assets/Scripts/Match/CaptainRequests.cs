@@ -422,7 +422,7 @@ public class CaptainRequests : MonoBehaviour
         foreach ((Tower tower, float penalty) in refusedBad)
         {
             float back = RequestRules.Payback(penalty, !wavePoorlyDefended);
-            if (back > 0f && tower != null) relationships.Change(tower, back, "admits you were right");
+            if (back > 0f && tower != null) relationships.Change(tower, back, RequestRules.PaybackReason);
         }
         refusedBad.Clear();
     }

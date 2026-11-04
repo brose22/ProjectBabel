@@ -583,10 +583,11 @@ public class AiPlayer : MonoBehaviour
     {
         CaptainRequests.Request request = requests != null ? requests.Active : null;
         if (request == null) return;
-        int answer = AiAbilityRules.AnswerRequest((int)request.Kind, RunState.Current.Gold, Tower.All.Count);
+        RequestEvaluation evaluation = requests.Evaluate(request);
+        int answer = AiAbilityRules.AnswerRequest(evaluation);
         string who = request.Tower != null ? request.Tower.Captain.displayName : "A captain";
         Decide("Request", $"{who} asked: {request.Text} Answered {(RequestAnswer)answer}");
-        recorder.NoteRequest(request.Kind, (RequestAnswer)answer);
+        recorder.NoteRequest(request.Kind, (RequestAnswer)answer, request.Tower != null ? request.Tower.Captain.Trait : CaptainTrait.Steady, evaluation.IsBad);
         requests.Answer(request, (RequestAnswer)answer);
     }
 

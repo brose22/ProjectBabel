@@ -139,6 +139,12 @@ public class AiRunRecord
     public Dictionary<string, float> approvalByReason = new();
     // Captains' requests and how the AI answered, counted as "MoreDraw: Yes".
     public Dictionary<string, int> requestAnswers = new();
+    // The same answers counted by the asking captain's trait ("Greedy: No"), the requests that evaluated as bad,
+    // how many of those were granted, and how many refusals were later proven right.
+    public Dictionary<string, int> requestsByTrait = new();
+    public int badRequests;
+    public int badRequestsGranted;
+    public int paybacks;
     public int finalHealth;
     public int maxHealth;
     public int finalGold;
@@ -286,6 +292,33 @@ public static class AiReportFormatter
             foreach (var g in goldOut.OrderByDescending(g => g.Sum(p => p.Value))) md.Append($"| Out | {g.Key} | {F((float)g.Sum(p => p.Value) / runs.Count)} |\n");
             md.Append($"| End | | {F((float)runs.Average(r => r.finalGold))} |\n\n");
         }
+
+        AppendRequests(md, runs);
+    }
+
+    // Requests across runs: how often they were refused (the target is 20-40%), by kind and by trait, and how the
+    // bad ones fared.
+    static void AppendRequests(StringBuilder md, IReadOnlyList<AiRunRecord> runs)
+    {
+        int Count(IEnumerable<Dictionary<string, int>> maps, string suffix) =>
+            maps.Sum(m => m.Where(p => p.Key.EndsWith(suffix)).Sum(p => p.Value));
+        var byKind = runs.Select(r => r.requestAnswers).ToList();
+        int granted = Count(byKind, ": Yes"), refused = Count(byKind, ": No"), asked = granted + refused;
+        if (asked == 0) return;
+        int bad = runs.Sum(r => r.badRequests), badGranted = runs.Sum(r => r.badRequestsGranted), paybacks = runs.Sum(r => r.paybacks);
+        md.Append("### Captain requests across runs\n\n| Stat | Value |\n|---|---|\n");
+        md.Append($"| Asked | {asked} ({F((float)asked / runs.Count)} per run) |\n| Granted | {granted} |\n| Refused | {refused} ({F(100f * refused / asked)}%) |\n");
+        md.Append($"| Bad requests | {bad} |\n| Bad requests granted | {badGranted} ({F(bad == 0 ? 0f : 100f * badGranted / bad)}%) |\n| Refusals proven right | {paybacks} |\n\n");
+        md.Append("| Request | Yes | No |\n|---|---|---|\n");
+        foreach (RequestKind kind in Enum.GetValues(typeof(RequestKind)))
+            md.Append($"| {kind} | {runs.Sum(r => r.requestAnswers.GetValueOrDefault($"{kind}: Yes"))} | {runs.Sum(r => r.requestAnswers.GetValueOrDefault($"{kind}: No"))} |\n");
+        md.Append("\n| Trait | Yes | No |\n|---|---|---|\n");
+        for (int t = 0; t < CaptainTraits.Count; t++)
+        {
+            string name = CaptainTraits.Name((CaptainTrait)t);
+            md.Append($"| {name} | {runs.Sum(r => r.requestsByTrait.GetValueOrDefault($"{name}: Yes"))} | {runs.Sum(r => r.requestsByTrait.GetValueOrDefault($"{name}: No"))} |\n");
+        }
+        md.Append('\n');
     }
 
     static void AppendRun(StringBuilder md, AiRunRecord run)

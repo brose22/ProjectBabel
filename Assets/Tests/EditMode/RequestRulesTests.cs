@@ -132,3 +132,28 @@ public class RivalRulesTests
         Assert.That(RequestEvaluator.Evaluate(s).Cons.Exists(c => c.Text == "Ser Aldric: -1 approval"), Is.True);
     }
 }
+
+public class AiRequestAnswerTests
+{
+    [Test]
+    public void Refuses_BadRequests_AndGrantsCheapOnes()
+    {
+        var bad = new RequestSnapshot { Kind = RequestKind.MoreDraw, ApprovalYes = 2f, Gold = 20, SpawnsToElite = -1 };
+        var cheap = new RequestSnapshot { Kind = RequestKind.UseSpecial, ApprovalYes = 2f, Gold = 300, SpawnsToElite = -1, ThreatPresent = true };
+        Assert.That(AiAbilityRules.AnswerRequest(RequestEvaluator.Evaluate(bad)), Is.EqualTo(AiAbilityRules.AnswerNo));
+        Assert.That(AiAbilityRules.AnswerRequest(RequestEvaluator.Evaluate(cheap)), Is.EqualTo(AiAbilityRules.AnswerYes));
+    }
+
+    [Test]
+    public void ReportCountsRequestsByKindAndTrait()
+    {
+        var run = new AiRunRecord { badRequests = 2, badRequestsGranted = 1, paybacks = 1 };
+        run.requestAnswers["MoreDraw: Yes"] = 1;
+        run.requestAnswers["MoreDraw: No"] = 3;
+        run.requestsByTrait["Greedy: No"] = 3;
+        string md = AiReportFormatter.Markdown(new[] { run, new AiRunRecord() }, "now");
+        Assert.That(md, Does.Contain("| Refused | 3 (75%) |"));
+        Assert.That(md, Does.Contain("| Refusals proven right | 1 |"));
+        Assert.That(md, Does.Contain("| Greedy | 0 | 3 |"));
+    }
+}
