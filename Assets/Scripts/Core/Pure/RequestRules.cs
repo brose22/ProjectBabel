@@ -11,6 +11,8 @@ public static class RequestRules
 {
     // Extra approval a captain gives on top of the refunded penalty when you were right to refuse.
     public const float PaybackBonus = 1f;
+    // The approval message a payback shows, and the AI report counts.
+    public const string PaybackReason = "admits you were right";
 
     // What a captain gives back after an explicit No to a bad request: the whole penalty and the bonus when the
     // wave ended with no leaks and no fallen towers, nothing otherwise.
@@ -75,9 +77,9 @@ public static class RequestEvaluator
     public const float GoldComfortPerDrawer = 150f;
     public const float MaxConWeight = 4f;
     // Weight of each road tile a move leaves uncovered.
-    public const float UncoveredTileWeight = 0.5f;
+    public const float UncoveredTileWeight = 0.25f;
     // Reserve Gold that weighs one approval point when a captain pockets it.
-    public const float PocketGoldPerPoint = 10f;
+    public const float PocketGoldPerPoint = 20f;
     // Weight of a lock-in (the answer can't be undone until the wave ends).
     public const float LockWeight = 0.5f;
     // Firing at nothing worth it while an elite or the boss is still to come.

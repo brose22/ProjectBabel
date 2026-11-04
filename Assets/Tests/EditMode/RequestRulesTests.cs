@@ -36,10 +36,10 @@ public class RequestRulesTests
     [TestCase(RequestKind.Reinforce)]
     public void Moves_NameWhatTheyLeaveUncovered(RequestKind kind)
     {
-        RequestSnapshot s = Snap(kind); s.UncoveredRoadTiles = 10;
+        RequestSnapshot s = Snap(kind); s.UncoveredRoadTiles = 12;
         RequestEvaluation bad = RequestEvaluator.Evaluate(s);
         Assert.That(bad.IsBad, Is.True);
-        Assert.That(bad.Cons[0].Text, Does.Contain("10 road tiles").And.Contain("road 1"));
+        Assert.That(bad.Cons[0].Text, Does.Contain("12 road tiles").And.Contain("road 1"));
         s.UncoveredRoadTiles = 0;
         Assert.That(RequestEvaluator.Evaluate(s).IsBad, Is.False);
     }
@@ -47,9 +47,9 @@ public class RequestRulesTests
     [Test]
     public void LowerDraw_CostsHalfTheReserve()
     {
-        RequestSnapshot big = Snap(RequestKind.LowerDraw); big.ReserveGold = 80;
+        RequestSnapshot big = Snap(RequestKind.LowerDraw); big.ReserveGold = 120;
         RequestSnapshot small = Snap(RequestKind.LowerDraw); small.ReserveGold = 10;
-        Assert.That(RequestEvaluator.Evaluate(big).Cons[0].Text, Does.Contain("keeps 40 Gold"));
+        Assert.That(RequestEvaluator.Evaluate(big).Cons[0].Text, Does.Contain("keeps 60 Gold"));
         Assert.That(RequestEvaluator.Evaluate(big).IsBad, Is.True);
         Assert.That(RequestEvaluator.Evaluate(small).IsBad, Is.False);
     }
@@ -66,7 +66,7 @@ public class RequestRulesTests
     {
         RequestSnapshot greedy = Snap(RequestKind.MoreDraw); greedy.Gold = 40;
         RequestSnapshot glory = Snap(RequestKind.UseSpecial); glory.SpawnsToElite = 5;
-        RequestSnapshot cautious = Snap(RequestKind.Retreat); cautious.UncoveredRoadTiles = 8;
+        RequestSnapshot cautious = Snap(RequestKind.Retreat); cautious.UncoveredRoadTiles = 14;
         Assert.That(RequestEvaluator.Evaluate(greedy).IsBad, Is.True);
         Assert.That(RequestEvaluator.Evaluate(glory).IsBad, Is.True);
         Assert.That(RequestEvaluator.Evaluate(glory).Cons.Exists(c => c.Text.Contains("weak enemies")), Is.True);
@@ -130,5 +130,30 @@ public class RivalRulesTests
     {
         var s = new RequestSnapshot { Kind = RequestKind.UseSpecial, ApprovalYes = 2f, Gold = 300, SpawnsToElite = -1, RivalName = "Ser Aldric", RivalCost = 1f };
         Assert.That(RequestEvaluator.Evaluate(s).Cons.Exists(c => c.Text == "Ser Aldric: -1 approval"), Is.True);
+    }
+}
+
+public class AiRequestAnswerTests
+{
+    [Test]
+    public void Refuses_BadRequests_AndGrantsCheapOnes()
+    {
+        var bad = new RequestSnapshot { Kind = RequestKind.MoreDraw, ApprovalYes = 2f, Gold = 20, SpawnsToElite = -1 };
+        var cheap = new RequestSnapshot { Kind = RequestKind.UseSpecial, ApprovalYes = 2f, Gold = 300, SpawnsToElite = -1, ThreatPresent = true };
+        Assert.That(AiAbilityRules.AnswerRequest(RequestEvaluator.Evaluate(bad)), Is.EqualTo(AiAbilityRules.AnswerNo));
+        Assert.That(AiAbilityRules.AnswerRequest(RequestEvaluator.Evaluate(cheap)), Is.EqualTo(AiAbilityRules.AnswerYes));
+    }
+
+    [Test]
+    public void ReportCountsRequestsByKindAndTrait()
+    {
+        var run = new AiRunRecord { badRequests = 2, badRequestsGranted = 1, paybacks = 1 };
+        run.requestAnswers["MoreDraw: Yes"] = 1;
+        run.requestAnswers["MoreDraw: No"] = 3;
+        run.requestsByTrait["Greedy: No"] = 3;
+        string md = AiReportFormatter.Markdown(new[] { run, new AiRunRecord() }, "now");
+        Assert.That(md, Does.Contain("| Refused | 3 (75%) |"));
+        Assert.That(md, Does.Contain("| Refusals proven right | 1 |"));
+        Assert.That(md, Does.Contain("| Greedy | 0 | 3 |"));
     }
 }

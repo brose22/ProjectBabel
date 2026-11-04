@@ -33,6 +33,12 @@ public static class AiAbilityRules
         }
     }
 
+    // The AI says Yes only when the cons stay well under what a Yes gives: a bad request is always refused.
+    public const float ConTolerance = 1f;
+
+    public static int AnswerRequest(RequestEvaluation evaluation) =>
+        !evaluation.IsBad && evaluation.ConWeight <= evaluation.ProWeight * ConTolerance ? AnswerYes : AnswerNo;
+
     // Grants what costs the run nothing; draws only when Gold is plentiful.
     public static int AnswerRequest(int request, int gold, int towersOnField) =>
         request != RequestMoreDraw || gold / Math.Max(1, towersOnField) >= 100 ? AnswerYes : AnswerNo;

@@ -149,17 +149,23 @@ public class AiRunRecorder
     {
         if (Run == null) return;
         Run.approvalByReason[notice.reason] = Run.approvalByReason.TryGetValue(notice.reason, out float total) ? total + notice.amount : notice.amount;
+        if (notice.reason == RequestRules.PaybackReason) Run.paybacks++;
         var bucket = notice.amount > 0f ? approvalGainedByCaptain : approvalLostByCaptain;
         string name = notice.captain.displayName;
         bucket[name] = bucket.TryGetValue(name, out float sum) ? sum + Mathf.Abs(notice.amount) : Mathf.Abs(notice.amount);
     }
 
     // A captain's request and the answer the AI gave it.
-    public void NoteRequest(RequestKind kind, RequestAnswer answer)
+    public void NoteRequest(RequestKind kind, RequestAnswer answer, CaptainTrait trait, bool bad)
     {
         if (Run == null) return;
         string key = $"{kind}: {answer}";
         Run.requestAnswers[key] = Run.requestAnswers.TryGetValue(key, out int count) ? count + 1 : 1;
+        string traitKey = $"{CaptainTraits.Name(trait)}: {answer}";
+        Run.requestsByTrait[traitKey] = Run.requestsByTrait.TryGetValue(traitKey, out int byTrait) ? byTrait + 1 : 1;
+        if (!bad) return;
+        Run.badRequests++;
+        if (answer == RequestAnswer.Yes) Run.badRequestsGranted++;
     }
 
     public void BeginRun(int index, int seed, IEnumerable<Captain> party, float realNow, float gameNow, string location = "")
