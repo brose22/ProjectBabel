@@ -23,7 +23,7 @@ public class RunScreens : MonoBehaviour
     // Party slots and roster cards: a party card's height, portrait and all.
     const float SlotHeight = 84f;
     const int RosterColumns = 2;
-    static readonly Vector2 MapArea = new(790f, 330f);
+    static readonly Vector2 MapArea = new(790f, 380f);
     // The world map's buttons, in a column down the left edge; the map sits to their right.
     const float MapMenuWidth = 120f;
     const float MapMenuGap = 12f;
@@ -32,8 +32,11 @@ public class RunScreens : MonoBehaviour
     const float BadgeSize = 24f;
     // Keeps jittered cities inside the map area.
     const float MapMargin = 14f;
-    const float CityJitter = 12f;
-    const float CityJitterX = 4f;
+    const float CityJitterAcross = 12f;
+    const float CityJitterAlong = 4f;
+    // The vertical map: rows a layer apart, and the width a row's cities spread across.
+    const float MapRowSpacing = 76f;
+    const float MapLaneWidth = 680f;
     // World map party drawer.
     const float DrawerWidth = 300f;
     const float DrawerSlideSeconds = 0.2f;
@@ -431,8 +434,26 @@ public class RunScreens : MonoBehaviour
             12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         BuildRunStats(root, run);
 
-        RectTransform area = UIKit.Box(column, "Map", blocksClicks: false);
-        UIKit.Size(area, MapArea.x, MapArea.y);
+        // The map scrolls up and down: the start is at the bottom, the enemy base at the top.
+        RectTransform frame = UIKit.Box(column, "Map", blocksClicks: false);
+        UIKit.Size(frame, MapArea.x, MapArea.y);
+        var scroll = frame.gameObject.AddComponent<ScrollRect>();
+        RectTransform viewport = UIKit.Stretch(UIKit.Panel(frame, "Viewport", Color.clear));
+        viewport.gameObject.AddComponent<RectMask2D>();
+        RectTransform area = UIKit.Group(viewport, "Content");
+        float mapHeight = MapHeight(map);
+        area.anchorMin = area.anchorMax = new Vector2(0.5f, 0f);
+        area.pivot = new Vector2(0.5f, 0f);
+        area.sizeDelta = new Vector2(MapArea.x, mapHeight);
+        scroll.viewport = viewport;
+        scroll.content = area;
+        scroll.horizontal = false;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 8f;
+        // Follow the player: the row they stand on sits low in the view, the choices just above it.
+        float focusY = (map.current < 0 ? CityPosition(map, map.nodes[0]).y : CityPosition(map, map.nodes[map.current]).y + MapRowSpacing * 0.5f)
+            + mapHeight * 0.5f;
+        area.anchoredPosition = new Vector2(0f, -Mathf.Clamp(focusY - MapArea.y * 0.45f, 0f, Mathf.Max(0f, mapHeight - MapArea.y)));
 
         var choices = map.Choices();
         // Hints of hidden roads first, then roads, so cities and their marks sit on top.
@@ -1141,22 +1162,28 @@ public class RunScreens : MonoBehaviour
         return BondMath.MaxRank;
     }
 
-    // Layers run left to right; cities in a layer are spread evenly top to bottom, nudged a little
-    // (the same way every time, from the city's seed) so the map doesn't look like a grid. The
-    // enemy base is pinned to the right edge, centred.
-    static Vector2 CityPosition(WorldMap map, MapNode node)
+    // The scrolling map's height: one row per layer, never shorter than the view.
+    public static float MapHeight(WorldMap map) =>
+        Mathf.Max(MapArea.y, Mathf.Max(0, map.layerCount - 1) * MapRowSpacing + (CitySize.y + BaseSize.y) * 0.5f + 2f * MapMargin);
+
+    // Layers run bottom to top, one row each; cities in a row are spread evenly left to right,
+    // nudged a little (the same way every time, from the city's seed) so the map doesn't look like
+    // a grid. The enemy base is the top row, centred. Positions are from the map's centre.
+    public static Vector2 CityPosition(WorldMap map, MapNode node)
     {
         bool isBase = node.id == map.BaseId;
-        Vector2 size = isBase ? BaseSize : CitySize;
-        float usableWidth = MapArea.x - BaseSize.x - 2f * MapMargin, usableHeight = MapArea.y - CitySize.y - 2f * MapMargin - CityJitter;
-        float x = map.layerCount > 1 ? node.layer / (float)(map.layerCount - 1) : 0.5f;
+        float height = MapHeight(map);
+        float graphHeight = Mathf.Max(0, map.layerCount - 1) * MapRowSpacing + (CitySize.y + BaseSize.y) * 0.5f;
+        // From the bottom of the map; a short graph is centred in the view.
+        float bottom = (height - graphHeight) * 0.5f + CitySize.y * 0.5f;
+        float y = bottom + node.layer * MapRowSpacing;
         int count = map.LayerSize(node.layer);
-        float y = isBase ? 0.5f : (node.lane + 0.5f) / count;
-        Vector2 position = new((x - 0.5f) * usableWidth, (0.5f - y) * usableHeight);
+        float x = isBase ? 0.5f : (node.lane + 0.5f) / count;
+        Vector2 position = new((x - 0.5f) * MapLaneWidth, y - height * 0.5f);
         if (isBase) return position;
         var jitter = new System.Random(node.seed);
-        position.x += ((float)jitter.NextDouble() * 2f - 1f) * CityJitterX;
-        position.y += ((float)jitter.NextDouble() * 2f - 1f) * CityJitter * (count > 1 ? 1f : 0.3f);
+        position.y += ((float)jitter.NextDouble() * 2f - 1f) * CityJitterAlong;
+        position.x += ((float)jitter.NextDouble() * 2f - 1f) * CityJitterAcross * (count > 1 ? 1f : 0.3f);
         return position;
     }
 
@@ -1306,9 +1333,13 @@ public class RunScreens : MonoBehaviour
         string flag = here ? "YOU ARE HERE" : node.cleared ? "WON" : null;
         if (flag != null)
         {
-            Text tag = UIKit.Shadowed(UIKit.Label(area, flag, 9, TextAnchor.MiddleCenter, here ? UIKit.AccentColor : UIKit.GoodColor));
+            // On a dark tab, since the roads ahead run up through it.
+            Vector2 tagSize = new(here ? 78f : 34f, 13f);
+            RectTransform tab = UIKit.Panel(area, "Flag", new Color(0.05f, 0.05f, 0.07f, 0.85f), blocksClicks: false);
+            UIKit.Place(tab, new Vector2(0.5f, 0.5f), position + new Vector2(0f, size.y * 0.5f + 7f), tagSize);
+            Text tag = UIKit.Shadowed(UIKit.Label(tab, flag, 9, TextAnchor.MiddleCenter, here ? UIKit.AccentColor : UIKit.GoodColor));
             tag.fontStyle = FontStyle.Bold;
-            UIKit.Place(tag.rectTransform, new Vector2(0.5f, 0.5f), position + new Vector2(0f, size.y * 0.5f + 8f), new Vector2(110f, 14f));
+            UIKit.Stretch(tag.rectTransform);
         }
         UIKit.HoverTip(rect, name, NodeDescription(node, isBase) + GateNote(node));
     }
