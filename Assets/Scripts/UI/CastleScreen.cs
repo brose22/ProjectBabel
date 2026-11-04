@@ -89,6 +89,7 @@ public partial class CastleScreen : MonoBehaviour
     RectTransform NewScreen(string name, float width, Action back, bool backButton = true)
     {
         refreshers.Clear();
+        titleBanner.gameObject.SetActive(true);
         bool fade = screen == null || screen.name != name;
         if (screen != null) Destroy(screen.gameObject);
         screen = UIKit.Stretch(UIKit.Panel(canvas.transform, name, DimColor));
