@@ -38,14 +38,8 @@ public partial class CastleScreen : MonoBehaviour
     enum Tab { Captains, Soldiers }
 
     Tab tab;
-    // The captain shown on the right of the Captains tab, and the slot whose soldier is being picked
-    // (-1 while none is).
+    // The captain last opened in the Great Hall, whose card takes focus when the hall is built.
     Captain selected;
-    int pickingSlot = -1;
-    // The Great Hall's right side, its slot buttons, and each roster card's soldier line.
-    RectTransform hallSide;
-    readonly List<Button> hallSlots = new();
-    readonly Dictionary<Captain, Text> hallCards = new();
     readonly List<Captain> party = new();
 
     public static void Open() => SceneManager.LoadScene(SceneName);
@@ -75,6 +69,7 @@ public partial class CastleScreen : MonoBehaviour
         UIKit.Refresh(refreshers);
         UIKit.Refresh(hudRefreshers);
         ShopFeedback();
+        AnimateHall();
         if (screenFade != null && screenFade.alpha < 1f)
             screenFade.alpha = Mathf.Clamp01(screenFade.alpha + Time.unscaledDeltaTime / FadeSeconds);
     }
@@ -140,9 +135,8 @@ public partial class CastleScreen : MonoBehaviour
     {
         if (selected != null && !profile.Owns(selected)) selected = null;
         if (selected == null && profile.Roster.Count > 0) selected = profile.Roster[0];
-        pickingSlot = -1;
-        // In the Great Hall, Back and cancel step out of the soldier picker first.
-        RectTransform column = NewScreen("Inventory", InventoryWidth, tab == Tab.Captains ? HallBack : BuildHome);
+        if (hallCaptain != null && !profile.Owns(hallCaptain)) hallCaptain = null;
+        RectTransform column = NewScreen("Inventory", InventoryWidth, BuildHome);
         UIKit.Label(column, tab == Tab.Captains ? "GREAT HALL" : "BARRACKS", UIKit.TitleSize, TextAnchor.MiddleCenter);
 
         RectTransform body = UIKit.Group(column, "Body");
@@ -150,151 +144,8 @@ public partial class CastleScreen : MonoBehaviour
         UIKit.Size(body, InventoryWidth, InventoryBodyHeight);
         if (tab == Tab.Captains) BuildCaptainsTab(body);
         else BuildSoldiersTab(body);
-    }
-
-    // The roster on the left; the shown captain's soldier slots (or the soldier picker for one of
-    // them) on the right. Only the right side is rebuilt as you work, so the roster keeps its scroll
-    // and gamepad focus stays where it was. With the gamepad, the captain under focus is the one shown.
-    void BuildCaptainsTab(Transform body)
-    {
-        RectTransform panel = UIKit.Box(body, "Roster");
-        UIKit.Size(panel, CaptainListWidth, InventoryBodyHeight, flexibleWidth: 0f);
-        UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
-        Header(panel, $"CAPTAINS", $"{profile.Roster.Count}/{Profile.MaxRoster}");
-        ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
-        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        hallCards.Clear();
-        foreach (Captain captain in profile.Roster)
-        {
-            Captain each = captain;
-            RectTransform card = CaptainCard(list.content, captain, "", () =>
-            {
-                ShowCaptain(each);
-                // On the pad the captain is already shown, so A goes on into their slots.
-                if (GameInput.UsingGamepad && hallSlots.Count > 0) screenScope.Request(hallSlots[0]);
-            }, false, out Text name, out Text tag, out Text soldiers);
-            Image image = card.GetComponent<Image>();
-            GameObject cardObject = card.gameObject;
-            hallCards[each] = soldiers;
-            if (captain == selected) screenScope.Default = () => card.GetComponent<Button>();
-            refreshers.Add(() =>
-            {
-                if (GameInput.UsingGamepad && selected != each && EventSystem.current != null &&
-                    EventSystem.current.currentSelectedGameObject == cardObject) ShowCaptain(each);
-                bool shown = selected == each;
-                image.color = shown ? PickedCardColor : CardColor;
-                name.color = shown ? UIKit.AccentColor : UIKit.TextColor;
-                tag.text = shown ? "SHOWN" : $"LV {Level(each)}";
-            });
-        }
-        if (profile.Roster.Count == 0)
-            UIKit.Label(list.content, "No captains in the roster.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-
-        hallSide = UIKit.Box(body, "Captain");
-        UIKit.Size(hallSide, height: InventoryBodyHeight, flexibleWidth: 1f);
-        UIKit.Layout<VerticalLayoutGroup>(hallSide, UIKit.Pad, 6);
-        BuildHallSide();
-    }
-
-    void ShowCaptain(Captain captain)
-    {
-        selected = captain;
-        pickingSlot = -1;
-        BuildHallSide();
-    }
-
-    // Back out of the soldier picker to its slot, or out of the Great Hall.
-    void HallBack()
-    {
-        if (pickingSlot < 0)
-        {
-            BuildHome();
-            return;
-        }
-        int slot = pickingSlot;
-        pickingSlot = -1;
-        BuildHallSide();
-        if (slot < hallSlots.Count) screenScope.Request(hallSlots[slot]);
-    }
-
-    // Empties the right side and builds the loadout or the picker in it. It can run inside a
-    // refresher, so it adds no refreshers itself.
-    void BuildHallSide()
-    {
-        if (hallSide == null) return;
-        foreach (Transform child in hallSide)
-        {
-            child.gameObject.SetActive(false);
-            Destroy(child.gameObject);
-        }
-        hallSlots.Clear();
-        if (selected == null) return;
-        if (pickingSlot >= 0) BuildSoldierPicker(hallSide, selected, pickingSlot);
-        else BuildLoadout(hallSide, selected);
-    }
-
-    // The captain's 4 slots, each a button that opens the soldier picker, and Release.
-    void BuildLoadout(Transform side, Captain captain)
-    {
-        Header(side, $"{captain.displayName.ToUpperInvariant()}", $"LV {Level(captain)}  {captain.ClassName}");
-        UIKit.Label(side, "Soldiers take this captain's element and add a stat by class: Knight Defense, Archer Range, " +
-                          "Mage Power, Rogue Speed. A slot fights once the captain's bond opens it.", 11, color: UIKit.MutedTextColor);
-        int open = MatchManager.SoldierCountFor(data, captain);
-        for (int i = 0; i < SoldierInventory.SlotsPerCaptain; i++)
-        {
-            int slot = i;
-            RectTransform row = UIKit.Group(side, $"Slot {slot + 1}");
-            UIKit.Layout<HorizontalLayoutGroup>(row, 0, 6);
-            UIKit.Size(row, flexibleWidth: 1f);
-            string label = CaptainPanelParts.SlotLabel(slot) + (slot >= open ? "\n<size=9>not open yet</size>" : "");
-            UIKit.Size(UIKit.Label(row, label, 12, color: slot < open ? UIKit.MutedTextColor : UIKit.DisabledTextColor), 80f);
-            SoldierItem soldier = profile.Soldiers.InSlot(captain.id, slot);
-            Button button = UIKit.Button(row, soldier != null ? SoldierSummary(soldier) : "Empty", () =>
-            {
-                pickingSlot = slot;
-                BuildHallSide();
-            }, height: 28f);
-            UIKit.Size(button, height: 28f, flexibleWidth: 1f);
-            if (soldier == null) button.GetComponentInChildren<Text>().color = UIKit.DisabledTextColor;
-            hallSlots.Add(button);
-        }
-
-        UIKit.Size(UIKit.Group(side, "Spacer"), flexibleWidth: 1f).flexibleHeight = 1f;
-        Button release = UIKit.Button(side, $"Release {captain.displayName}", () => BuildConfirmRelease(captain), height: 26f);
-        UIKit.Size(release, height: 26f, flexibleWidth: 1f);
-        release.GetComponent<Image>().color = UIKit.BadColor;
-    }
-
-    // Every soldier owned, those in the inventory first, rarest first. Equip puts one in the slot,
-    // moving it from another captain if it was theirs; Remove sends the slot's soldier back. Focus
-    // starts on the list and goes back to the slot afterwards.
-    void BuildSoldierPicker(Transform side, Captain captain, int slot)
-    {
-        Header(side, $"{captain.displayName.ToUpperInvariant()}", $"{CaptainPanelParts.SlotLabel(slot)}");
-        void Change(Action change)
-        {
-            change();
-            ProfileSave.Save(profile);
-            // Soldiers can move between captains, so every card's soldier line is redone.
-            foreach (var (each, line) in hallCards) line.text = SoldiersLine(each);
-            HallBack();
-        }
-
-        ScrollRect list = UIKit.ScrollList(side, "Soldiers", UIKit.Gap);
-        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        Button first = null;
-        foreach (SoldierItem soldier in SortedSoldiers())
-        {
-            SoldierItem chosen = soldier;
-            bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
-            RectTransform row = SoldierRow(list.content, soldier, here ? "In this slot" : WhereIs(soldier));
-            Button action = here ? RowAction(row, "Remove", () => Change(() => profile.Soldiers.Unequip(chosen.id)))
-                : RowAction(row, "Equip", () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
-            first ??= action;
-        }
-        if (profile.Soldiers.Items.Count == 0)
-            UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
-        if (first != null) screenScope.Request(first);
+        // Coming back from the release confirm reopens the captain's window.
+        if (tab == Tab.Captains && hallCaptain != null) OpenHallWindow(hallCaptain);
     }
 
     // Every soldier owned and who has it; an equipped one can be sent back to the inventory.
@@ -374,7 +225,7 @@ public partial class CastleScreen : MonoBehaviour
             profile.Release(captain);
             party.Remove(captain);
             ProfileSave.Save(profile);
-            selected = null;
+            selected = hallCaptain = null;
             BuildInventory();
         }, BackSize.x, BackSize.y);
         release.GetComponent<Image>().color = UIKit.BadColor;
