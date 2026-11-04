@@ -149,7 +149,7 @@ public partial class CastleScreen : MonoBehaviour
         if (tab == Tab.Captains && hallCaptain != null) OpenHallWindow(hallCaptain);
     }
 
-    // Every soldier owned and who has it; an equipped one can be sent back to the inventory.
+    // Every soldier owned and who has it; picking an equipped one sends it back to the inventory.
     void BuildSoldiersTab(Transform body)
     {
         RectTransform panel = UIKit.Box(body, "Soldiers");
@@ -162,9 +162,13 @@ public partial class CastleScreen : MonoBehaviour
         foreach (SoldierItem soldier in SortedSoldiers())
         {
             SoldierItem chosen = soldier;
-            RectTransform row = SoldierRow(list.content, soldier, WhereIs(soldier));
-            if (!soldier.IsEquipped) continue;
-            RowAction(row, "Unequip", () =>
+            if (!soldier.IsEquipped)
+            {
+                SoldierRow(list.content, soldier, WhereIs(soldier));
+                continue;
+            }
+            RectTransform row = SoldierRow(list.content, soldier, $"{WhereIs(soldier)}. Select to unequip.");
+            UIKit.Clickable(row, () =>
             {
                 profile.Soldiers.Unequip(chosen.id);
                 ProfileSave.Save(profile);
@@ -185,7 +189,7 @@ public partial class CastleScreen : MonoBehaviour
     }
 
     // Class portrait and rarity pip, "Rare Knight" in its rarity's colour, and its bonus, damage type
-    // and where (a line the caller picks) under it; buttons go on the end.
+    // and where (a line the caller picks) under it.
     RectTransform SoldierRow(Transform list, SoldierItem soldier, string where)
     {
         SoldierClassData soldierClass = data.ClassData(soldier.soldierClass);
@@ -194,10 +198,6 @@ public partial class CastleScreen : MonoBehaviour
         return UIKit.ItemRow(list, soldier.id, soldierClass != null ? soldierClass.portrait : null, name,
             UIKit.RarityColor(soldier.rarity), $"{detail}   <color={UIKit.Hex(UIKit.TextColor)}>{where}</color>", soldier.rarity);
     }
-
-    // The button at the end of an item row; every list uses the same size.
-    static Button RowAction(RectTransform row, string text, Action onClick) =>
-        UIKit.Button(row, text, onClick, UIKit.ItemActionWidth, UIKit.ItemActionHeight);
 
     // "Rare Knight  +0.75 Defense  Melee".
     string SoldierSummary(SoldierItem soldier)
