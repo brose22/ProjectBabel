@@ -40,13 +40,16 @@ public class MainMenu : MonoBehaviour
 
     void LateUpdate() => UIKit.Refresh(refreshers);
 
+    // The current screen's focus scope.
+    UIFocusScope screenScope;
+
     // Every screen but the first goes back to it on the gamepad's cancel button.
     RectTransform NewScreen(string name, float width)
     {
         refreshers.Clear();
         if (screen != null) Destroy(screen.gameObject);
         screen = UIKit.Stretch(UIKit.Panel(canvas.transform, name, BackgroundColor));
-        UIKit.Focus(screen, name == "Main" ? null : BuildMain);
+        screenScope = UIKit.Focus(screen, name == "Main" ? null : BuildMain);
         RectTransform column = UIKit.Group(screen, "Column");
         UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 10, fitContent: true);
@@ -161,7 +164,9 @@ public class MainMenu : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Go to the Castle", GoToCastle, 180f, 32f);
-        UIKit.CloseButton(buttons, "Cancel", BuildMain);
+        Button cancel = UIKit.CloseButton(buttons, "Cancel", BuildMain);
+        // Cancel takes focus first, so a stray confirm press doesn't throw anything away.
+        screenScope.Default = () => cancel;
     }
 
     void BuildConfirmNewGame()
@@ -173,7 +178,9 @@ public class MainMenu : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Start new game", NewGame, 180f, 32f);
-        UIKit.CloseButton(buttons, "Cancel", BuildMain);
+        Button cancel = UIKit.CloseButton(buttons, "Cancel", BuildMain);
+        // Cancel takes focus first, so a stray confirm press doesn't throw anything away.
+        screenScope.Default = () => cancel;
     }
 
     // Home to the Castle on the saved profile, giving up any run in progress; the Castle makes a new
