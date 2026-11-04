@@ -38,7 +38,7 @@ public partial class CastleScreen
     void OpenRoster(Tab chosen)
     {
         tab = chosen;
-        pickingSlot = -1;
+        hallCaptain = null;
         BuildInventory();
     }
 

@@ -859,7 +859,7 @@ public class RunScreens : MonoBehaviour
     }
 
     // What the next bond rank takes and gives, e.g. "Next: B at 65 (opens Slot 4)".
-    static string NextRankLine(Captain captain)
+    internal static string NextRankLine(Captain captain)
     {
         int rank = ApprovalStore.RankOf(captain);
         if (rank >= BondMath.MaxRank) return "Bond is at its highest rank";
@@ -870,7 +870,7 @@ public class RunScreens : MonoBehaviour
         return $"Next: {BondMath.RankName(next)} at {BondMath.ApprovalForRank(next):0} ({reward})";
     }
 
-    static void TagLine(Transform parent, string caption, CaptainTag[] tags, Color color)
+    internal static void TagLine(Transform parent, string caption, CaptainTag[] tags, Color color)
     {
         Transform row = UIKit.Group(parent, caption);
         UIKit.Layout<HorizontalLayoutGroup>(row, 0, 8);
