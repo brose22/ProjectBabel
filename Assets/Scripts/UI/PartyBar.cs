@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-// The party along the bottom of the match screen, a card per captain still with the run.
-// Clicking a captain who isn't on the field makes them the next one placed; clicking one who is
-// fires their special once its meter is full. The gamepad steps a highlight along the bar instead:
-// landing on a captain makes them next, or moves the tile cursor to their tower, and the special
-// button fires the highlighted one. Cards rebuild only when the party or the field changes.
+// The captains on the field, along the bottom of the match screen; the captain cycler at the
+// cursor picks who is placed next. Clicking a card fires that captain's special once its meter is
+// full. On the gamepad the cycler's captain is highlighted here and the special button fires
+// theirs. Cards rebuild only when the field changes.
 public class PartyBar
 {
     public const float Height = 48f;
@@ -17,22 +16,18 @@ public class PartyBar
     const float TipWidth = 220f;
     // Seconds the highlighted captain's tip stays up after stepping to them.
     const float PadTipSeconds = 2.5f;
-    // How far the shoulder button icons sit from the ends of the bar.
-    const float BadgeGap = 14f;
     static readonly Color CardColor = new(0.17f, 0.2f, 0.28f, 1f);
 
     readonly MatchManager match;
-    readonly PlacementController placement;
     readonly RectTransform bar;
     readonly List<Action> refreshers = new();
     string key;
     Captain highlighted;
     float tipUntil;
 
-    public PartyBar(Transform parent, MatchManager match, PlacementController placement)
+    public PartyBar(Transform parent, MatchManager match)
     {
         this.match = match;
-        this.placement = placement;
         bar = UIKit.Group(parent, "Party Bar");
         UIKit.Place(bar, new Vector2(0.5f, 0f), new Vector2(0f, UIKit.Pad), new Vector2(0f, Height));
         UIKit.Layout<HorizontalLayoutGroup>(bar, 0, UIKit.Gap, fitContent: true);
@@ -48,58 +43,48 @@ public class PartyBar
             key = newKey;
             refreshers.Clear();
             UIKit.Clear(bar);
-            foreach (Captain captain in run.Party) Card(captain, TowerOf(captain));
-            // The shoulder buttons step along the bar, so they sit at its ends.
-            UIKit.PadBadge(bar, PadGlyph.LeftShoulder, () => GameInput.PadInMatch, new Vector2(0f, 0.5f), Vector2.left * BadgeGap);
-            UIKit.PadBadge(bar, PadGlyph.RightShoulder, () => GameInput.PadInMatch, new Vector2(1f, 0.5f), Vector2.right * BadgeGap);
+            foreach (Captain captain in run.Party)
+            {
+                Tower tower = TowerOf(captain);
+                if (tower != null) Card(captain, tower);
+            }
         }
         UIKit.Refresh(refreshers);
     }
 
+    // The cycler's captain is the highlighted one; stepping onto a placed captain shows their tip.
     void UpdatePad(RunState run)
     {
         if (match.IsOver) return;
-        int step = GameInput.PartyStep;
-        if (step != 0) StepHighlight(run, step);
+        Captain selected = match.SelectedCaptain;
+        if (selected != highlighted)
+        {
+            highlighted = selected;
+            tipUntil = Time.unscaledTime + PadTipSeconds;
+        }
         if (highlighted == null || !GameInput.UseSpecial) return;
         Tower tower = TowerOf(highlighted);
         if (tower != null) tower.TryUseAbility();
     }
 
-    // The first step starts from the captain up next.
-    void StepHighlight(RunState run, int step)
-    {
-        List<Captain> present = run.Party.FindAll(captain => captain != null);
-        if (present.Count == 0) return;
-        int index = present.IndexOf(highlighted != null ? highlighted : match.NextCaptain);
-        highlighted = present[(Mathf.Max(index, 0) + step + present.Count) % present.Count];
-        tipUntil = Time.unscaledTime + PadTipSeconds;
+    static Tower TowerOf(Captain captain) => Tower.All.Find(t => t != null && t.Captain == captain);
 
-        Tower tower = TowerOf(highlighted);
-        if (tower != null) placement.JumpCursor(tower.Cell);
-        else match.ChooseNextCaptain(highlighted);
-    }
-
-    static Tower TowerOf(Captain captain) => Tower.All.Find(t => t.Captain == captain);
-
-    // Who is with the run and which of them are on the field.
+    // Which party captains are on the field, and in which towers.
     static string Key(RunState run)
     {
         var parts = new List<string>();
         foreach (Captain captain in run.Party)
-            parts.Add($"{captain.displayName}:{TowerOf(captain)?.GetHashCode()}");
+            if (captain != null) parts.Add($"{captain.displayName}:{TowerOf(captain)?.GetHashCode()}");
         return string.Join("|", parts);
     }
 
-    // Portrait, name, then the special's meter once placed or "Up next" until then. The gold ring
-    // marks the card a click acts on now: the next captain to place, or a special ready to fire.
+    // Portrait, name, then the special's meter. The gold ring marks a special ready to fire.
     void Card(Captain captain, Tower tower)
     {
         RectTransform card = UIKit.Box(bar, captain.displayName, CardColor, blocksClicks: false);
         UIKit.Size(card, CardWidth, Height);
         UIKit.Layout<HorizontalLayoutGroup>(card, 6, 5);
-        if (tower != null) UIKit.Clickable(card, () => tower.TryUseAbility());
-        else UIKit.Clickable(card, () => match.ChooseNextCaptain(captain));
+        UIKit.Clickable(card, () => tower.TryUseAbility());
 
         RectTransform frame = UIKit.Box(card, "Portrait", UIKit.InsetColor, blocksClicks: false);
         UIKit.Layout<HorizontalLayoutGroup>(frame, 2, 0);
@@ -112,15 +97,7 @@ public class PartyBar
         name.fontStyle = FontStyle.Bold;
 
         Func<bool> actionable;
-        if (tower == null)
-        {
-            Func<bool> isNext = () => match.NextCaptain == captain && match.CanPlaceTower;
-            Text status = UIKit.LiveLabel(info, () => isNext() ? "UP NEXT" : "Not placed", refreshers, 9);
-            status.fontStyle = FontStyle.Bold;
-            refreshers.Add(() => status.color = isNext() ? UIKit.AccentColor : UIKit.MutedTextColor);
-            actionable = isNext;
-        }
-        else if (tower.HasAbility)
+        if (tower.HasAbility)
         {
             UIKit.LiveBar(info, () => tower.SpecialCharge,
                 () => tower.IsSpecialReady ? "Ready" : $"{Mathf.FloorToInt(tower.SpecialCharge * 100f)}%", UIKit.ChargeBarColor, refreshers, 12f);
@@ -152,7 +129,7 @@ public class PartyBar
             if (tip != null && GameInput.UsingGamepad) tip.gameObject.SetActive(isHighlighted && Time.unscaledTime < tipUntil);
         });
         // The special button works on the highlighted captain, once their meter is full.
-        if (tower != null && tower.HasAbility)
+        if (tower.HasAbility)
             UIKit.PadBadge(card, PadGlyph.RightTrigger, () => highlighted == captain && tower.CanUseAbility && GameInput.PadInMatch, Vector2.one);
     }
 }

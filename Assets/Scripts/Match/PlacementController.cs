@@ -21,6 +21,10 @@ public class PlacementController : MonoBehaviour
     public bool IsMoving { get; private set; }
     // Whether gamepad focus is in the selected captain's widget, whose buttons the tile cursor can't reach.
     public bool WidgetFocused { get; set; }
+    // Whether the mouse or tile cursor is over the battlefield this frame, and where: the captain
+    // cycler follows it and hides when it's over the HUD or a menu.
+    public bool PointerOnField { get; private set; }
+    public Vector3 PointerWorld { get; private set; }
 
     const float CursorRepeatDelay = 0.25f;
     const float CursorRepeatInterval = 0.09f;
@@ -58,15 +62,20 @@ public class PlacementController : MonoBehaviour
         // A hidden mouse's position means nothing, so the gamepad only asks whether a menu is up.
         bool blocked = pad ? match.IsOver || match.IsBetweenMatches || match.IsPaused || UIFocusScope.Top != null || IsAsked
             : mouse == null || hud.IsPointerOverHud(screen);
-        if (ended || blocked)
+        PointerOnField = !ended && !blocked;
+        if (!PointerOnField)
         {
             hoverMarker.enabled = false;
             ghosts.Hide();
             return;
         }
 
+        // The wheel cycles captains only over the field, where it can't be scrolling a list.
+        if (!pad && GameInput.WheelCaptainStep != 0) Cycle(GameInput.WheelCaptainStep);
+
         // The gamepad's cancel button goes through HandleKeys, like Esc.
         Vector2Int cell = pad ? StepCursor() : grid.WorldToCell(cam.ScreenToWorldPoint(screen));
+        PointerWorld = pad ? grid.CellCenter(cell) : cam.ScreenToWorldPoint(screen);
         bool confirm = pad ? GameInput.ConfirmTile : mouse.leftButton.wasPressedThisFrame;
         bool back = !pad && mouse.rightButton.wasPressedThisFrame;
         if (IsMoving)
@@ -76,10 +85,13 @@ public class PlacementController : MonoBehaviour
         }
 
         Tower hovered = grid.GetOccupant(cell);
-        bool canBuild = match.CanPlaceOn(cell);
+        // Only the cycler's captain is placed, and only while they aren't on the field already.
+        Captain selected = match.SelectedCaptain;
+        if (match.CanPlaceSelected) match.ChooseNextCaptain(selected);
+        bool canBuild = match.CanPlaceSelected && match.CanPlaceOn(cell);
 
         ShowMarker(cell, hovered != null || canBuild);
-        if (canBuild) ShowGhosts(cell, match.NextCaptain, match.SlotClassesFor(match.NextCaptain));
+        if (canBuild) ShowGhosts(cell, selected, match.SlotClassesFor(selected));
         else ghosts.Hide();
 
         // Placing leaves the new captain unselected, so its widget only opens when clicked.
@@ -90,7 +102,8 @@ public class PlacementController : MonoBehaviour
             else if (hovered != null) Select(hovered);
             else
             {
-                if (canBuild) match.PlaceTower(cell);
+                // The cycler moves on to the next captain still to place.
+                if (canBuild && match.PlaceTower(cell) != null && match.NextCaptain != null) match.ChooseNextCaptain(match.NextCaptain);
                 Select(null);
             }
         }
@@ -111,7 +124,18 @@ public class PlacementController : MonoBehaviour
         return cursorCell;
     }
 
-    // Puts the tile cursor on a tile, for jumping to a captain from the party bar.
+    // Steps the captain cycler. On the gamepad, landing on a placed captain brings the tile cursor
+    // to their tower, as stepping the party bar used to.
+    void Cycle(int step)
+    {
+        match.CycleCaptain(step);
+        if (!GameInput.UsingGamepad) return;
+        Captain captain = match.SelectedCaptain;
+        Tower tower = Tower.All.Find(t => t.Captain == captain);
+        if (tower != null) JumpCursor(tower.Cell);
+    }
+
+    // Puts the tile cursor on a tile, for jumping to a captain.
     public void JumpCursor(Vector2Int cell)
     {
         cursorCell = cell;
@@ -154,6 +178,7 @@ public class PlacementController : MonoBehaviour
         // The pause menu owns the input while it's up; its own Resume handling closes it.
         if (match.IsPaused) return;
         if (GameInput.StartWave) match.StartNextWave();
+        if (!match.IsOver && !match.IsBetweenMatches && GameInput.CaptainStep != 0) Cycle(GameInput.CaptainStep);
         if (GameInput.Cancel)
         {
             if (IsMoving) CancelMove();
