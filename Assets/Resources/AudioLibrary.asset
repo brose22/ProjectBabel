@@ -17,14 +17,14 @@ MonoBehaviour:
   - key: music.menu
     channel: 2
     clips:
-    - {fileID: 8300000, guid: 9ec679684c5dc874a93dd8048c726a93, type: 3}
+    - {fileID: 8300000, guid: adbd515c33b909c499af752322f09523, type: 3}
     volume: 0.7
     pitchVariance: 0
     cooldown: 0
   - key: music.match
     channel: 2
     clips:
-    - {fileID: 8300000, guid: 95d67aef145c0d14da0050a3131a4d74, type: 3}
+    - {fileID: 8300000, guid: dcbd93681664b024f8cce6b2e64bfd72, type: 3}
     volume: 0.7
     pitchVariance: 0
     cooldown: 0
