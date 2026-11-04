@@ -287,7 +287,7 @@ public class AiPlayer : MonoBehaviour
         if (run.RecruitOffer.Count > 0)
         {
             List<Captain> offer = run.RecruitOffer.ToList();
-            var party = run.Party.FindAll(c => !run.HasDeparted(c)).ConvertAll(Info);
+            var party = run.Party.ConvertAll(Info);
             int pick = AiPartyPicker.PickRecruit(offer.ConvertAll(Info), party);
             Captain recruit = pick >= 0 ? offer[pick] : null;
             Decide("Recruit", recruit != null ? $"took {recruit.displayName} to fill a gap in roles and elements" : "nobody on offer improved the party");
@@ -477,7 +477,7 @@ public class AiPlayer : MonoBehaviour
         Vector2Int size = match.Grid.Size;
         while (match.CanPlaceTower)
         {
-            var active = run.Party.FindAll(c => !run.HasDeparted(c));
+            var active = new List<Captain>(run.Party);
             List<int> order = AiPartyPicker.FieldOrder(active.ConvertAll(Info));
             Captain captain = order.Select(i => active[i]).FirstOrDefault(c => !Tower.All.Exists(t => t.Captain == c));
             if (captain == null) return;

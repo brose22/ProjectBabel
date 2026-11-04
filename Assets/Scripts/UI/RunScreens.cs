@@ -563,17 +563,14 @@ public class RunScreens : MonoBehaviour
         });
     }
 
-    // A captain in the party drawer: the usual details, tagged with their level, or faded with a
-    // note when they've walked out.
+    // A captain in the party drawer: the usual details, tagged with their level.
     void PartyCard(Transform list, RunState run, Captain captain)
     {
-        bool departed = run.HasDeparted(captain);
-        RectTransform card = UIKit.Box(list, captain.displayName, departed ? UIKit.InsetColor : CardColor, blocksClicks: false);
+        RectTransform card = UIKit.Box(list, captain.displayName, CardColor, blocksClicks: false);
         UIKit.Size(card, flexibleWidth: 1f);
         UIKit.Clickable(card, () => ShowCaptainDetails(run, captain));
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
-        PartyCardBody(card, captain, departed ? "WALKED OUT" : $"LV {level}", departed ? UIKit.BadColor : UIKit.AccentColor, out _, out _, live: true);
-        if (departed) card.gameObject.AddComponent<CanvasGroup>().alpha = 0.6f;
+        PartyCardBody(card, captain, $"LV {level}", UIKit.AccentColor, out _, out _, live: true);
     }
 
     // The party card's face, shared with run setup: portrait on the left; name and tag, element
@@ -700,9 +697,8 @@ public class RunScreens : MonoBehaviour
         Transform buttons = UIKit.Group(window, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 6);
         UIKit.Size(buttons, flexibleWidth: 1f);
-        if (!run.HasDeparted(captain))
-            UIKit.Size(UIKit.Button(buttons, "Gift", () => ShowGiftWindow(run, captain, () => UIKit.Refresh(detailRefreshers))),
-                height: 26f, flexibleWidth: 1f);
+        UIKit.Size(UIKit.Button(buttons, "Gift", () => ShowGiftWindow(run, captain, () => UIKit.Refresh(detailRefreshers))),
+            height: 26f, flexibleWidth: 1f);
         Button close = UIKit.Button(buttons, "Close", () => Destroy(overlay.gameObject));
         UIKit.Size(close, height: 26f, flexibleWidth: 1f);
         UIKit.PadBadge(close, PadGlyph.East);
@@ -831,8 +827,6 @@ public class RunScreens : MonoBehaviour
         Text name = UIKit.Shadowed(UIKit.Label(title, captain.displayName, 20));
         name.fontStyle = FontStyle.Bold;
         UIKit.Size(name, flexibleWidth: 1f);
-        if (run.HasDeparted(captain))
-            UIKit.Label(title, "WALKED OUT", 10, TextAnchor.MiddleRight, UIKit.BadColor).fontStyle = FontStyle.Bold;
 
         // Nothing here changes while the window is open, so the meters are drawn once rather than
         // joining the screen's refreshers, which would outlive the window.
@@ -1350,8 +1344,11 @@ public class RunScreens : MonoBehaviour
 
         UIKit.Size(UIKit.Header(panel, "Captains"), flexibleWidth: 1f);
         ResultColumns(ResultRow(panel, false), "", "LEVEL", "BOND", "APPROVAL", "CHANGE", 9, UIKit.MutedTextColor).preferredHeight = 14f;
-        for (int i = 0; i < run.Party.Count; i++)
-            CaptainResultRow(panel, run, run.Party[i], i % 2 == 0);
+        // The party, then anyone who walked out at the end of this match, so the player sees who left.
+        var rows = new List<Captain>(run.Party);
+        if (relationships != null) rows.AddRange(relationships.Walkouts.Where(c => !rows.Contains(c)));
+        for (int i = 0; i < rows.Count; i++)
+            CaptainResultRow(panel, run, rows[i], i % 2 == 0);
 
         UIKit.Size(UIKit.Group(panel, "Gap"), height: UIKit.Gap);
         if (won && !runWon) UIKit.Primary(UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f), refreshers);
@@ -1399,7 +1396,7 @@ public class RunScreens : MonoBehaviour
     // "#2/4": where the captain stands among the party still with the run on a stat, 1 being highest.
     static string PartyRank(RunState run, Captain captain, Func<Captain, float> stat)
     {
-        List<Captain> present = run.Party.FindAll(c => c != null && !run.HasDeparted(c));
+        List<Captain> present = run.Party.FindAll(c => c != null);
         if (!present.Contains(captain) || present.Count < 2) return null;
         float mine = stat(captain);
         int rank = 1 + present.FindAll(c => stat(c) > mine + 0.001f).Count;
@@ -1426,15 +1423,14 @@ public class RunScreens : MonoBehaviour
         return UIKit.Size(row, height: 22f, flexibleWidth: 1f);
     }
 
-    // One table row per captain, with any walkout noted after the name.
+    // One table row per captain, with a walkout this match noted after the name.
     void CaptainResultRow(Transform panel, RunState run, Captain captain, bool shaded)
     {
         Tower tower = Tower.All.Find(t => t.Captain == captain);
         float change = relationships != null ? relationships.ApprovalChangeThisMatch(captain) : 0f;
         int level = tower != null ? tower.Level : Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
         bool walkedOut = relationships != null && relationships.Walkouts.Contains(captain);
-        string note = walkedOut ? $"  <color={UIKit.Hex(UIKit.BadColor)}>walked out!</color>"
-            : run.HasDeparted(captain) ? $"  <color={UIKit.Hex(UIKit.MutedTextColor)}>(left earlier)</color>" : "";
+        string note = walkedOut ? $"  <color={UIKit.Hex(UIKit.BadColor)}>walked out!</color>" : "";
 
         Color changeColor = change > 0f ? UIKit.GoodColor : change < 0f ? UIKit.BadColor : UIKit.MutedTextColor;
         ResultColumns(ResultRow(panel, shaded), captain.displayName + note, $"Lv {level}", BondMath.RankName(ApprovalStore.RankOf(captain)),
