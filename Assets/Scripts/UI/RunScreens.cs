@@ -702,7 +702,7 @@ public class RunScreens : MonoBehaviour
 
         Transform title = UIKit.Group(drawer, "Title");
         UIKit.Layout<HorizontalLayoutGroup>(title, 0, 6);
-        Text header = UIKit.Label(title, headerText, 10, color: UIKit.AccentColor);
+        Text header = UIKit.Label(title, headerText, UIKit.HeadingSize, color: UIKit.AccentColor);
         header.fontStyle = FontStyle.Bold;
         UIKit.Size(header, flexibleWidth: 1f);
         UIKit.CloseButton(title, "Close", () => setOpen(false));
