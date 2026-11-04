@@ -117,7 +117,8 @@ public class RunScreens : MonoBehaviour
     // inventory. Not while a captain, gift or shop window is up, which have their own focus.
     void PadDrawerShortcuts()
     {
-        int step = GameInput.PartyStep;
+        // The map screen always holds focus, so this reads the pad itself rather than the match's PartyStep.
+        int step = GameInput.MenuShoulderStep;
         if (step == 0 || shopOpen || screen == null) return;
         if (screen.Find("Captain Details") != null || screen.Find("Gift") != null) return;
         string id = step > 0 ? "Party" : "Inventory";
