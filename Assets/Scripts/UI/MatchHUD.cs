@@ -404,14 +404,14 @@ public class MatchHUD : MonoBehaviour
 
     // ---------- Pause menu ----------
 
-    // A dimmed overlay with the menu window; it blocks clicks to the match behind it.
+    // A popup over the match that blocks clicks to it. It is built once and shown while paused; a
+    // click on the backdrop or the gamepad's cancel button resumes.
     void BuildPauseMenu()
     {
-        pauseMenu = UIKit.Stretch(UIKit.Panel(canvas.transform, "Pause Menu", new Color(0f, 0f, 0f, 0.55f)));
-        UIKit.Focus(pauseMenu);
-        RectTransform window = UIKit.Box(pauseMenu, "Window");
-        UIKit.Place(window, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(260f, 0f));
-        UIKit.Layout<VerticalLayoutGroup>(window, 14, 8, fitContent: true);
+        ModalWindow modal = UIKit.Modal(canvas.transform, "Pause Menu", 260f, new Vector2(0.5f, 0.5f), Vector2.zero,
+            () => match.SetPaused(false));
+        pauseMenu = modal.Backdrop;
+        RectTransform window = modal.Window;
         UIKit.Label(window, "PAUSED", 22, TextAnchor.MiddleCenter);
         // Here as well as behind the Stats button, which the gamepad can't reach during play.
         DetailRows(window);
