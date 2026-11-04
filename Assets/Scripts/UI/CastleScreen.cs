@@ -395,42 +395,6 @@ public partial class CastleScreen : MonoBehaviour
         });
     }
 
-    void BuildLocations()
-    {
-        RectTransform column = NewScreen("Locations", 520f, BuildParty);
-        UIKit.Label(column, "CHOOSE A LOCATION", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, $"Party: {string.Join(", ", party.ConvertAll(c => c.displayName))}", 13, TextAnchor.MiddleCenter,
-            UIKit.MutedTextColor);
-        // One row per location, in unlock order: a mark, its name and a line under it, and Set out.
-        // A locked row is dimmed, with a lock for the mark, what opens it on the line and no button.
-        LocationData previous = null;
-        foreach (LocationSelect.Entry entry in LocationSelect.Entries(data, profile))
-        {
-            LocationData location = entry.location;
-            RectTransform row = UIKit.Box(column, location.displayName, entry.unlocked ? null : UIKit.InsetColor, blocksClicks: false);
-            UIKit.Size(row, 520f).minHeight = 52f;
-            UIKit.Layout<HorizontalLayoutGroup>(row, 8, 8).childAlignment = TextAnchor.MiddleLeft;
-            Image mark = UIKit.Icon(row, entry.unlocked ? null : LockSprite, LockIconSize);
-            mark.enabled = true;
-            if (entry.unlocked) mark.color = Color.clear;
-            RectTransform text = UIKit.Group(row, "Text");
-            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
-            UIKit.Size(text, flexibleWidth: 1f);
-            Text name = UIKit.Label(text, location.displayName, 15);
-            name.fontStyle = FontStyle.Bold;
-            string requirement = previous != null ? $"Locked: win a run at {previous.displayName} to open it." : "Locked.";
-            UIKit.Label(text, entry.unlocked ? location.description : requirement, 11,
-                color: entry.unlocked ? UIKit.MutedTextColor : UIKit.AccentColor);
-            if (entry.unlocked) UIKit.Button(row, "Set out", () => SetOut(location), 110f, 28f);
-            else
-            {
-                UIKit.Size(UIKit.Label(row, "LOCKED", UIKit.CaptionSize, TextAnchor.MiddleCenter, UIKit.DisabledTextColor), 110f, 28f);
-                row.gameObject.AddComponent<CanvasGroup>().alpha = 0.55f;
-            }
-            previous = location;
-        }
-    }
-
     const float LockIconSize = 24f;
     static Sprite lockSprite;
 
