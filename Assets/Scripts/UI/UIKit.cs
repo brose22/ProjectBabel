@@ -516,10 +516,7 @@ public static class UIKit
         var tipCanvas = tip.gameObject.AddComponent<Canvas>();
         tipCanvas.overrideSorting = true;
         tipCanvas.sortingOrder = short.MaxValue;
-        tip.anchorMin = tip.anchorMax = new Vector2(0.5f, 1f);
-        tip.pivot = new Vector2(0.5f, 0f);
         tip.sizeDelta = new Vector2(width, 0f);
-        tip.anchoredPosition = new Vector2(0f, Gap);
         Layout<VerticalLayoutGroup>(tip, Pad, 2, fitContent: true);
         Label(tip, title, 13).fontStyle = FontStyle.Bold;
         if (!string.IsNullOrEmpty(description)) Label(tip, description, 11, color: MutedTextColor);
@@ -534,10 +531,52 @@ public static class UIKit
         void AddHover(EventTriggerType type, Func<bool> show)
         {
             var entry = new EventTrigger.Entry { eventID = type };
-            entry.callback.AddListener(_ => tip.gameObject.SetActive(show()));
+            entry.callback.AddListener(_ =>
+            {
+                bool shown = show();
+                tip.gameObject.SetActive(shown);
+                if (shown) KeepOnScreen(tip);
+            });
             trigger.triggers.Add(entry);
         }
         return tip;
+    }
+
+    // Puts a hover tip above its target, or below it when there's no room above, then slides it
+    // sideways so all of it is inside the screen.
+    static void KeepOnScreen(RectTransform tip)
+    {
+        PlaceTip(tip, above: true);
+        var root = (RectTransform)tip.GetComponent<Canvas>().rootCanvas.transform;
+        Rect area = root.rect;
+        TipBounds(tip, root, out Vector2 min, out Vector2 max);
+        if (max.y > area.yMax - Gap)
+        {
+            PlaceTip(tip, above: false);
+            TipBounds(tip, root, out min, out max);
+        }
+        float shift = 0f;
+        if (min.x < area.xMin + Gap) shift = area.xMin + Gap - min.x;
+        else if (max.x > area.xMax - Gap) shift = area.xMax - Gap - max.x;
+        if (shift != 0f) tip.position += root.TransformVector(new Vector3(shift, 0f, 0f));
+    }
+
+    static void PlaceTip(RectTransform tip, bool above)
+    {
+        tip.anchorMin = tip.anchorMax = new Vector2(0.5f, above ? 1f : 0f);
+        tip.pivot = new Vector2(0.5f, above ? 0f : 1f);
+        tip.anchoredPosition = new Vector2(0f, above ? Gap : -Gap);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(tip);
+    }
+
+    static readonly Vector3[] Corners = new Vector3[4];
+
+    // The tip's corners in the root canvas's space.
+    static void TipBounds(RectTransform tip, RectTransform root, out Vector2 min, out Vector2 max)
+    {
+        tip.GetWorldCorners(Corners);
+        min = root.InverseTransformPoint(Corners[0]);
+        max = root.InverseTransformPoint(Corners[2]);
     }
 
     // Marks a button as the screen's main action: gold while it can be pressed.
