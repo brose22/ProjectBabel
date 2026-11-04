@@ -501,12 +501,29 @@ public class RunScreens : MonoBehaviour
         // Two drawers share the left edge. Only one is open at a time; each is built over the
         // last, so the later one's blocker covers the earlier.
         openDrawer = null;
+        drawerOpened.Clear();
         BuildDrawer(root, "Party",
             $"PARTY   <color={UIKit.Hex(UIKit.MutedTextColor)}>{run.ActivePartyCount}/{match.Data.maxPartySize}</color>",
             list =>
             {
+                var cards = new List<(Captain, GameObject)>();
                 foreach (Captain captain in run.Party)
-                    PartyCard(list.content, run, captain);
+                    cards.Add((captain, PartyCard(list.content, run, captain).gameObject));
+                Text empty = UIKit.Label(list.content, "Nothing matches these filters.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+                void Fill()
+                {
+                    bool any = false;
+                    foreach (var (captain, card) in cards)
+                    {
+                        bool shown = partyDrawerFilter.Matches(ListFilterBar.ValuesOf(captain));
+                        card.SetActive(shown);
+                        any |= shown;
+                    }
+                    empty.gameObject.SetActive(!any);
+                }
+                ListFilterBar.Captains(list.transform.parent, partyDrawerFilter, Fill).SetSiblingIndex(list.transform.GetSiblingIndex());
+                drawerOpened["Party"] = () => { partyDrawerFilter.Reset(); Fill(); };
+                Fill();
             });
         BuildDrawer(root, "Inventory", "INVENTORY",
             list =>
@@ -533,6 +550,7 @@ public class RunScreens : MonoBehaviour
         ProfileSave.Save(run.Profile);
         if (run.Soldiers.Items.Count == 0) { match.ReturnToCastle(); return; }
         abandonPicking = true;
+        abandonFilter.Reset();
         shownFor = (MatchState)(-1);
     }
 
@@ -550,33 +568,42 @@ public class RunScreens : MonoBehaviour
             12, color: UIKit.MutedTextColor);
         UIKit.Size(note, flexibleWidth: 1f);
 
-        ScrollRect list = UIKit.ScrollList(panel, "Soldiers", UIKit.Gap);
-        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
-        var soldiers = new List<SoldierItem>(run.Soldiers.Items);
-        soldiers.Sort((a, b) => b.rarity != a.rarity ? a.rarity.CompareTo(b.rarity) : a.soldierClass.CompareTo(b.soldierClass));
+        ScrollRect list = null;
         Button first = null;
-        foreach (SoldierItem soldier in soldiers)
+        void Fill()
         {
-            RectTransform row = UIKit.Box(list.content, soldier.id, CardColor, blocksClicks: false);
-            UIKit.Size(row, flexibleWidth: 1f);
-            UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
-            SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
-            UIKit.Icon(row, soldierClass != null ? soldierClass.portrait : null, 32f);
-
-            RectTransform text = UIKit.Group(row, "Text");
-            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
-            UIKit.Size(text, flexibleWidth: 1f);
-            UIKit.Label(text, $"{CaptainPanelParts.SoldierName(soldier, soldierClass)}  {CaptainPanelParts.SoldierBonus(soldier, soldierClass)}", 13);
-            UIKit.Label(text, WhereIs(run, soldier), 11, color: UIKit.MutedTextColor);
-            string chosen = soldier.id;
-            Button lose = UIKit.Button(row, "Lose", () =>
+            UIKit.Clear(list.content);
+            first = null;
+            var soldiers = abandonFilter.Apply(run.Soldiers.Items, s => SoldierValues(run, s));
+            soldiers.Sort((a, b) => b.rarity != a.rarity ? a.rarity.CompareTo(b.rarity) : a.soldierClass.CompareTo(b.soldierClass));
+            foreach (SoldierItem soldier in soldiers)
             {
-                run.Profile.LoseSoldier(chosen);
-                abandonPicking = false;
-                match.ReturnToCastle();
-            }, 70f, 24f);
-            first ??= lose;
+                RectTransform row = UIKit.Box(list.content, soldier.id, CardColor, blocksClicks: false);
+                UIKit.Size(row, flexibleWidth: 1f);
+                UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
+                SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
+                UIKit.Icon(row, soldierClass != null ? soldierClass.portrait : null, 32f);
+    
+                RectTransform text = UIKit.Group(row, "Text");
+                UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
+                UIKit.Size(text, flexibleWidth: 1f);
+                UIKit.Label(text, $"{CaptainPanelParts.SoldierName(soldier, soldierClass)}  {CaptainPanelParts.SoldierBonus(soldier, soldierClass)}", 13);
+                UIKit.Label(text, WhereIs(run, soldier), 11, color: UIKit.MutedTextColor);
+                string chosen = soldier.id;
+                Button lose = UIKit.Button(row, "Lose", () =>
+                {
+                    run.Profile.LoseSoldier(chosen);
+                    abandonPicking = false;
+                    match.ReturnToCastle();
+                }, 70f, 24f);
+                first ??= lose;
+            }
+            if (soldiers.Count == 0) ListFilterBar.Empty(list.content, run.Soldiers.Items.Count == 0, "You have no soldiers.");
         }
+        ListFilterBar.Soldiers(panel, abandonFilter, Fill);
+        list = UIKit.ScrollList(panel, "Soldiers", UIKit.Gap);
+        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
+        Fill();
         // The gamepad starts on the first soldier's button, the commonest one.
         focus.Default = () => first;
     }
@@ -594,7 +621,23 @@ public class RunScreens : MonoBehaviour
     bool shopOpen;
 
     // Opens or closes the shop over the map by rebuilding the map screen.
-    void ToggleDrawer(string id) => openDrawer = openDrawer == id ? null : id;
+    void ToggleDrawer(string id)
+    {
+        openDrawer = openDrawer == id ? null : id;
+        // Opening a drawer shows its whole list again.
+        if (openDrawer != null && drawerOpened.TryGetValue(id, out Action opened)) opened();
+    }
+
+    // What each drawer does as it opens, by id.
+    readonly Dictionary<string, Action> drawerOpened = new();
+
+    // What the Party drawer, the soldier picker and the abandon picker show. Each resets as it opens.
+    readonly ListFilter partyDrawerFilter = ListFilterBar.ForCaptains();
+    readonly ListFilter soldierPickerFilter = ListFilterBar.ForSoldiers();
+    readonly ListFilter abandonFilter = ListFilterBar.ForSoldiers();
+
+    static int[] SoldierValues(RunState run, SoldierItem soldier) =>
+        ListFilterBar.ValuesOf(soldier, soldier.IsEquipped ? run.Profile.Find(soldier.equippedTo) : null);
 
     void SetShopOpen(bool open)
     {
@@ -668,13 +711,14 @@ public class RunScreens : MonoBehaviour
     }
 
     // A captain in the party drawer: the usual details, tagged with their level.
-    void PartyCard(Transform list, RunState run, Captain captain)
+    RectTransform PartyCard(Transform list, RunState run, Captain captain)
     {
         RectTransform card = UIKit.Box(list, captain.displayName, CardColor, blocksClicks: false);
         UIKit.Size(card, flexibleWidth: 1f);
         UIKit.Clickable(card, () => ShowCaptainDetails(run, captain));
         int level = Mathf.Max(captain.level, LevelMath.LevelForXp(run.XpOf(captain)));
         PartyCardBody(card, captain, $"LV {level}", UIKit.AccentColor, out _, out _, live: true);
+        return card;
     }
 
     // The party card's face, shared with run setup: portrait on the left; name and tag, element
@@ -1044,31 +1088,38 @@ public class RunScreens : MonoBehaviour
             onChanged?.Invoke();
         }
 
-        ScrollRect list = UIKit.ScrollList(window, "Soldiers", UIKit.Gap);
-        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
-        var soldiers = new List<SoldierItem>(run.Soldiers.Items);
-        soldiers.Sort((a, b) => a.IsEquipped != b.IsEquipped ? a.IsEquipped.CompareTo(b.IsEquipped)
-            : b.rarity != a.rarity ? b.rarity.CompareTo(a.rarity) : a.soldierClass.CompareTo(b.soldierClass));
-        foreach (SoldierItem soldier in soldiers)
-        {
-            bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
-            RectTransform row = UIKit.Box(list.content, soldier.id, CardColor, blocksClicks: false);
-            UIKit.Size(row, flexibleWidth: 1f);
-            UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
-            SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
-            UIKit.Icon(row, soldierClass != null ? soldierClass.portrait : null, 32f);
-
-            RectTransform text = UIKit.Group(row, "Text");
-            UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
-            UIKit.Size(text, flexibleWidth: 1f);
-            UIKit.Label(text, SoldierSummary(captain, soldier), 13);
-            UIKit.Label(text, here ? "In this slot" : WhereIs(run, soldier), 11, color: UIKit.MutedTextColor);
-            SoldierItem chosen = soldier;
-            if (here) UIKit.Button(row, "Remove", () => Change(() => run.Soldiers.Unequip(chosen.id)), 70f, 24f);
-            else UIKit.Button(row, "Equip", () => Change(() => run.Soldiers.Equip(chosen.id, captain.id, slot)), 70f, 24f);
+        soldierPickerFilter.Reset();
+        ScrollRect list = null;
+        void Fill()
+            {
+            UIKit.Clear(list.content);
+            var soldiers = soldierPickerFilter.Apply(run.Soldiers.Items, s => SoldierValues(run, s));
+            soldiers.Sort((a, b) => a.IsEquipped != b.IsEquipped ? a.IsEquipped.CompareTo(b.IsEquipped)
+                : b.rarity != a.rarity ? b.rarity.CompareTo(a.rarity) : a.soldierClass.CompareTo(b.soldierClass));
+            foreach (SoldierItem soldier in soldiers)
+            {
+                bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
+                RectTransform row = UIKit.Box(list.content, soldier.id, CardColor, blocksClicks: false);
+                UIKit.Size(row, flexibleWidth: 1f);
+                UIKit.Layout<HorizontalLayoutGroup>(row, 6, 8).childAlignment = TextAnchor.MiddleLeft;
+                SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
+                UIKit.Icon(row, soldierClass != null ? soldierClass.portrait : null, 32f);
+    
+                RectTransform text = UIKit.Group(row, "Text");
+                UIKit.Layout<VerticalLayoutGroup>(text, 0, 1);
+                UIKit.Size(text, flexibleWidth: 1f);
+                UIKit.Label(text, SoldierSummary(captain, soldier), 13);
+                UIKit.Label(text, here ? "In this slot" : WhereIs(run, soldier), 11, color: UIKit.MutedTextColor);
+                SoldierItem chosen = soldier;
+                if (here) UIKit.Button(row, "Remove", () => Change(() => run.Soldiers.Unequip(chosen.id)), 70f, 24f);
+                else UIKit.Button(row, "Equip", () => Change(() => run.Soldiers.Equip(chosen.id, captain.id, slot)), 70f, 24f);
+            }
+            if (soldiers.Count == 0) ListFilterBar.Empty(list.content, run.Soldiers.Items.Count == 0, "You have no soldiers yet.");
         }
-        if (soldiers.Count == 0)
-            UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        ListFilterBar.Soldiers(window, soldierPickerFilter, Fill);
+        list = UIKit.ScrollList(window, "Soldiers", UIKit.Gap);
+        UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
+        Fill();
 
         Button close = UIKit.Button(window, "Close", () => Destroy(backdrop));
         UIKit.Size(close, height: 26f, flexibleWidth: 1f);

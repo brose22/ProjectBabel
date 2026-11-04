@@ -48,28 +48,17 @@ public partial class CastleScreen
         UIKit.Size(panel, height: InventoryBodyHeight, flexibleWidth: 1f);
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
         Header(panel, "CAPTAINS", $"{profile.Roster.Count}/{Profile.MaxRoster}");
-        ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
-        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        hallCards.Clear();
-        hallCardButtons.Clear();
-        for (int i = 0; i < profile.Roster.Count; i += PartyColumns)
+        ScrollRect list = null;
+        void Fill()
         {
-            RectTransform row = UIKit.Group(list.content, "Row");
-            UIKit.Layout<HorizontalLayoutGroup>(row, 0, UIKit.Gap);
-            UIKit.Size(row, flexibleWidth: 1f);
-            for (int j = i; j < i + PartyColumns; j++)
-            {
-                // A blank cell keeps a short last row's cards at the same width as the rest.
-                if (j >= profile.Roster.Count)
-                {
-                    UIKit.Size(UIKit.Group(row, "Blank"), 0f, flexibleWidth: 1f);
-                    continue;
-                }
-                HallCard(row, profile.Roster[j]);
-            }
+            hallCards.Clear();
+            hallCardButtons.Clear();
+            CaptainGrid(list, hallFilter, HallCard);
         }
-        if (profile.Roster.Count == 0)
-            UIKit.Label(list.content, "No captains in the roster.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        ListFilterBar.Captains(panel, hallFilter, Fill);
+        list = UIKit.ScrollList(panel, "List", UIKit.Gap);
+        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        Fill();
         UIKit.Label(panel, "Pick a captain to see them in full and change their soldiers.", 11, TextAnchor.MiddleCenter,
             UIKit.MutedTextColor);
     }
@@ -311,23 +300,32 @@ public partial class CastleScreen
             CloseHallPicker();
         }
 
-        ScrollRect list = UIKit.ScrollList(hallPicker, "Soldiers", UIKit.Gap);
-        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        hallPickerFilter.Reset();
+        ScrollRect list = null;
         Button first = null;
-        foreach (SoldierItem soldier in SortedSoldiers())
+        void Fill()
         {
-            SoldierItem chosen = soldier;
-            bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
-            RectTransform row = SoldierRow(list.content, soldier, here ? "In this slot. Select to remove." : WhereIs(soldier));
-            Button action = UIKit.Clickable(row, here ? () => Change(() => profile.Soldiers.Unequip(chosen.id))
-                : () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
-            // Who has the soldier now, at the row's right end; not on the row that removes it.
-            Captain owner = here || !soldier.IsEquipped ? null : profile.Find(soldier.equippedTo);
-            if (owner != null) HallOwnerPortrait(row, owner);
-            first ??= action;
+            UIKit.Clear(list.content);
+            first = null;
+            List<SoldierItem> shown = FilteredSoldiers(hallPickerFilter);
+            foreach (SoldierItem soldier in shown)
+            {
+                SoldierItem chosen = soldier;
+                bool here = soldier.equippedTo == captain.id && soldier.slot == slot;
+                RectTransform row = SoldierRow(list.content, soldier, here ? "In this slot. Select to remove." : WhereIs(soldier));
+                Button action = UIKit.Clickable(row, here ? () => Change(() => profile.Soldiers.Unequip(chosen.id))
+                    : () => Change(() => profile.Soldiers.Equip(chosen.id, captain.id, slot)));
+                // Who has the soldier now, at the row's right end; not on the row that removes it.
+                Captain owner = here || !soldier.IsEquipped ? null : profile.Find(soldier.equippedTo);
+                if (owner != null) HallOwnerPortrait(row, owner);
+                first ??= action;
+            }
+            if (shown.Count == 0) ListFilterBar.Empty(list.content, profile.Soldiers.Items.Count == 0, "You have no soldiers yet.");
         }
-        if (profile.Soldiers.Items.Count == 0)
-            UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        ListFilterBar.Soldiers(hallPicker, hallPickerFilter, Fill);
+        list = UIKit.ScrollList(hallPicker, "Soldiers", UIKit.Gap);
+        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        Fill();
 
         Button back = UIKit.Button(hallPicker, "Back", CloseHallPicker, height: 26f);
         UIKit.Size(back, height: 26f, flexibleWidth: 1f);

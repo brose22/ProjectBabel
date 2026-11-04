@@ -32,13 +32,15 @@ public partial class CastleScreen
         ("Training Yard", "training_yard", new(0.895f, 0.73f), "Recruit new soldiers.", () => OpenShop(ShopTab.Soldiers)),
         ("Storehouse", "storehouse", new(0.2f, 0.3f), "The items packed for your next run.", BuildStorehouse),
         ("Market", "market", new(0.8f, 0.3f), "Buy gifts for your next run.", () => OpenShop(ShopTab.Gifts)),
-        ("Gate", "gate", new(0.5f, 0.17f), "Choose a party and set out.", BuildParty),
+        ("Gate", "gate", new(0.5f, 0.17f), "Choose a party and set out.", OpenParty),
     };
 
     void OpenRoster(Tab chosen)
     {
         tab = chosen;
         hallCaptain = null;
+        barracksFilter.Reset();
+        hallFilter.Reset();
         BuildInventory();
     }
 

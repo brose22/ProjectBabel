@@ -157,19 +157,36 @@ public partial class CastleScreen : MonoBehaviour
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
         int free = profile.Soldiers.Unequipped.Count;
         Header(panel, $"SOLDIERS", $"{profile.Soldiers.Items.Count} owned, {free} in the inventory");
-        ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
-        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        foreach (SoldierItem soldier in SortedSoldiers())
+        ScrollRect list = null;
+        void Fill()
         {
-            SoldierItem chosen = soldier;
-            RectTransform row = SoldierRow(list.content, soldier, WhereIs(soldier));
-            Button pick = null;
-            pick = UIKit.Clickable(row, () => OpenSoldierInfo(pick, chosen));
+            UIKit.Clear(list.content);
+            List<SoldierItem> shown = FilteredSoldiers(barracksFilter);
+            foreach (SoldierItem soldier in shown)
+            {
+                SoldierItem chosen = soldier;
+                RectTransform row = SoldierRow(list.content, soldier, WhereIs(soldier));
+                Button pick = null;
+                pick = UIKit.Clickable(row, () => OpenSoldierInfo(pick, chosen));
+            }
+            if (shown.Count == 0) ListFilterBar.Empty(list.content, profile.Soldiers.Items.Count == 0, "You have no soldiers yet.");
         }
-        if (profile.Soldiers.Items.Count == 0)
-            UIKit.Label(list.content, "You have no soldiers yet.", 13, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        ListFilterBar.Soldiers(panel, barracksFilter, Fill);
+        list = UIKit.ScrollList(panel, "List", UIKit.Gap);
+        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        Fill();
         UIKit.Label(panel, "Equip soldiers from a captain in the Great Hall.", 11, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
     }
+
+    // What the Barracks, the Great Hall, its soldier list and the party pick show. Each resets when
+    // its screen or list opens.
+    readonly ListFilter barracksFilter = ListFilterBar.ForSoldiers();
+    readonly ListFilter hallFilter = ListFilterBar.ForCaptains();
+    readonly ListFilter hallPickerFilter = ListFilterBar.ForSoldiers();
+    readonly ListFilter partyFilter = ListFilterBar.ForCaptains();
+
+    List<SoldierItem> FilteredSoldiers(ListFilter filter) =>
+        filter.Apply(SortedSoldiers(), s => ListFilterBar.ValuesOf(s, s.IsEquipped ? profile.Find(s.equippedTo) : null));
 
     List<SoldierItem> SortedSoldiers()
     {
@@ -244,25 +261,19 @@ public partial class CastleScreen : MonoBehaviour
         RectTransform panel = UIKit.Box(column, "Roster");
         UIKit.Size(panel, InventoryWidth, InventoryBodyHeight);
         UIKit.Layout<VerticalLayoutGroup>(panel, UIKit.Pad, 6);
-        ScrollRect list = UIKit.ScrollList(panel, "List", UIKit.Gap);
-        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
-        for (int i = 0; i < profile.Roster.Count; i += PartyColumns)
+        // The cards' refreshers live apart from the screen's, so refilling the list drops the old ones.
+        var cardRefreshers = new List<Action>();
+        refreshers.Add(() => UIKit.Refresh(cardRefreshers));
+        ScrollRect list = null;
+        void Fill()
         {
-            RectTransform row = UIKit.Group(list.content, "Row");
-            UIKit.Layout<HorizontalLayoutGroup>(row, 0, UIKit.Gap);
-            UIKit.Size(row, flexibleWidth: 1f);
-            for (int j = i; j < i + PartyColumns; j++)
-            {
-                // A blank cell keeps a short last row's cards at the same width as the rest.
-                if (j >= profile.Roster.Count)
-                {
-                    UIKit.Size(UIKit.Group(row, "Blank"), 0f, flexibleWidth: 1f);
-                    continue;
-                }
-                Captain captain = profile.Roster[j];
-                PartyCard(row, captain);
-            }
+            cardRefreshers.Clear();
+            CaptainGrid(list, partyFilter, (row, captain) => PartyCard(cardRefreshers, row, captain));
         }
+        ListFilterBar.Captains(panel, partyFilter, Fill);
+        list = UIKit.ScrollList(panel, "List", UIKit.Gap);
+        UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
+        Fill();
 
         // Disabled until someone is picked, with the reason beside it (a blank the same width on the
         // other side keeps the button centred).
@@ -275,7 +286,39 @@ public partial class CastleScreen : MonoBehaviour
     }
 
     // Picked cards get a gold ring, name and tag; the rest fade once the party is full.
-    void PartyCard(Transform row, Captain captain)
+    // The roster's captains that pass filter, PartyColumns cards to a row; card adds one to the row
+    // it is given.
+    void CaptainGrid(ScrollRect list, ListFilter filter, Action<Transform, Captain> card)
+    {
+        UIKit.Clear(list.content);
+        List<Captain> shown = filter.Apply(profile.Roster, ListFilterBar.ValuesOf);
+        for (int i = 0; i < shown.Count; i += PartyColumns)
+        {
+            RectTransform row = UIKit.Group(list.content, "Row");
+            UIKit.Layout<HorizontalLayoutGroup>(row, 0, UIKit.Gap);
+            UIKit.Size(row, flexibleWidth: 1f);
+            for (int j = i; j < i + PartyColumns; j++)
+            {
+                // A blank cell keeps a short last row's cards at the same width as the rest.
+                if (j >= shown.Count)
+                {
+                    UIKit.Size(UIKit.Group(row, "Blank"), 0f, flexibleWidth: 1f);
+                    continue;
+                }
+                card(row, shown[j]);
+            }
+        }
+        if (shown.Count == 0) ListFilterBar.Empty(list.content, profile.Roster.Count == 0, "No captains in the roster.");
+    }
+
+    // The Gate: a fresh party pick shows every captain.
+    void OpenParty()
+    {
+        partyFilter.Reset();
+        BuildParty();
+    }
+
+    void PartyCard(List<Action> cardRefreshers, Transform row, Captain captain)
     {
         RectTransform card = CaptainCard(row, captain, "", () =>
         {
@@ -287,7 +330,7 @@ public partial class CastleScreen : MonoBehaviour
         Image ring = UIKit.Outline(card, UIKit.AccentColor);
         ring.rectTransform.offsetMin = new Vector2(2f, 2f);
         ring.rectTransform.offsetMax = new Vector2(-2f, -2f);
-        refreshers.Add(() =>
+        cardRefreshers.Add(() =>
         {
             bool picked = party.Contains(captain);
             image.color = picked ? PickedCardColor : CardColor;
