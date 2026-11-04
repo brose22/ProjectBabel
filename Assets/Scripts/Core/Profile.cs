@@ -118,6 +118,18 @@ public class Profile
         return lost;
     }
 
+    // Abandoning a run: a quarter of the Gold goes; the captains stay. Returns the Gold taken. The
+    // soldier abandoning also costs is picked by the player and taken with LoseSoldier.
+    public int AbandonRun()
+    {
+        int goldLost = RunEndRules.AbandonGoldLost(Gold);
+        Gold -= goldLost;
+        return goldLost;
+    }
+
+    // Takes one soldier for good, unequipped first. Returns whether it was owned.
+    public bool LoseSoldier(string soldierId) => Soldiers.Remove(soldierId);
+
     // The captain's soldiers in slot order.
     public List<SoldierItem> SoldiersOf(Captain captain) =>
         captain != null ? Soldiers.EquippedTo(captain.id) : new List<SoldierItem>();

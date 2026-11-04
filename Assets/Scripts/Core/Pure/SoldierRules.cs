@@ -142,6 +142,16 @@ public class SoldierInventory
     public int RemoveEquippedTo(string captainId) =>
         string.IsNullOrEmpty(captainId) ? 0 : items.RemoveAll(i => i.IsEquipped && i.equippedTo == captainId);
 
+    // Takes one soldier out of the inventory for good, unequipping it first, as when abandoning a
+    // run. Returns whether it was there.
+    public bool Remove(string soldierId)
+    {
+        SoldierItem item = Find(soldierId);
+        if (item == null) return false;
+        Unequip(soldierId);
+        return items.Remove(item);
+    }
+
     // The lowest empty slot below openSlots, or -1 when they're all taken.
     public int FirstEmptySlot(string captainId, int openSlots)
     {
