@@ -543,9 +543,10 @@ public partial class CastleScreen : MonoBehaviour
     // rarity, so the line fits on one row of a card).
     string SoldiersLine(Captain captain)
     {
-        List<SoldierItem> soldiers = profile.SoldiersOf(captain);
+        // A captain on offer isn't owned yet; its soldiers were rolled with the offer.
+        List<SoldierItem> soldiers = profile.Owns(captain) ? profile.SoldiersOf(captain)
+            : startingSoldiers.TryGetValue(captain.id, out List<SoldierItem> offered) ? offered : new List<SoldierItem>();
         string muted = UIKit.Hex(UIKit.MutedTextColor);
-        if (!profile.Owns(captain)) return $"<color={muted}>Brings {StartingCaptains.SoldiersEach} random soldiers</color>";
         if (soldiers.Count == 0) return $"<color={muted}>No soldiers</color>";
         return $"<color={muted}>Soldiers</color> " +
                string.Join(", ", soldiers.ConvertAll(s =>

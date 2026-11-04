@@ -63,12 +63,15 @@ public class MainMenu : MonoBehaviour
         UIKit.Label(column, "A roguelite tower defense", 14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         UIKit.Size(UIKit.Group(column, "Gap"), height: 16f);
 
-        UIKit.Button(column, "Castle", () => { if (RunSave.Exists) BuildConfirmNewRun(); else GoToCastle(); }, 240f, 34f);
-        UIKit.LiveButton(column, () => "Resume run", ResumeRun, refreshers, () => RunSave.Exists, width: 240f, height: 34f);
+        // Resume lands on the world map when a run is in progress, otherwise at the Castle.
+        UIKit.Button(column, "Resume", Resume, 240f, 34f);
         UIKit.Button(column, "New game", () => { if (ProfileSave.Exists) BuildConfirmNewGame(); else NewGame(); }, 240f, 34f);
-        UIKit.Button(column, "AI Run", BuildAiRun, 240f, 34f);
         UIKit.Button(column, "Settings", BuildSettings, 240f, 34f);
         UIKit.Button(column, "Exit", Quit, 240f, 34f);
+
+        // AI Run: a small square button in the bottom left corner.
+        Button ai = UIKit.Button(screen, "AI", BuildAiRun, 48f, 48f);
+        UIKit.Place((RectTransform)ai.transform, Vector2.zero, new Vector2(24f, 24f), new Vector2(48f, 48f));
     }
 
     // ---------- AI Run ----------
@@ -188,6 +191,17 @@ public class MainMenu : MonoBehaviour
         ProfileSave.Delete();
         Profile.Clear();
         GoToCastle();
+    }
+
+    static void Resume()
+    {
+        if (!RunSave.Exists)
+        {
+            RunState.Clear();
+            CastleScreen.Open();
+            return;
+        }
+        ResumeRun();
     }
 
     static void ResumeRun()
