@@ -33,6 +33,8 @@ public class GridMap : MonoBehaviour
     // Gates added for routes beyond the first, copies of spawnMarker.
     readonly List<Transform> extraGateMarkers = new();
     readonly Dictionary<Vector2Int, Tower> occupants = new();
+    // The gates' and the castle's tiles: the routes' ends plus wherever the markers stand.
+    readonly HashSet<Vector2Int> gateAndCastleCells = new();
 
     // Decorative ground painted this many tiles beyond the playable map on every side, so the
     // camera can look past the edge. Nothing can be built or walked there.
@@ -82,6 +84,22 @@ public class GridMap : MonoBehaviour
                 pathTilemap.SetTile(new Vector3Int(cell.x, cell.y, 0), pathTile);
 
         PaintBorderTrees();
+        RefreshGateAndCastleCells();
+    }
+
+    void RefreshGateAndCastleCells()
+    {
+        gateAndCastleCells.Clear();
+        foreach ((int x, int y) in RouteMath.EndCells(plainRoutes))
+            gateAndCastleCells.Add(new Vector2Int(x, y));
+        AddMarkerCell(spawnMarker);
+        AddMarkerCell(baseMarker);
+        foreach (Transform gate in extraGateMarkers) AddMarkerCell(gate);
+    }
+
+    void AddMarkerCell(Transform marker)
+    {
+        if (marker != null) gateAndCastleCells.Add(WorldToCell(marker.position));
     }
 
     void PaintBorderTrees()
@@ -140,6 +158,7 @@ public class GridMap : MonoBehaviour
             }
         }
         if (baseMarker != null) baseMarker.position = CellCenter(routeCells[0][^1]);
+        RefreshGateAndCastleCells();
     }
 
     // The side of the map this spawn point's gate is on, such as "north", or empty with one gate.
@@ -178,12 +197,16 @@ public class GridMap : MonoBehaviour
     public bool InBounds(Vector2Int cell) => cell.x >= 0 && cell.y >= 0 && cell.x < size.x && cell.y < size.y;
 
     public bool IsBuildable(Vector2Int cell) =>
-        InBounds(cell) && !pathCells.Contains(cell) && !occupants.ContainsKey(cell) && !HasProp(cell);
+        InBounds(cell) && !pathCells.Contains(cell) && !occupants.ContainsKey(cell) && !HasProp(cell) && !IsGateOrCastle(cell);
+
+    // A gate's or the castle's tile, on every route of the map.
+    public bool IsGateOrCastle(Vector2Int cell) => gateAndCastleCells.Contains(cell);
 
     public bool IsRoad(Vector2Int cell) => pathCells.Contains(cell);
 
-    // Soldiers may wait on the road, unlike towers, but not on a tower or a prop.
-    public bool CanStandOn(Vector2Int cell) => InBounds(cell) && !occupants.ContainsKey(cell) && !HasProp(cell);
+    // Soldiers may wait on the road, unlike towers, but not on a tower, a prop, a gate or the castle.
+    public bool CanStandOn(Vector2Int cell) =>
+        InBounds(cell) && !occupants.ContainsKey(cell) && !HasProp(cell) && !IsGateOrCastle(cell);
 
     bool HasProp(Vector2Int cell) => propTilemap != null && propTilemap.HasTile(new Vector3Int(cell.x, cell.y, 0));
 
