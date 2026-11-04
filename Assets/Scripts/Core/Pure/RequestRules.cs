@@ -44,6 +44,9 @@ public struct RequestSnapshot
     public string Area;
     // The asker's own reserve, for LowerDraw.
     public int ReserveGold;
+    // The asker's rival in the party and what a Yes costs them in approval (0 when there is none).
+    public string RivalName;
+    public float RivalCost;
 }
 
 public readonly struct RequestEffect
@@ -123,6 +126,7 @@ public static class RequestEvaluator
                 break;
             }
         }
+        if (s.RivalCost > 0f) e.Cons.Add(new RequestEffect($"{s.RivalName}: -{s.RivalCost:0.#} approval", s.RivalCost));
         return e;
     }
 

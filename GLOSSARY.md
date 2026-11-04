@@ -79,3 +79,5 @@ _Avoid:_ Earth, Air.
 **Retreat** — The request kind a Cautious captain makes: fall back away from the gate, free, locking their place for the wave. May leave road uncovered.
 
 **Proven right (payback)** — When the player explicitly refuses a bad request and the wave then ends with no leaks and no fallen towers, the captain gives back the whole refusal penalty plus 1 approval ("admits you were right"). A dirty wave refunds nothing; a request that times out or expires never pays back.
+
+**Rival** — At most one pair of party captains chosen at the start of a run (weighted toward clashing personality traits). Granting a request from one costs the other 1 approval, shown as a con on the card; 2 when a Reinforce moves one rival in to cover the other, or when a MoreDraw is granted while the other's reserve is under half. Saved with the run; shown on both captains' info panels. Runs saved before rivals existed get a pair when the party is set.

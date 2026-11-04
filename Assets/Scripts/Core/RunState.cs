@@ -96,10 +96,40 @@ public class RunState
     // Matches finished this run; the next match is MatchesPlayed + 1.
     public int MatchesPlayed { get; private set; }
 
+    // The run's rival pair, by captain id, so it saves as plain data. Null when the party has none.
+    public string RivalA { get; private set; }
+    public string RivalB { get; private set; }
+
+    // The other half of the captain's rival pair, while both are still in the party.
+    public Captain RivalOf(Captain captain)
+    {
+        if (captain == null || RivalA == null) return null;
+        string other = captain.id == RivalA ? RivalB : captain.id == RivalB ? RivalA : null;
+        return other == null ? null : Party.Find(c => c.id == other);
+    }
+
+    // Restores a saved pair; ignored unless both are in the party.
+    public void SetRivals(string a, string b)
+    {
+        if (Party.Exists(c => c.id == a) && Party.Exists(c => c.id == b) && a != b) { RivalA = a; RivalB = b; }
+    }
+
+    void PickRivals()
+    {
+        RivalA = RivalB = null;
+        var traits = Party.ConvertAll(c => c.Trait);
+        var pair = RivalRules.PickPair(traits, new System.Random(UnityEngine.Random.Range(int.MinValue, int.MaxValue)));
+        if (pair == null) return;
+        RivalA = Party[pair.Value.Item1].id;
+        RivalB = Party[pair.Value.Item2].id;
+    }
+
     public void SetParty(IEnumerable<Captain> captains)
     {
         Party.Clear();
         Party.AddRange(captains);
+        // A new run, or a party changed so its pair is gone, gets a rival pair.
+        if (RivalOf(Party.Count > 0 ? Party.Find(c => c.id == RivalA) : null) == null) PickRivals();
     }
 
     // Captains who leave are taken out of the party, so every party member is active.

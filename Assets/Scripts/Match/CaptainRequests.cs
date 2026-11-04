@@ -405,6 +405,12 @@ public class CaptainRequests : MonoBehaviour
 
         Grant(request);
         relationships.Change(tower, RequestRules.ApprovalChange(RequestOutcome.Granted, ApprovalReward, 0f), "got their way");
+        (Captain rival, float rivalCost) = RivalCost(request);
+        if (rival == null) return;
+        Tower rivalTower = Tower.All.Find(t => t.Captain == rival);
+        string reason = $"resents {tower.Captain.displayName} getting their way";
+        if (rivalTower != null) relationships.Change(rivalTower, -rivalCost, reason);
+        else ApprovalStore.Change(rival, -rivalCost);
     }
 
     void MarkWaveDirty(Enemy _) => wavePoorlyDefended = true;
@@ -439,12 +445,24 @@ public class CaptainRequests : MonoBehaviour
         request.Area = match.Grid.Routes.Count > 1 ? $"road {route + 1}" : "the road";
     }
 
+    // The asker's rival and what a Yes costs them in approval, or null and 0 when the asker has none.
+    (Captain rival, float cost) RivalCost(Request request)
+    {
+        Captain rival = request.Tower != null ? RunState.Current.RivalOf(request.Tower.Captain) : null;
+        if (rival == null) return (null, 0f);
+        Tower rivalTower = Tower.All.Find(t => t.Captain == rival);
+        float reserve = rivalTower != null ? rivalTower.Reserve / (float)Mathf.Max(1, rivalTower.Captain.ResourceCapacity) : 1f;
+        bool fallenIsRival = request.Fallen != null && request.Fallen.Captain == rival;
+        return (rival, RivalRules.Cost(request.Kind, fallenIsRival, reserve));
+    }
+
     // The pros and cons of a Yes right now; Gold and the other captains' draws change while it is up.
     public RequestEvaluation Evaluate(Request request)
     {
         int drawing = 0;
         foreach (Tower tower in Tower.All)
             if (tower != request.Tower && tower.DrawRate == DrawRate.High) drawing++;
+        (Captain rival, float rivalCost) = RivalCost(request);
         return RequestEvaluator.Evaluate(new RequestSnapshot
         {
             Kind = request.Kind,
@@ -456,6 +474,8 @@ public class CaptainRequests : MonoBehaviour
             UncoveredRoadTiles = request.UncoveredTiles,
             Area = request.Area,
             ReserveGold = request.Tower != null ? request.Tower.Reserve : 0,
+            RivalName = rival?.displayName,
+            RivalCost = rivalCost,
         });
     }
 

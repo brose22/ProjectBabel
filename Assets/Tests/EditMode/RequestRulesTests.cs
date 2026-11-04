@@ -94,3 +94,41 @@ public class RequestPaybackTests
     [Test]
     public void DirtyWave_RefundsNothing() => Assert.That(RequestRules.Payback(3f, false), Is.EqualTo(0f));
 }
+
+public class RivalRulesTests
+{
+    [Test]
+    public void PickPair_NeedsTwoCaptains()
+    {
+        Assert.That(RivalRules.PickPair(new[] { CaptainTrait.Greedy }, new System.Random(1)), Is.Null);
+        var pair = RivalRules.PickPair(new[] { CaptainTrait.Greedy, CaptainTrait.Cautious }, new System.Random(1));
+        Assert.That(pair, Is.EqualTo((0, 1)));
+    }
+
+    [Test]
+    public void PickPair_FavoursClashingTraits()
+    {
+        var traits = new[] { CaptainTrait.Steady, CaptainTrait.Steady, CaptainTrait.Greedy, CaptainTrait.Cautious };
+        int clashing = 0;
+        for (int i = 0; i < 400; i++)
+            if (RivalRules.PickPair(traits, new System.Random(i)) == (2, 3)) clashing++;
+        // Weight 6 of 1+2+2+2+2+6 = 15: about 40% of picks.
+        Assert.That(clashing, Is.InRange(100, 220));
+    }
+
+    [Test]
+    public void Cost_RisesWhenRequestBringsTheTwoTogether()
+    {
+        Assert.That(RivalRules.Cost(RequestKind.UseSpecial, false, 1f), Is.EqualTo(1f));
+        Assert.That(RivalRules.Cost(RequestKind.Reinforce, true, 1f), Is.EqualTo(2f));
+        Assert.That(RivalRules.Cost(RequestKind.MoreDraw, false, 0.2f), Is.EqualTo(2f));
+        Assert.That(RivalRules.Cost(RequestKind.MoreDraw, false, 0.9f), Is.EqualTo(1f));
+    }
+
+    [Test]
+    public void Evaluate_ListsRivalCostAsACon()
+    {
+        var s = new RequestSnapshot { Kind = RequestKind.UseSpecial, ApprovalYes = 2f, Gold = 300, SpawnsToElite = -1, RivalName = "Ser Aldric", RivalCost = 1f };
+        Assert.That(RequestEvaluator.Evaluate(s).Cons.Exists(c => c.Text == "Ser Aldric: -1 approval"), Is.True);
+    }
+}
