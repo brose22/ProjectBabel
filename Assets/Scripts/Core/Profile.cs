@@ -102,14 +102,14 @@ public class Profile
         return joined;
     }
 
-    // A lost run: a share of the Gold goes, and so does every party captain still in the roster,
-    // with the soldiers equipped to them. Returns the captains lost.
-    public List<Captain> LoseRun(IEnumerable<Captain> party, out int goldLost, out int soldiersLost)
+    // A lost run: a share of the Gold goes, and so does every captain deployed in the losing match
+    // who is still in the roster, with the soldiers equipped to them. Returns the captains lost.
+    public List<Captain> LoseRun(IEnumerable<Captain> deployed, out int goldLost, out int soldiersLost)
     {
         goldLost = RunEndRules.GoldLost(Gold);
         Gold -= goldLost;
         soldiersLost = 0;
-        List<Captain> lost = RunEndRules.CaptainsLost(party, Roster);
+        List<Captain> lost = RunEndRules.CaptainsLost(deployed, Roster);
         foreach (Captain captain in lost)
         {
             Roster.Remove(captain);

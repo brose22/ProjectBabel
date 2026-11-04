@@ -1338,7 +1338,7 @@ public class RunScreens : MonoBehaviour
         {
             UIKit.Label(panel, $"-{match.GoldLost} Gold lost with the run", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
             if (match.CaptainsLost.Count > 0)
-                UIKit.Label(panel, $"Lost with the party: {string.Join(", ", match.CaptainsLost.Select(c => c.displayName))}" +
+                UIKit.Label(panel, $"Lost on the field: {string.Join(", ", match.CaptainsLost.Select(c => c.displayName))}" +
                                    $" and {match.SoldiersLost} soldier{(match.SoldiersLost == 1 ? "" : "s")}", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
         }
 

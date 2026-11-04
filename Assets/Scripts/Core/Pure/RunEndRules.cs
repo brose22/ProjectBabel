@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 
-// What a lost run costs the profile: a share of its Gold, and every party captain still in the
-// roster, with the soldiers equipped to them. A won run opens the next location (LocationRules).
+// What a lost run costs the profile: a share of its Gold, and every captain placed on the field in
+// the losing match who is still in the roster, with the soldiers equipped to them. Party captains
+// who were never deployed go home safely. A won run opens the next location (LocationRules).
 public static class RunEndRules
 {
     public const int LossGoldPercent = 20;
@@ -9,12 +10,12 @@ public static class RunEndRules
     // The Gold a lost run takes, rounded down.
     public static int GoldLost(int gold) => gold <= 0 ? 0 : gold * LossGoldPercent / 100;
 
-    // The party captains a lost run takes from the roster: those still in it, so walkouts aren't
-    // counted twice.
-    public static List<T> CaptainsLost<T>(IEnumerable<T> party, ICollection<T> roster)
+    // The captains a lost run takes from the roster: those deployed in the losing match who are
+    // still in it, so walkouts aren't counted twice.
+    public static List<T> CaptainsLost<T>(IEnumerable<T> deployed, ICollection<T> roster)
     {
         var lost = new List<T>();
-        foreach (T captain in party)
+        foreach (T captain in deployed)
             if (captain != null && roster.Contains(captain) && !lost.Contains(captain)) lost.Add(captain);
         return lost;
     }

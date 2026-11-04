@@ -46,10 +46,13 @@ public class MatchManager : MonoBehaviour
     // Gold the win paid into the pool: the flat bonus plus the towers' unspent reserves.
     public int WinGoldEarned { get; private set; }
     public int ReserveRefunded { get; private set; }
-    // What a lost run cost the profile: Gold, and the party captains with their soldiers.
+    // What a lost run cost the profile: Gold, and the deployed captains with their soldiers.
     public int GoldLost { get; private set; }
     public List<Captain> CaptainsLost { get; private set; } = new();
     public int SoldiersLost { get; private set; }
+    // Every captain placed on the field this match, even if later sold. A lost match takes these.
+    readonly List<Captain> deployed = new();
+    public IReadOnlyList<Captain> Deployed => deployed;
     // The location a won run opened, or null.
     public LocationData LocationUnlocked { get; private set; }
     // Gold the wave just cleared paid out.
@@ -291,6 +294,7 @@ public class MatchManager : MonoBehaviour
         Captain captain = NextCaptain;
         tower.Init(this, grid, captain, FieldedSoldiers(captain), cell);
         grid.SetOccupant(cell, tower);
+        if (!deployed.Contains(captain)) deployed.Add(captain);
         GameEvents.RaiseTowerPlaced(tower);
         return tower;
     }
@@ -899,11 +903,12 @@ public class MatchManager : MonoBehaviour
             LocationUnlocked = data.locations[profile.LocationsUnlocked - 1];
     }
 
-    // A lost run costs a share of the Gold and every party captain, with their soldiers.
+    // A lost run costs a share of the Gold and every captain deployed this match, with their
+    // soldiers. Undeployed party captains go home safely.
     void LoseRun()
     {
         RunState run = RunState.Current;
-        CaptainsLost = run.Profile.LoseRun(run.Party, out int goldLost, out int soldiersLost);
+        CaptainsLost = run.Profile.LoseRun(deployed, out int goldLost, out int soldiersLost);
         GoldLost = goldLost;
         SoldiersLost = soldiersLost;
     }
