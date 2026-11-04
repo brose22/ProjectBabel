@@ -41,6 +41,9 @@ public static class GameInput
     // Steps through the party with the shoulder buttons: -1, 1, or 0.
     public static int PartyStep => (Pressed(WorldPad?.rightShoulder) ? 1 : 0) - (Pressed(WorldPad?.leftShoulder) ? 1 : 0);
 
+    // The shoulder buttons in a menu, where the screen itself has focus: -1, 1, or 0.
+    public static int MenuShoulderStep => (Pressed(Pad?.rightShoulder) ? 1 : 0) - (Pressed(Pad?.leftShoulder) ? 1 : 0);
+
     // WASD, as a direction for the camera.
     public static Vector2 PanKeys
     {
