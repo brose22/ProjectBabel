@@ -34,7 +34,7 @@ public static class AiAbilityRules
     }
 
     // The AI says Yes only when the cons stay well under what a Yes gives: a bad request is always refused.
-    public const float ConTolerance = 0.75f;
+    public const float ConTolerance = 1f;
 
     public static int AnswerRequest(RequestEvaluation evaluation) =>
         !evaluation.IsBad && evaluation.ConWeight <= evaluation.ProWeight * ConTolerance ? AnswerYes : AnswerNo;

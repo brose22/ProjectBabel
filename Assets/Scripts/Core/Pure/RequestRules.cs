@@ -77,9 +77,9 @@ public static class RequestEvaluator
     public const float GoldComfortPerDrawer = 150f;
     public const float MaxConWeight = 4f;
     // Weight of each road tile a move leaves uncovered.
-    public const float UncoveredTileWeight = 0.5f;
+    public const float UncoveredTileWeight = 0.25f;
     // Reserve Gold that weighs one approval point when a captain pockets it.
-    public const float PocketGoldPerPoint = 10f;
+    public const float PocketGoldPerPoint = 20f;
     // Weight of a lock-in (the answer can't be undone until the wave ends).
     public const float LockWeight = 0.5f;
     // Firing at nothing worth it while an elite or the boss is still to come.
