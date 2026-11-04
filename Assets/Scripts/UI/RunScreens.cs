@@ -1407,7 +1407,7 @@ public class RunScreens : MonoBehaviour
             UIKit.LiveLabel(card, () => $"{gift.cost} Gold   (owned {run.GiftCount(gift)})", refreshers, 11, TextAnchor.MiddleCenter,
                 UIKit.MutedTextColor);
             UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 25f),
-                flexibleWidth: 1f);
+                height: 25f, flexibleWidth: 1f);
         }
         UIKit.CloseButton(panel, "Back", leave);
     }
