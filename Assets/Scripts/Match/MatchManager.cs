@@ -275,9 +275,14 @@ public class MatchManager : MonoBehaviour
     }
 
     // Captains can't stand on a soldier's tile. A moving captain's own soldiers will pick new
-    // tiles anyway, so theirs don't count.
-    public bool CanPlaceOn(Vector2Int cell) => CanPlaceTower && grid.IsBuildable(cell) && !Tower.IsSoldierHome(cell);
-    public bool CanMoveTo(Tower tower, Vector2Int cell) => grid.IsBuildable(cell) && !Tower.IsSoldierHome(cell, tower);
+    // tiles anyway, so theirs don't count. Nor may any of its soldiers end up waiting on a gate
+    // or the castle, which only happens when every tile around the captain is taken.
+    public bool CanPlaceOn(Vector2Int cell) => CanPlaceTower && grid.IsBuildable(cell) && !Tower.IsSoldierHome(cell)
+        && HomesClear(Tower.PickHomes(grid, cell, SlotClassesFor(NextCaptain)));
+    public bool CanMoveTo(Tower tower, Vector2Int cell) => grid.IsBuildable(cell) && !Tower.IsSoldierHome(cell, tower)
+        && HomesClear(Tower.PickHomes(grid, cell, tower.SlotClasses(), tower));
+
+    bool HomesClear(List<Vector2Int> homes) => homes.TrueForAll(home => !grid.IsGateOrCastle(home));
 
     public Tower PlaceTower(Vector2Int cell)
     {

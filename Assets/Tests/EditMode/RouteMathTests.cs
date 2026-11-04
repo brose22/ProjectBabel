@@ -95,4 +95,13 @@ public class RouteMathTests
     [Test]
     public void GateDirection_IsEmptyForALoneGate() =>
         Assert.That(RouteMath.GateDirection(new[] { (0, 5) }, 0), Is.Empty);
+
+    [Test]
+    public void EndCells_AreEveryGateAndTheSharedCastle()
+    {
+        var a = Line((0, 0), (1, 0), (5, 5), (7, 5));
+        var b = Line((0, 9), (5, 5), (7, 5));
+        var empty = Line();
+        Assert.That(RouteMath.EndCells(new[] { a, b, empty }), Is.EquivalentTo(new[] { (0, 0), (0, 9), (7, 5) }));
+    }
 }

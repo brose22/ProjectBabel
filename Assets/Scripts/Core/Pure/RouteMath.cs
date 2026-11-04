@@ -97,6 +97,20 @@ public static class RouteMath
     }
 
     // True when every route ends on the same cell, which is where the castle sits.
+    // Every route's first and last cell: its gate and the castle. Nothing is built there and no
+    // soldier waits there. Empty routes add nothing.
+    public static HashSet<(int x, int y)> EndCells(IReadOnlyList<IReadOnlyList<(int x, int y)>> routes)
+    {
+        var cells = new HashSet<(int x, int y)>();
+        foreach (IReadOnlyList<(int x, int y)> route in routes)
+        {
+            if (route.Count == 0) continue;
+            cells.Add(route[0]);
+            cells.Add(route[route.Count - 1]);
+        }
+        return cells;
+    }
+
     public static bool EndAtTheSameCell(IReadOnlyList<IReadOnlyList<(int x, int y)>> routes)
     {
         for (int i = 1; i < routes.Count; i++)
