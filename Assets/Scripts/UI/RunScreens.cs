@@ -92,8 +92,8 @@ public class RunScreens : MonoBehaviour
     {
         if (canvas == null) return;
         MatchState wanted = match.IsBetweenMatches || match.IsOver ? match.State : MatchState.Preparing;
-        // The map screen shows recruiting first while captains are on offer.
-        bool recruiting = wanted == MatchState.Map && RunState.Current.RecruitOffer.Count > 0;
+        // The map screen shows the soldier reward first while soldiers are on offer.
+        bool recruiting = wanted == MatchState.Map && RunState.Current.SoldierOffer.Count > 0;
         // An event's recruit for a full roster asks who to release before the stop is left.
         bool releasing = wanted == MatchState.Stop && match.PendingRecruit != null;
         if (wanted != shownFor || recruiting != shownRecruiting || releasing != shownReleasing)
@@ -105,7 +105,7 @@ public class RunScreens : MonoBehaviour
             if (screen != null) Destroy(screen.gameObject);
             screen = null;
             if (wanted == MatchState.Setup) BuildSetup();
-            else if (recruiting) BuildRecruit();
+            else if (recruiting) BuildSoldierReward();
             else if (wanted == MatchState.Map) BuildMap();
             else if (releasing) BuildReleaseChoice();
             else if (wanted == MatchState.Stop) BuildStop();
@@ -337,40 +337,74 @@ public class RunScreens : MonoBehaviour
         if (picked.Count < PartySize) picked.Add(captain);
     }
 
-    // ---------- Recruiting ----------
+    // ---------- Soldier reward ----------
 
-    void BuildRecruit()
+    // After a won city: pick one of the offered soldiers into the inventory, or skip.
+    void BuildSoldierReward()
     {
         RunState run = RunState.Current;
-        Captain chosen = null;
+        SoldierItem chosen = null;
 
-        RectTransform root = NewScreen("Recruit");
+        RectTransform root = NewScreen("Soldier Reward");
         RectTransform column = UIKit.Group(root, "Column");
         UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880f, 0f));
         VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(column, 0, 10, fitContent: true);
         layout.childAlignment = TextAnchor.UpperCenter;
 
-        UIKit.Label(column, "A CAPTAIN OFFERS TO JOIN", 24, TextAnchor.MiddleCenter);
-        UIKit.Label(column, $"Recruit one into your roster and party, or go on without.  Party {run.ActivePartyCount}/{match.Data.maxPartySize}",
-            14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+        UIKit.Label(column, "SOLDIERS OFFER TO JOIN", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, "Take one into your soldier inventory, or go on without.", 14, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
 
-        RectTransform row = UIKit.Group(column, "Captains");
+        RectTransform row = UIKit.Group(column, "Soldiers");
         var rowLayout = row.gameObject.AddComponent<GridLayoutGroup>();
-        rowLayout.cellSize = new Vector2(205f, CardHeight);
+        rowLayout.cellSize = new Vector2(205f, SoldierCardHeight);
         rowLayout.spacing = new Vector2(8f, 8f);
         rowLayout.constraint = GridLayoutGroup.Constraint.FixedRowCount;
         rowLayout.constraintCount = 1;
         rowLayout.childAlignment = TextAnchor.UpperCenter;
-        int count = run.RecruitOffer.Count;
-        UIKit.Size(row, count * 205f + (count - 1) * 8f, CardHeight);
-        foreach (Captain captain in run.RecruitOffer)
-            BuildCaptainCard(row, captain, () => chosen = captain, () => chosen == captain);
+        int count = run.SoldierOffer.Count;
+        UIKit.Size(row, count * 205f + (count - 1) * 8f, SoldierCardHeight);
+        foreach (SoldierItem soldier in run.SoldierOffer)
+            BuildSoldierCard(row, soldier, () => chosen = soldier, () => chosen == soldier);
 
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
-        UIKit.Primary(UIKit.LiveButton(buttons, () => chosen != null ? $"Recruit {chosen.displayName}" : "Pick a captain",
-            () => match.Recruit(chosen), refreshers, () => chosen != null, width: 200f, height: 32f), refreshers);
-        UIKit.Button(buttons, "No thanks", () => match.Recruit(null), 140f, 32f);
+        UIKit.Primary(UIKit.LiveButton(buttons, () => chosen != null ? $"Take the {chosen.rarity} {ClassName(chosen)}" : "Pick a soldier",
+            () => match.TakeSoldier(chosen), refreshers, () => chosen != null, width: 240f, height: 32f), refreshers);
+        UIKit.Button(buttons, "Skip", () => match.TakeSoldier(null), 140f, 32f);
+    }
+
+    const float SoldierCardHeight = 96f;
+
+    string ClassName(SoldierItem soldier)
+    {
+        SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
+        return soldierClass != null ? soldierClass.displayName : soldier.soldierClass.ToString();
+    }
+
+    // Like a captain card: picked cards keep their dark face and get a gold ring.
+    void BuildSoldierCard(Transform parent, SoldierItem soldier, Action onClick, Func<bool> selected)
+    {
+        Button card = UIKit.Button(parent, "", onClick);
+        UIKit.Clear(card.transform);
+        var image = card.GetComponent<Image>();
+        VerticalLayoutGroup layout = UIKit.Layout<VerticalLayoutGroup>(card, 8, 2);
+        layout.padding.top = 6;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        SoldierClassData soldierClass = match.Data.ClassData(soldier.soldierClass);
+        UIKit.Icon(card.transform, soldierClass != null ? soldierClass.portrait : null, 40f);
+        UIKit.Label(card.transform, CaptainPanelParts.SoldierName(soldier, soldierClass), 14, TextAnchor.MiddleCenter);
+        string detail = CaptainPanelParts.SoldierBonus(soldier, soldierClass) + (soldierClass != null ? $"  {soldierClass.damageType}" : "");
+        UIKit.Label(card.transform, detail, 11, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
+
+        Image ring = UIKit.Outline(card.transform, UIKit.AccentColor);
+        ring.rectTransform.offsetMin = new Vector2(2f, 2f);
+        ring.rectTransform.offsetMax = new Vector2(-2f, -2f);
+        refreshers.Add(() =>
+        {
+            bool isPicked = selected();
+            image.color = isPicked ? PickedCardColor : CardColor;
+            ring.enabled = isPicked;
+        });
     }
 
     // ---------- World map ----------

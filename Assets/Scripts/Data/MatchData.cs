@@ -77,8 +77,8 @@ public class MatchData : ScriptableObject
     public int partySize = 3;
     [Tooltip("Most captains in the party at once (GDD: 8 per run). Walked-out captains don't count.")]
     public int maxPartySize = 8;
-    [Tooltip("Captains offered to recruit after each won city.")]
-    public int recruitChoices = 3;
+    [Tooltip("Soldiers offered to pick one from after each won city.")]
+    [FormerlySerializedAs("recruitChoices")] public int rewardSoldierChoices = 3;
     [Tooltip("The captain templates captains are rolled from, one per role.")]
     [FormerlySerializedAs("roster")] public List<CaptainData> captainTemplates = new();
     [Tooltip("The soldier classes, one per SoldierClass, in display order. Soldier items find their art and combat stats here.")]
@@ -136,8 +136,8 @@ public class MatchData : ScriptableObject
     public int eliteLayerBonus = 2;
     [Tooltip("Elite cities multiply the Gold from kills by this.")]
     public float eliteGoldMultiplier = 2f;
-    [Tooltip("Extra captains offered to recruit after winning an elite city.")]
-    public int eliteExtraRecruitChoices = 1;
+    [Tooltip("After an elite city each offered soldier rolls rarity this many times and keeps the best (1 = Castle odds).")]
+    public int eliteRewardRarityRolls = 2;
     [Tooltip("The enemy base plays its waves this many times over (GDD: double the waves).")]
     public int baseWaveRepeats = 2;
     [Tooltip("The enemy base's very slow boss (GDD). It walks on with the first wave and the base falls only once it dies. Give it a huge leakDamage so reaching the end loses the run. Empty plays the base without a boss.")]

@@ -284,14 +284,11 @@ public class AiPlayer : MonoBehaviour
     void ThinkMap()
     {
         RunState run = RunState.Current;
-        if (run.RecruitOffer.Count > 0)
+        if (run.SoldierOffer.Count > 0)
         {
-            List<Captain> offer = run.RecruitOffer.ToList();
-            var party = run.Party.ConvertAll(Info);
-            int pick = AiPartyPicker.PickRecruit(offer.ConvertAll(Info), party);
-            Captain recruit = pick >= 0 ? offer[pick] : null;
-            Decide("Recruit", recruit != null ? $"took {recruit.displayName} to fill a gap in roles and elements" : "nobody on offer improved the party");
-            match.Recruit(recruit);
+            SoldierItem reward = run.SoldierOffer.OrderByDescending(s => s.rarity).First();
+            Decide("Soldier reward", $"took the {reward.rarity} {reward.soldierClass}, the rarest on offer");
+            match.TakeSoldier(reward);
             return;
         }
 

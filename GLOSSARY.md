@@ -54,6 +54,8 @@ _Avoid:_ Attacker, Buffer, Thief. A captain is a buffer only because its ability
 
 **Soldier Recruit tab**, **Captain Recruit tab** — The two Castle shop tabs that sell soldiers and captains. World-map shops don't have them.
 
+**Soldier reward** — After each won match that doesn't end the run, the player is offered 3 random soldiers and picks one into the soldier inventory, or skips. Rarity rolls with the Soldier Recruit tab's odds; after an elite match each soldier rolls rarity twice and keeps the better. Won matches no longer offer captains: during a run, captains join only through events. An open offer is saved with the run.
+
 ## Combat
 
 **Damage type** — Melee, Range or Magic. Melee beats Range, Range beats Magic, Magic beats Melee. A soldier attacks with its class's damage type; a captain's ability uses the captain's damage type; enemies have one too.

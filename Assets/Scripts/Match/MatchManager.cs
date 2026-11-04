@@ -111,7 +111,7 @@ public class MatchManager : MonoBehaviour
     void Awake()
     {
         // Pick up the saved profile and run if there are any, otherwise start fresh.
-        if (RunState.Current == null && !RunSave.TryResume(LoadProfile(), data.captainTemplates, data.shopGifts))
+        if (RunState.Current == null && !RunSave.TryResume(LoadProfile(), data.shopGifts))
             StartRun();
         // A run without a party starts at the setup screen, then the world map until a city is picked.
         // A run the Castle just set out on has its party but no map yet.
@@ -514,7 +514,7 @@ public class MatchManager : MonoBehaviour
     public List<Captain> RollCaptains(int count, int seed)
     {
         RunState run = RunState.Current;
-        return RollCaptains(data, run.Profile.Roster.Concat(run.Party).Concat(run.Departed).Concat(run.RecruitOffer), count, seed);
+        return RollCaptains(data, run.Profile.Roster.Concat(run.Party).Concat(run.Departed), count, seed);
     }
 
     // The same outside a match (the Castle), with the names of the given captains taken.
@@ -604,22 +604,20 @@ public class MatchManager : MonoBehaviour
         SceneManager.LoadScene(gameObject.scene.name);
     }
 
-    // Takes an offered captain into the roster and party (or none, for null) and saves the choice.
-    public void Recruit(Captain captain)
+    // Takes an offered soldier into the soldier inventory (or none, for null) and saves the choice.
+    public void TakeSoldier(SoldierItem soldier)
     {
-        RunState.Current.Recruit(captain);
-        if (captain != null && RunState.Current.Party.Contains(captain)) GiveStartingSoldiers(new[] { captain });
+        RunState.Current.TakeSoldier(soldier);
         RunSave.Save(RunState.Current);
     }
 
-    // A won city offers a few newly rolled captains to join, while there's room. Elite cities
-    // offer a wider choice.
-    void OfferRecruits()
+    // A won city offers a few newly rolled soldiers to pick one from. Elite cities roll rarity more
+    // than once and keep the best, for better odds.
+    void OfferSoldiers()
     {
-        RunState run = RunState.Current;
-        if (run.ActivePartyCount >= data.maxPartySize || run.Profile.RosterFull) return;
-        int choices = data.recruitChoices + (IsEliteMatch ? Mathf.Max(0, data.eliteExtraRecruitChoices) : 0);
-        run.OfferRecruits(RollCaptains(choices, Random.Range(int.MinValue, int.MaxValue)));
+        int rarityRolls = IsEliteMatch ? Mathf.Max(1, data.eliteRewardRarityRolls) : 1;
+        RunState.Current.OfferSoldiers(SoldierRules.RollOffer(Random.Range(int.MinValue, int.MaxValue),
+            Mathf.Max(0, data.rewardSoldierChoices), rarityRolls));
     }
 
     // Plays the picked city: reloads the scene, which lays out that city's map and waves.
@@ -869,7 +867,7 @@ public class MatchManager : MonoBehaviour
             foreach (Tower tower in Tower.All) ReserveRefunded += tower.ReturnReserve(data.reserveRefundFraction);
             RunState.Current.CompleteMatch(data.intelDepth);
         }
-        // Walkouts are judged on this, so recruits are offered after it.
+        // Walkouts are judged on this, so the soldier reward is offered after it.
         GameEvents.RaiseMatchEnded(won);
 
         // The city falls as soon as the match is won and is saved straight away, so the win counts
@@ -880,7 +878,7 @@ public class MatchManager : MonoBehaviour
             int before = RunState.Current.Health;
             RunState.Current.Heal(data.healthPerWin);
             HealthRestored = RunState.Current.Health - before;
-            OfferRecruits();
+            OfferSoldiers();
             RunSave.Save(RunState.Current);
         }
         else

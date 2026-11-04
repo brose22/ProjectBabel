@@ -5,7 +5,7 @@ using UnityEngine;
 
 // The run in progress, saved to a JSON file in persistentDataPath between matches so the player
 // can quit and pick it up again from the world map. The party refers to the profile's captains by
-// id; captains offered to join, who aren't in the roster yet, are saved whole. Saving the run saves
+// id; soldiers offered as a match reward, not owned yet, are saved whole. Saving the run saves
 // the profile too (ProfileSave), so the two files always agree. A match in progress isn't saved:
 // resuming returns to the map before it.
 public static class RunSave
@@ -45,7 +45,7 @@ public static class RunSave
         public int matchesPlayed;
         // Ids of roster captains; those who walked out have left the roster and aren't kept.
         public List<string> party = new();
-        public List<Captain> recruitOffer = new();
+        public List<SoldierItem> soldierOffer = new();
         public List<CaptainApproval> bestApproval = new();
         public List<CaptainRank> startRanks = new();
         public List<GiftStack> gifts = new();
@@ -78,7 +78,7 @@ public static class RunSave
             map = run.Map,
         };
         foreach (Captain captain in run.Party) file.party.Add(captain.id);
-        file.recruitOffer.AddRange(run.RecruitOffer);
+        file.soldierOffer.AddRange(run.SoldierOffer);
         foreach (KeyValuePair<Captain, float> entry in run.AllBestApprovals)
             file.bestApproval.Add(new CaptainApproval { captain = entry.Key.id, approval = entry.Value });
         foreach (KeyValuePair<Captain, int> entry in run.AllStartRanks)
@@ -98,7 +98,7 @@ public static class RunSave
     // Restores the saved run as RunState.Current on the given profile, finding the party in its
     // roster and reconnecting offered captains to their templates. Returns false, leaving no run,
     // if there is no save or it can't be used.
-    public static bool TryResume(Profile profile, IEnumerable<CaptainData> templates, IEnumerable<GiftData> gifts = null)
+    public static bool TryResume(Profile profile, IEnumerable<GiftData> gifts = null)
     {
         if (profile == null || !Exists) return false;
         SaveFile file;
@@ -116,21 +116,14 @@ public static class RunSave
         List<Captain> party = (file.party ?? new List<string>()).ConvertAll(profile.Find).FindAll(c => c != null);
         if (party.Count == 0) return false;
 
-        var templateByName = new Dictionary<string, CaptainData>();
-        foreach (CaptainData template in templates)
-            if (template != null) templateByName[template.name] = template;
-        var offer = new List<Captain>();
-        foreach (Captain captain in file.recruitOffer ?? new List<Captain>())
-        {
-            if (captain == null || string.IsNullOrEmpty(captain.id) || !templateByName.TryGetValue(captain.templateName ?? "", out CaptainData template)) continue;
-            captain.Bind(template);
-            offer.Add(captain);
-        }
+        var offer = new List<SoldierItem>();
+        foreach (SoldierItem soldier in file.soldierOffer ?? new List<SoldierItem>())
+            if (soldier != null && !string.IsNullOrEmpty(soldier.id) && profile.Soldiers.Find(soldier.id) == null) offer.Add(soldier);
 
         RunState run = RunState.Resume(profile, file.location, file.health, file.maxHealth, file.matchesPlayed);
         run.SetParty(party);
         run.SetMap(file.map);
-        run.OfferRecruits(offer);
+        run.OfferSoldiers(offer);
         foreach (CaptainApproval entry in file.bestApproval ?? new List<CaptainApproval>())
             if (profile.Find(entry.captain) is { } captain) run.SetBestApproval(captain, entry.approval);
         foreach (CaptainRank entry in file.startRanks ?? new List<CaptainRank>())
