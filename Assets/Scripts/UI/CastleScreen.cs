@@ -137,6 +137,7 @@ public partial class CastleScreen : MonoBehaviour
         if (selected == null && profile.Roster.Count > 0) selected = profile.Roster[0];
         if (hallCaptain != null && !profile.Owns(hallCaptain)) hallCaptain = null;
         RectTransform column = NewScreen("Inventory", InventoryWidth, BuildHome);
+        hallColumn = tab == Tab.Captains ? column : null;
         UIKit.Label(column, tab == Tab.Captains ? "GREAT HALL" : "BARRACKS", UIKit.TitleSize, TextAnchor.MiddleCenter);
 
         RectTransform body = UIKit.Group(column, "Body");
