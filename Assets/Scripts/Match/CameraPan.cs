@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.Rendering.Universal;
 
 // Lets the player look around the match: drag with the middle mouse button or use WASD or the
-// right stick to pan, the scroll wheel or left trigger and right stick to zoom. The view stays inside
+// right stick to pan, Ctrl and the scroll wheel or left trigger and right stick to zoom. The view stays inside
 // the padded map. Pixel-perfect rendering only allows whole-number zooms, so it is turned off while
 // the view is moved or zoomed and back on once the camera is home again. Does nothing while CameraFocus has the camera, and moves it through
 // CameraShake's rest position so a shake still plays.
@@ -79,7 +79,8 @@ public class CameraPan : MonoBehaviour
         Vector2 mouseNow = mouse != null ? mouse.position.ReadValue() : Vector2.zero;
         bool overUi = mouse != null && UIKit.IsPointerOverUI();
 
-        float scroll = mouse != null && !overUi ? mouse.scroll.ReadValue().y : 0f;
+        // The plain wheel cycles captains (PlacementController); Ctrl and the wheel zoom.
+        float scroll = mouse != null && !overUi ? GameInput.WheelZoom : 0f;
         bool dragging = mouse != null && mouse.middleButton.isPressed && !overUi;
         Vector2 drag = dragging && mouse.middleButton.wasPressedThisFrame == false ? mouseNow - lastMouse : Vector2.zero;
         lastMouse = mouseNow;

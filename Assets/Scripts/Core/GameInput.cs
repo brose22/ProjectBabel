@@ -38,8 +38,25 @@ public static class GameInput
     public static bool Resume => KeyDown(Key.Escape) || Pressed(Pad?.startButton) || Pressed(Pad?.buttonEast);
     public static bool UseSpecial => Pressed(WorldPad?.rightTrigger);
 
-    // Steps through the party with the shoulder buttons: -1, 1, or 0.
-    public static int PartyStep => (Pressed(WorldPad?.rightShoulder) ? 1 : 0) - (Pressed(WorldPad?.leftShoulder) ? 1 : 0);
+    // Steps the match's captain cycler with Q and E or the shoulder buttons: -1, 1, or 0.
+    public static int CaptainStep => (KeyDown(Key.E) || Pressed(WorldPad?.rightShoulder) ? 1 : 0)
+        - (KeyDown(Key.Q) || Pressed(WorldPad?.leftShoulder) ? 1 : 0);
+
+    // The wheel steps the captain cycler too (down is next), unless Ctrl is held: then it zooms.
+    public static int WheelCaptainStep
+    {
+        get
+        {
+            float wheel = WheelSteps;
+            return ZoomHeld || wheel == 0f ? 0 : wheel < 0f ? 1 : -1;
+        }
+    }
+
+    // Wheel units for the camera zoom: only with Ctrl held, since the plain wheel cycles captains.
+    public static float WheelZoom => ZoomHeld ? WheelSteps : 0f;
+
+    static float WheelSteps => Mouse.current != null ? Mouse.current.scroll.ReadValue().y : 0f;
+    static bool ZoomHeld => Keyboard.current != null && Keyboard.current.ctrlKey.isPressed;
 
     // The shoulder buttons in a menu, where the screen itself has focus: -1, 1, or 0.
     public static int MenuShoulderStep => (Pressed(Pad?.rightShoulder) ? 1 : 0) - (Pressed(Pad?.leftShoulder) ? 1 : 0);

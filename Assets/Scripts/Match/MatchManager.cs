@@ -101,6 +101,29 @@ public class MatchManager : MonoBehaviour
         if (index >= 0) nextCaptainIndex = index;
     }
 
+    // The party captain the player's cycler is on, placed or not; null with no party.
+    public Captain SelectedCaptain
+    {
+        get
+        {
+            List<Captain> party = RunState.Current.Party;
+            int index = CaptainCycle.Step(party, nextCaptainIndex, 0);
+            return index >= 0 ? party[index] : null;
+        }
+    }
+
+    // Moves the cycler step captains along the party, wrapping at the ends.
+    public void CycleCaptain(int step)
+    {
+        int index = CaptainCycle.Step(RunState.Current.Party, nextCaptainIndex, step);
+        if (index >= 0) nextCaptainIndex = index;
+    }
+
+    public static bool IsOnField(Captain captain) => captain != null && Tower.All.Exists(t => t.Captain == captain);
+
+    // Whether a click on a free tile would place the selected captain: they aren't placed yet.
+    public bool CanPlaceSelected => SelectedCaptain != null && !IsOnField(SelectedCaptain) && CanPlaceTower;
+
     public bool CanPlaceTower => !IsOver && Tower.All.Count < data.maxTowers && NextCaptain != null;
     // Captains can be rearranged for free until the first wave starts.
     bool MovesAreFree => State == MatchState.Preparing && WavesCleared == 0;

@@ -52,6 +52,7 @@ public class MatchHUD : MonoBehaviour
     Relationships relationships;
     CaptainWidget captainWidget;
     PartyBar partyBar;
+    CaptainCycler captainCycler;
     CaptainDebugPanel debugPanel;
     CaptainRequests requests;
     Canvas canvas;
@@ -116,10 +117,11 @@ public class MatchHUD : MonoBehaviour
         // After the toasts, so the stats list draws over them.
         BuildStatsPanel();
 
-        partyBar = new PartyBar(canvas.transform, match, placement);
+        partyBar = new PartyBar(canvas.transform, match);
         BuildControlsHint();
         captainWidget = new CaptainWidget(canvas, TopBarHeight + UIKit.Pad, match, placement);
         // The full captain panel is a testing tool, kept out of release builds.
+        captainCycler = new CaptainCycler(canvas, match, placement);
         if (Debug.isDebugBuild) debugPanel = new CaptainDebugPanel(canvas.transform, match, placement);
         // Last, so it draws over everything else on the canvas.
         BuildPauseMenu();
@@ -135,6 +137,7 @@ public class MatchHUD : MonoBehaviour
         UpdateWavePreview();
         UpdateControlsHint();
         partyBar.Update();
+        captainCycler.Update();
         captainWidget.Update();
         debugPanel?.Update();
         UpdateRequests();
@@ -176,10 +179,11 @@ public class MatchHUD : MonoBehaviour
         if (hintOpen)
         {
             if (placement.Selected != null) keys.Add(("M", "move")); else keys.Add(("Click", "place / select"));
+            keys.Add(("Wheel/Q/E", "captain"));
             if (placement.Selected != null) keys.Add(("X", "sell"));
             if (match.State == MatchState.Preparing) keys.Add(("Space", "start wave"));
             keys.Add(("F", "speed"));
-            keys.Add(("Wheel", "zoom"));
+            keys.Add(("Ctrl+Wheel", "zoom"));
             keys.Add(("Mid drag", "pan"));
             keys.Add(("Tab", "hide"));
         }
@@ -232,6 +236,7 @@ public class MatchHUD : MonoBehaviour
             Add("deselect", PadGlyph.East);
         }
         else Add("place / select", PadGlyph.South);
+        if (!placement.IsMoving && !placement.WidgetFocused) Add("captain", PadGlyph.LeftShoulder, PadGlyph.RightShoulder);
         Add("pan", PadGlyph.RightStick);
         Add("zoom", PadGlyph.LeftTrigger, PadGlyph.RightStick);
         Add("hide", PadGlyph.LeftStickPress);
