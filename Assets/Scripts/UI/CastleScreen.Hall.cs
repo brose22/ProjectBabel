@@ -238,14 +238,27 @@ public partial class CastleScreen
     }
 
     // The slot's name and its soldier, a button that opens the soldier list. A gold ring marks the
-    // slot while the list is open for it.
+    // slot while the list is open for it. A slot the bond hasn't opened is a padlock and the rank
+    // that opens it, with no button, so neither the mouse nor the gamepad can pick it. Open slots
+    // always come first, so hallSlots and hallSlotRings stay indexed by slot.
     void HallSlotRow(Transform window, Captain captain, int slot, int open)
     {
         RectTransform row = UIKit.Group(window, $"Slot {slot + 1}");
         UIKit.Layout<HorizontalLayoutGroup>(row, 0, 6);
         UIKit.Size(row, flexibleWidth: 1f);
-        string label = CaptainPanelParts.SlotLabel(slot) + (slot >= open ? "  <size=9>not open yet</size>" : "");
-        UIKit.Size(UIKit.Label(row, label, 12, color: slot < open ? UIKit.MutedTextColor : UIKit.DisabledTextColor), 130f);
+        UIKit.Size(UIKit.Label(row, CaptainPanelParts.SlotLabel(slot), 12,
+            color: slot < open ? UIKit.MutedTextColor : UIKit.DisabledTextColor), 110f);
+        if (slot >= open)
+        {
+            RectTransform locked = UIKit.Box(row, "Locked", UIKit.InsetColor, blocksClicks: false);
+            UIKit.Size(locked, height: HallSlotHeight, flexibleWidth: 1f);
+            HorizontalLayoutGroup layout = UIKit.Layout<HorizontalLayoutGroup>(locked, 4, 6);
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            UIKit.Icon(locked, LockSprite, 16f).raycastTarget = false;
+            UIKit.Label(locked, $"Opens at bond {BondMath.RankName(CaptainPanelParts.RankOpening(slot))}", 11, TextAnchor.MiddleLeft,
+                UIKit.DisabledTextColor);
+            return;
+        }
         SoldierItem soldier = profile.Soldiers.InSlot(captain.id, slot);
         Button button = UIKit.Button(row, soldier != null ? SoldierSummary(soldier) : "Empty", () => OpenHallPicker(slot), height: HallSlotHeight);
         UIKit.Size(button, height: HallSlotHeight, flexibleWidth: 1f);
