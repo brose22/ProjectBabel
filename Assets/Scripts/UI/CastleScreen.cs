@@ -77,7 +77,6 @@ public partial class CastleScreen : MonoBehaviour
     // Every screen's Back sits in the same place: centred in a strip along the bottom, which the
     // column is kept above.
     const float FooterHeight = 52f;
-    static readonly Vector2 BackSize = new(160f, 32f);
     const float FadeSeconds = 0.12f;
     CanvasGroup screenFade;
     UIFocusScope screenScope;
@@ -103,9 +102,9 @@ public partial class CastleScreen : MonoBehaviour
         content.offsetMax = new Vector2(0f, -HudHeight);
         if (back != null && backButton)
         {
-            Button button = UIKit.Button(screen, "Back", back);
-            UIKit.Place((RectTransform)button.transform, new Vector2(0.5f, 0f), new Vector2(0f, (FooterHeight - BackSize.y) / 2f), BackSize);
-            UIKit.PadBadge(button, PadGlyph.East);
+            Button button = UIKit.CloseButton(screen, "Back", back);
+            Vector2 size = UIKit.CloseButtonSize;
+            UIKit.Place((RectTransform)button.transform, new Vector2(0.5f, 0f), new Vector2(0f, (FooterHeight - size.y) / 2f), size);
         }
         RectTransform column = UIKit.Group(content, "Column");
         UIKit.Place(column, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(width, 0f));
@@ -236,12 +235,11 @@ public partial class CastleScreen : MonoBehaviour
             ProfileSave.Save(profile);
             selected = hallCaptain = null;
             BuildInventory();
-        }, BackSize.x, BackSize.y);
+        }, UIKit.CloseButtonSize.x, UIKit.CloseButtonSize.y);
         release.GetComponent<Image>().color = UIKit.BadColor;
         release.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
         // Cancel takes focus first, so a stray confirm press doesn't release anyone.
-        Button cancel = UIKit.Button(buttons, "Cancel", BuildInventory, BackSize.x, BackSize.y);
-        UIKit.PadBadge(cancel, PadGlyph.East);
+        Button cancel = UIKit.CloseButton(buttons, "Cancel", BuildInventory);
         screenScope.Default = () => cancel;
     }
 

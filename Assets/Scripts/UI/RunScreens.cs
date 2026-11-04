@@ -705,7 +705,7 @@ public class RunScreens : MonoBehaviour
         Text header = UIKit.Label(title, headerText, 10, color: UIKit.AccentColor);
         header.fontStyle = FontStyle.Bold;
         UIKit.Size(header, flexibleWidth: 1f);
-        UIKit.PadBadge(UIKit.Button(title, "Close", () => setOpen(false), 60f, 22f), PadGlyph.East);
+        UIKit.CloseButton(title, "Close", () => setOpen(false));
 
         ScrollRect list = UIKit.ScrollList(drawer, "Contents", UIKit.Gap);
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
@@ -858,9 +858,7 @@ public class RunScreens : MonoBehaviour
         Button gift = null;
         gift = UIKit.Button(buttons, "Gift", () => ShowGiftWindow(run, captain, gift, () => UIKit.Refresh(detailRefreshers)));
         UIKit.Size(gift, height: 26f, flexibleWidth: 1f);
-        Button close = UIKit.Button(buttons, "Close", () => details.Close());
-        UIKit.Size(close, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(close, PadGlyph.East);
+        UIKit.CloseButton(buttons, "Close", () => details.Close());
     }
 
     // ---------- Inventory and gifts ----------
@@ -910,9 +908,7 @@ public class RunScreens : MonoBehaviour
         };
         BuildGiftRows(list.content, run, captain, give);
         UIKit.Refresh(live);
-        Button close = UIKit.Button(window, "Close", () => modal.Close());
-        UIKit.Size(close, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(close, PadGlyph.East);
+        UIKit.CloseButton(window, "Close", () => modal.Close());
     }
 
     // One row per item carried. With a captain, each row says how they feel about the item and has
@@ -1121,9 +1117,7 @@ public class RunScreens : MonoBehaviour
         UIKit.Size(list, height: GiftListHeight, flexibleWidth: 1f);
         Fill();
 
-        Button close = UIKit.Button(window, "Close", () => modal.Close());
-        UIKit.Size(close, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(close, PadGlyph.East);
+        UIKit.CloseButton(window, "Close", () => modal.Close());
     }
 
     static string WhereIs(RunState run, SoldierItem soldier)
@@ -1415,7 +1409,7 @@ public class RunScreens : MonoBehaviour
             UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 25f),
                 flexibleWidth: 1f);
         }
-        UIKit.PadBadge(UIKit.Button(panel, "Leave the shop", leave, 220f, 32f), PadGlyph.East);
+        UIKit.CloseButton(panel, "Back", leave);
     }
 
     void BuildEvent(RectTransform panel, EventData data)

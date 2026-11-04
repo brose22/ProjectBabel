@@ -121,7 +121,7 @@ public class MainMenu : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Start", StartAiRun, 180f, 32f);
-        UIKit.PadBadge(UIKit.Button(buttons, "Back", BuildMain, 140f, 32f), PadGlyph.East);
+        UIKit.CloseButton(buttons, "Back", BuildMain);
     }
 
     void BuildAiMatchRows(RectTransform column)
@@ -161,7 +161,7 @@ public class MainMenu : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Go to the Castle", GoToCastle, 180f, 32f);
-        UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f), PadGlyph.East);
+        UIKit.CloseButton(buttons, "Cancel", BuildMain);
     }
 
     void BuildConfirmNewGame()
@@ -173,7 +173,7 @@ public class MainMenu : MonoBehaviour
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Button(buttons, "Start new game", NewGame, 180f, 32f);
-        UIKit.PadBadge(UIKit.Button(buttons, "Cancel", BuildMain, 140f, 32f), PadGlyph.East);
+        UIKit.CloseButton(buttons, "Cancel", BuildMain);
     }
 
     // Home to the Castle on the saved profile, giving up any run in progress; the Castle makes a new
@@ -258,7 +258,7 @@ public class MainMenu : MonoBehaviour
             default: BuildGameplayTab(options); break;
         }
 
-        UIKit.PadBadge(UIKit.Button(column, "Back", BuildMain, 200f, 32f), PadGlyph.East);
+        UIKit.CloseButton(column, "Back", BuildMain);
     }
 
     void BuildGraphicsTab(RectTransform column)

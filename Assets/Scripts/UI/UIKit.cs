@@ -483,6 +483,18 @@ public static class UIKit
         return button;
     }
 
+    public static readonly Vector2 CloseButtonSize = new(140f, 28f);
+
+    // The button that closes or backs out of a window or screen, always the same size and marked
+    // with the gamepad's cancel button. Label it Close for a window that only shows something,
+    // Cancel for a purchase or confirmation, Back for going up a level, and OK for a message.
+    public static Button CloseButton(Transform parent, string label, Action onClick)
+    {
+        Button button = Button(parent, label, onClick, CloseButtonSize.x, CloseButtonSize.y);
+        PadBadge(button, PadGlyph.East);
+        return button;
+    }
+
     // A button whose label, enabled state and highlighted ("selected") state follow the game.
     public static Button LiveButton(Transform parent, Func<string> text, Action onClick, List<Action> refreshers,
         Func<bool> interactable = null, Func<bool> selected = null, float width = 100f, float height = 24f)

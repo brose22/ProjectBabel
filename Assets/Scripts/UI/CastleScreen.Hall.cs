@@ -169,9 +169,7 @@ public partial class CastleScreen
         Button release = UIKit.Button(buttons, $"Release {captain.displayName}", () => BuildConfirmRelease(captain), height: 26f);
         UIKit.Size(release, height: 26f, flexibleWidth: 1f);
         release.GetComponent<Image>().color = UIKit.BadColor;
-        Button close = UIKit.Button(buttons, "Close", CloseHallWindow, height: 26f);
-        UIKit.Size(close, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(close, PadGlyph.East);
+        UIKit.CloseButton(buttons, "Close", CloseHallWindow);
     }
 
     // Portrait, name, the level and bond meters, element and class, and what the next bond rank gives.
@@ -318,9 +316,7 @@ public partial class CastleScreen
         UIKit.Size(list, flexibleWidth: 1f).flexibleHeight = 1f;
         Fill();
 
-        Button back = UIKit.Button(hallPicker, "Back", CloseHallPicker, height: 26f);
-        UIKit.Size(back, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(back, PadGlyph.East);
+        Button back = UIKit.CloseButton(hallPicker, "Back", CloseHallPicker);
         scope.Default = () => first != null ? first : back;
         PositionHall();
     }
