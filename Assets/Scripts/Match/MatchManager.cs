@@ -343,7 +343,7 @@ public class MatchManager : MonoBehaviour
 
     // Relocates a tower for Gold. It keeps its reserve and soldiers. A disabled tower stays put
     // until it is restored.
-    public bool CanMove(Tower tower) => !IsOver && tower != null && !tower.IsDisabled && Tower.All.Contains(tower);
+    public bool CanMove(Tower tower) => !IsOver && tower != null && !tower.IsDisabled && !tower.MoveLocked && Tower.All.Contains(tower);
 
     public bool MoveTower(Tower tower, Vector2Int cell)
     {
@@ -413,6 +413,7 @@ public class MatchManager : MonoBehaviour
 
     public GridMap Grid => grid;
     public bool IsSpawning => spawner != null && spawner.IsSpawning;
+    public int SpawnsToElite => spawner != null ? spawner.SpawnsToElite() : -1;
 
     // Zooms the camera in on a tower, such as a captain making a request, or back out with null.
     public void FocusCamera(Tower tower)

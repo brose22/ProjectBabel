@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// New kinds go at the end: AiAbilityRules mirrors this order.
-public enum RequestKind { MoreDraw, Relocate, UseSpecial, Reinforce, LowerDraw }
-
 public enum RequestAnswer { No, Yes }
 
 // Captains ask for things when something happens in the match (GDD: up to 2 per wave, often none):
@@ -34,6 +31,12 @@ public class CaptainRequests : MonoBehaviour
         public string Text;
         // Real time the request goes unanswered, set once it is shown.
         public float Deadline = -1f;
+        // Where a Relocate or Reinforce would take the captain, and what that leaves uncovered.
+        public Vector2Int? Target;
+        public int UncoveredTiles;
+        public string Area;
+        // Set when the request was prompted by an elite, the boss or a leak.
+        public bool ThreatPresent;
     }
 
     const float ApprovalReward = 2f;
@@ -118,6 +121,7 @@ public class CaptainRequests : MonoBehaviour
     void OnWaveEnded(int waveNumber)
     {
         // Requests still open are dismissed without a verdict; only their own countdown refuses them.
+        foreach (Tower tower in Tower.All) tower.ClearRequestLocks();
         foreach (Request request in pending.ToArray())
             Expire(request);
     }
@@ -165,7 +169,7 @@ public class CaptainRequests : MonoBehaviour
             closestDistance = distance;
         }
         if (closest == null) return;
-        TryAsk(closest, RequestKind.UseSpecial, $"{reason}. Let me use {closest.Captain.Ability.displayName} now?");
+        TryAsk(closest, RequestKind.UseSpecial, $"{reason}. Let me use {closest.Captain.Ability.displayName} now?", threat: true);
     }
 
     // The working captain nearest a fallen tower that has a spot to cover it from asks to move in.
@@ -238,15 +242,23 @@ public class CaptainRequests : MonoBehaviour
 
     // Shows the request unless one is already up (nothing is queued behind it), the wave is out of
     // requests, or the captain asked for the same thing too recently.
-    void TryAsk(Tower tower, RequestKind kind, string text, Tower fallen = null)
+    void TryAsk(Tower tower, RequestKind kind, string text, Tower fallen = null, bool threat = false)
     {
         if (match.State != MatchState.WaveActive || match.IsOver || tower.IsDisabled) return;
         if (askedThisWave >= MaxRequestsPerWave || pending.Count > 0) return;
         if (lastAsked.TryGetValue((tower, kind), out int last) && wave - last < CooldownWaves) return;
+        // A captain whose draw or place was just granted is locked until the wave ends, so there is nothing to ask.
+        bool movesTower = kind == RequestKind.Relocate || kind == RequestKind.Reinforce;
+        if ((movesTower && tower.MoveLocked) || ((kind == RequestKind.MoreDraw || kind == RequestKind.LowerDraw) && tower.DrawLocked)) return;
+
+        Vector2Int? target = kind == RequestKind.Relocate ? FindCellNearerSpawner(tower)
+            : kind == RequestKind.Reinforce && fallen != null ? FindCellNear(tower, fallen.transform.position) : null;
 
         lastAsked[(tower, kind)] = wave;
         askedThisWave++;
-        pending.Add(new Request { Tower = tower, Kind = kind, Text = text, Fallen = fallen });
+        var request = new Request { Tower = tower, Kind = kind, Text = text, Fallen = fallen, ThreatPresent = threat, Target = target };
+        if (target != null) MeasureUncovered(request);
+        pending.Add(request);
         ShowNext();
     }
 
@@ -355,6 +367,37 @@ public class CaptainRequests : MonoBehaviour
         RequestRules.ApprovalChange(RequestOutcome.Refused, ApprovalReward,
             RefusalPenalty * RefusalWeight(request.Kind) * request.Tower.Captain.refusalTemper);
 
+    // Road the move would leave out of the captain's reach, and the road it is on, for the card.
+    void MeasureUncovered(Request request)
+    {
+        Tower tower = request.Tower;
+        Vector3 to = match.Grid.CellCenter(request.Target.Value);
+        CountRoadInRange(tower.transform.position, tower.Range);
+        request.UncoveredTiles = RoadReach.CountLost(tower.transform.position, to, roadCenters, tower.Range);
+        int route = NearestRoad(tower.transform.position).route;
+        request.Area = match.Grid.Routes.Count > 1 ? $"road {route + 1}" : "the road";
+    }
+
+    // The pros and cons of a Yes right now; Gold and the other captains' draws change while it is up.
+    public RequestEvaluation Evaluate(Request request)
+    {
+        int drawing = 0;
+        foreach (Tower tower in Tower.All)
+            if (tower != request.Tower && tower.DrawRate == DrawRate.High) drawing++;
+        return RequestEvaluator.Evaluate(new RequestSnapshot
+        {
+            Kind = request.Kind,
+            ApprovalYes = ApprovalIfYes,
+            Gold = RunState.Current.Gold,
+            DrawingCaptains = drawing,
+            SpawnsToElite = match.SpawnsToElite,
+            ThreatPresent = request.ThreatPresent,
+            UncoveredRoadTiles = request.UncoveredTiles,
+            Area = request.Area,
+            ReserveGold = request.Tower != null ? request.Tower.Reserve : 0,
+        });
+    }
+
     // How much a refusal stings, by request.
     static float RefusalWeight(RequestKind kind) => kind switch
     {
@@ -368,10 +411,12 @@ public class CaptainRequests : MonoBehaviour
         switch (request.Kind)
         {
             case RequestKind.MoreDraw:
-                tower.SetDrawRate(DrawRate.High);
+                tower.SetDrawRate(DrawRate.High, ignoreLock: true);
+                tower.LockDraw();
                 break;
             case RequestKind.Relocate:
                 MoveTowardSpawner(tower);
+                tower.LockMove();
                 break;
             case RequestKind.UseSpecial:
                 // Fires now, or the moment it can if nothing is in reach yet.
@@ -379,9 +424,13 @@ public class CaptainRequests : MonoBehaviour
                 break;
             case RequestKind.Reinforce:
                 if (request.Fallen != null) MoveFreeTo(tower, FindCellNear(tower, request.Fallen.transform.position));
+                tower.LockMove();
                 break;
             case RequestKind.LowerDraw:
-                tower.SetDrawRate(DrawRate.Low);
+                // The captain pockets half the reserve; it leaves the match.
+                tower.TrySpendReserve(tower.Reserve / 2);
+                tower.SetDrawRate(DrawRate.Low, ignoreLock: true);
+                tower.LockDraw();
                 break;
         }
     }

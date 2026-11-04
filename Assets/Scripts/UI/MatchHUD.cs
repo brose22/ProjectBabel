@@ -513,11 +513,26 @@ public class MatchHUD : MonoBehaviour
         UIKit.Label(words, $"{captain.displayName}{more}", 14, color: UIKit.AccentColor).fontStyle = FontStyle.Bold;
         UIKit.Label(words, $"\"{request.Text}\"", 13);
 
-        // What each answer does, so the choice can be made without remembering the rules.
-        UIKit.Label(card, $"Yes: {YesEffect(request)}   <color={UIKit.Hex(UIKit.GoodColor)}>{Signed(Requests.ApprovalIfYes)} approval</color>", 12,
-            color: UIKit.MutedTextColor);
-        UIKit.Label(card, $"No: nothing changes   <color={UIKit.Hex(UIKit.BadColor)}>{Signed(Requests.ApprovalIfNo(request))} approval</color>", 12,
-            color: UIKit.MutedTextColor);
+        // What each answer does, in two columns so the choice can be made without remembering the rules.
+        RectTransform columns = UIKit.Group(card, "Answers");
+        UIKit.Layout<HorizontalLayoutGroup>(columns, 0, UIKit.Pad).childAlignment = TextAnchor.UpperLeft;
+        UIKit.Size(UIKit.Group(columns, "Yes"), flexibleWidth: 1f);
+        UIKit.Size(UIKit.Group(columns, "No"), flexibleWidth: 1f);
+        string good = UIKit.Hex(UIKit.GoodColor), bad = UIKit.Hex(UIKit.BadColor);
+        Transform yes = columns.Find("Yes"), no = columns.Find("No");
+        UIKit.Layout<VerticalLayoutGroup>((RectTransform)yes, 0, 2);
+        UIKit.Layout<VerticalLayoutGroup>((RectTransform)no, 0, 2);
+        UIKit.LiveLabel(yes, () =>
+        {
+            RequestEvaluation eval = Requests.Evaluate(request);
+            var text = new System.Text.StringBuilder($"<b>Yes</b>: {YesEffect(request)}\n<color={good}>{Signed(eval.ApprovalYes)} approval</color>");
+            foreach (RequestEffect pro in eval.Pros) text.Append($"\n<color={good}>+ {pro.Text}</color>");
+            foreach (RequestEffect con in eval.Cons) text.Append($"\n<color={bad}>- {con.Text}</color>");
+            if (eval.IsBad) text.Append($"\n<color={bad}><b>Costs more than it gives</b></color>");
+            return text.ToString();
+        }, requestRefreshers, 12, color: UIKit.MutedTextColor);
+        UIKit.LiveLabel(no, () => $"<b>No</b>: nothing changes\n<color={bad}>{Signed(Requests.ApprovalIfNo(request))} approval</color>",
+            requestRefreshers, 12, color: UIKit.MutedTextColor);
 
         RectTransform buttons = UIKit.Group(card, "Answers");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, UIKit.Pad);
@@ -535,7 +550,7 @@ public class MatchHUD : MonoBehaviour
     static string YesEffect(CaptainRequests.Request request) => request.Kind switch
     {
         RequestKind.MoreDraw => "draw set to High",
-        RequestKind.LowerDraw => "draw set to Low",
+        RequestKind.LowerDraw => "draw set to Low, captain keeps half the reserve",
         RequestKind.Relocate => "moves closer to the gate, free",
         RequestKind.UseSpecial => $"uses {request.Tower.Captain.Ability.displayName} now",
         RequestKind.Reinforce => request.Fallen != null ? $"moves in beside {request.Fallen.Captain.displayName}, free" : "moves in to cover, free",

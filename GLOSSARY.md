@@ -65,3 +65,11 @@ _Avoid:_ armor type (`ArmorType`), which damage type replaces.
 _Avoid:_ Earth, Air.
 
 **Advantage** — Damage ×1.5 when the attacker beats the target's damage type or element, ×0.75 when the target beats it. The damage-type and element multipliers stack, so the result ranges from ×0.5625 to ×2.25.
+
+## Captain requests
+
+**Request** — A captain asking for something mid-wave (more draw, a move, their special, reinforcing a fallen captain, keeping spare Gold). A Yes pays approval but carries match-dependent cons shown on the card; a No always costs approval.
+
+**Cons / IsBad** — What a Yes costs, worked out by `RequestEvaluator.Evaluate` from a match snapshot (Gold left, captains drawing, elites still to spawn, road left uncovered, reserve). A request is **bad** when its cons outweigh its pros (approval included).
+
+**Lock-in** — A granted draw rate stays until the wave ends, and a captain who was moved by a request can't be moved again until then. Shown on the captain widget.
