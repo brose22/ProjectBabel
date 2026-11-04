@@ -246,6 +246,7 @@ public class AiRunRecorder
                     goldStart = w.GoldStart,
                     goldEarned = w.GoldEarned,
                     goldBonus = w.GoldBonus,
+                    goldRefunded = w.GoldRefunded,
                     goldSpent = w.GoldSpent,
                     goldBetween = w.GoldBetween,
                     goldEnd = w.GoldEnd,
@@ -255,6 +256,7 @@ public class AiRunRecorder
                 });
                 NoteGold(true, "Kills", w.GoldEarned);
                 NoteGold(true, "Wave clears", w.GoldBonus);
+                NoteGold(true, "Refunds from sold towers", w.GoldRefunded);
             }
         }
         if (result == "Won")

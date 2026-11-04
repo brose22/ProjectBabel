@@ -15,9 +15,12 @@ public class MatchStats : MonoBehaviour
         public float Seconds;
         public int GoldStart;
         public int GoldEnd;
+        // Paid for kills, elite extra included.
         public int GoldEarned;
         // Paid for clearing the wave, on top of kills.
         public int GoldBonus;
+        // Reserves handed back to the pool by towers sold during the wave.
+        public int GoldRefunded;
         // Drained from the pool between the last wave and this one: reserve top-ups, restores, moves.
         public int GoldBetween;
         public int Kills;
@@ -28,7 +31,8 @@ public class MatchStats : MonoBehaviour
         public readonly Dictionary<string, int> KillsByCaptain = new();
 
         // Spent = what the pool lost beyond what came in: draws into tower reserves, moves, restores.
-        public int GoldSpent => GoldStart + GoldEarned + GoldBonus - GoldEnd;
+        // A win's payout is left out of the wave (GoldEnd is before it), so this never goes negative.
+        public int GoldSpent => GoldStart + GoldEarned + GoldBonus + GoldRefunded - GoldEnd;
     }
 
     // The AI Run turns this off so its matches don't fill the player's stats folder.
@@ -40,6 +44,10 @@ public class MatchStats : MonoBehaviour
     // Gold when the last wave closed, or at match start; what the next wave's between-wave drain is measured from.
     int goldAtLastClose = -1;
     MatchManager match;
+    // The match's running totals when the wave started, so the wave's share can be measured.
+    int sellRefundedAtStart, eliteGoldAtStart, winGoldAtStart;
+
+    int WinGold => match != null ? match.WinGoldEarned + match.ReserveRefunded : 0;
 
     void OnEnable()
     {
@@ -70,6 +78,9 @@ public class MatchStats : MonoBehaviour
         int gold = RunState.Current.Gold;
         current = new WaveRecord { Wave = wave, GoldStart = gold, GoldBetween = Mathf.Max(0, goldAtLastClose - gold) };
         waveStartTime = Time.time;
+        sellRefundedAtStart = match != null ? match.SellRefunded : 0;
+        eliteGoldAtStart = match != null ? match.EliteGoldEarned : 0;
+        winGoldAtStart = WinGold;
     }
 
     void OnEnemyKilled(Enemy enemy)
@@ -102,12 +113,18 @@ public class MatchStats : MonoBehaviour
     {
         if (current == null) return;
         current.Seconds = Time.time - waveStartTime;
-        current.GoldEnd = RunState.Current.Gold;
+        if (match != null)
+        {
+            current.GoldRefunded = match.SellRefunded - sellRefundedAtStart;
+            current.GoldEarned += match.EliteGoldEarned - eliteGoldAtStart;
+        }
+        // A boss kill can win mid-wave; its payout is counted with the match, as after a cleared last wave.
+        current.GoldEnd = RunState.Current.Gold - (WinGold - winGoldAtStart);
         goldAtLastClose = current.GoldEnd;
         current.HealthEnd = RunState.Current.Health;
         Waves.Add(current);
         Debug.Log($"[Stats] Wave {current.Wave}: {current.Seconds:0}s, kills {current.Kills}, leaks {current.Leaks}, " +
-                  $"casualties {current.Casualties}, Gold +{current.GoldEarned} +{current.GoldBonus} clear bonus -{current.GoldSpent} " +
+                  $"casualties {current.Casualties}, Gold +{current.GoldEarned} +{current.GoldBonus} clear bonus +{current.GoldRefunded} refunded -{current.GoldSpent} " +
                   $"(-{current.GoldBetween} drawn before the wave, now {current.GoldEnd}), " +
                   $"health {current.HealthEnd}, abilities {current.AbilitiesUsed}, kills by {FormatKills(current)}");
         current = null;
@@ -127,9 +144,9 @@ public class MatchStats : MonoBehaviour
             string folder = Path.Combine(Application.persistentDataPath, "stats");
             Directory.CreateDirectory(folder);
             string path = Path.Combine(folder, $"match_{DateTime.Now:yyyyMMdd_HHmmss}_{(won ? "won" : "lost")}.csv");
-            var csv = new StringBuilder("wave,seconds,kills,leaks,casualties,gold_start,gold_earned,gold_bonus,gold_spent,gold_between,gold_end,health_end,abilities,kills_by\n");
+            var csv = new StringBuilder("wave,seconds,kills,leaks,casualties,gold_start,gold_earned,gold_bonus,gold_refunded,gold_spent,gold_between,gold_end,health_end,abilities,kills_by\n");
             foreach (WaveRecord w in Waves)
-                csv.AppendLine($"{w.Wave},{w.Seconds:0.0},{w.Kills},{w.Leaks},{w.Casualties},{w.GoldStart},{w.GoldEarned},{w.GoldBonus},{w.GoldSpent},{w.GoldBetween},{w.GoldEnd},{w.HealthEnd},{w.AbilitiesUsed},\"{FormatKills(w)}\"");
+                csv.AppendLine($"{w.Wave},{w.Seconds:0.0},{w.Kills},{w.Leaks},{w.Casualties},{w.GoldStart},{w.GoldEarned},{w.GoldBonus},{w.GoldRefunded},{w.GoldSpent},{w.GoldBetween},{w.GoldEnd},{w.HealthEnd},{w.AbilitiesUsed},\"{FormatKills(w)}\"");
             File.WriteAllText(path, csv.ToString());
             Debug.Log($"[Stats] Match written to {path}");
         }
