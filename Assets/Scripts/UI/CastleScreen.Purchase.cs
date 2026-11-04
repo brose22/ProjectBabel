@@ -50,9 +50,7 @@ public partial class CastleScreen
         Text heading = UIKit.Shadowed(UIKit.Label(window, title, UIKit.HeadingSize, TextAnchor.MiddleCenter, UIKit.BadColor));
         heading.fontStyle = FontStyle.Bold;
         UIKit.Label(window, message, 13, TextAnchor.MiddleCenter);
-        Button ok = UIKit.Button(window, "OK", ClosePurchaseWindow, height: 26f);
-        UIKit.Size(ok, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(ok, PadGlyph.East);
+        Button ok = UIKit.CloseButton(window, "OK", ClosePurchaseWindow);
         scope.Default = () => ok;
     }
 
@@ -97,9 +95,7 @@ public partial class CastleScreen
             buy();
         }, height: 26f);
         UIKit.Size(confirm, height: 26f, flexibleWidth: 1f);
-        Button cancel = UIKit.Button(row, "Cancel", ClosePurchaseWindow, height: 26f);
-        UIKit.Size(cancel, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(cancel, PadGlyph.East);
+        UIKit.CloseButton(row, "Cancel", ClosePurchaseWindow);
         scope.Default = () => confirm;
     }
 
@@ -164,9 +160,7 @@ public partial class CastleScreen
             }, height: 26f);
             UIKit.Size(unequip, height: 26f, flexibleWidth: 1f);
         }
-        Button close = UIKit.Button(buttons, "Close", ClosePurchaseWindow, height: 26f);
-        UIKit.Size(close, height: 26f, flexibleWidth: 1f);
-        UIKit.PadBadge(close, PadGlyph.East);
+        Button close = UIKit.CloseButton(buttons, "Close", ClosePurchaseWindow);
         scope.Default = () => unequip != null ? unequip : close;
     }
 
