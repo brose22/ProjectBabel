@@ -13,8 +13,8 @@ public class RunState
     readonly Dictionary<Captain, float> bestApprovalThisRun = new();
     // Each captain's bond rank when it was first seen this run, which caps how far it can rise.
     readonly Dictionary<Captain, int> startRanks = new();
-    // Captains who have walked out this run. They have left the roster for good; this keeps them
-    // in the party list so the run's screens can still say they left.
+    // Captains who have walked out this run. They have left the roster and the party for good; this
+    // only remembers who, for the run's reports.
     readonly HashSet<Captain> departed = new();
     // Gifts bought this run and not yet given. They don't carry over to the next run.
     readonly Dictionary<GiftData, int> gifts = new();
@@ -102,8 +102,8 @@ public class RunState
         Party.AddRange(captains);
     }
 
-    // Party members who haven't walked out.
-    public int ActivePartyCount => Party.FindAll(c => !HasDeparted(c)).Count;
+    // Captains who leave are taken out of the party, so every party member is active.
+    public int ActivePartyCount => Party.Count;
 
     // Captains offered to join after a won city; empty when there's nothing to choose.
     public List<Captain> RecruitOffer { get; } = new();
@@ -152,7 +152,7 @@ public class RunState
     bool JoinFromEvent(Captain newcomer, Captain released, int maxPartySize)
     {
         bool joined = Profile.Join(newcomer, released);
-        if (released != null && !Profile.Owns(released)) Party.Remove(released);
+        if (released != null && !Profile.Owns(released)) PartyRules.Leave(Party, null, released);
         if (joined && ActivePartyCount < maxPartySize) Party.Add(newcomer);
         return joined;
     }
@@ -196,11 +196,13 @@ public class RunState
 
     public bool HasDeparted(Captain captain) => departed.Contains(captain);
 
-    // A captain who walks out leaves the roster for good, and their soldiers go back to the inventory.
+    // A captain who walks out leaves the party and the roster for good, and their soldiers go back
+    // to the inventory.
     public void Depart(Captain captain)
     {
         if (captain == null) return;
         departed.Add(captain);
+        PartyRules.Leave(Party, null, captain);
         Profile.Release(captain);
     }
 

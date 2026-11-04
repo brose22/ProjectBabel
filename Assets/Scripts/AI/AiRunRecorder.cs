@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 // Collects what an AI run does into AiRunRecord rows: damage from GameEvents, wave numbers from
@@ -288,7 +289,8 @@ public class AiRunRecorder
             Run.finalHealth = run.Health;
             Run.maxHealth = run.MaxHealth;
             Run.finalGold = run.Gold;
-            foreach (Captain captain in run.Party)
+            // Captains who walked out have left the party, so they're added back for the report.
+            foreach (Captain captain in run.Party.Concat(run.Departed.Where(c => !run.Party.Contains(c))))
             {
                 int kills = 0;
                 foreach (AiMatchRow match in Run.matches)

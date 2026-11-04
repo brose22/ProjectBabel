@@ -48,8 +48,7 @@ public class PartyBar
             key = newKey;
             refreshers.Clear();
             UIKit.Clear(bar);
-            foreach (Captain captain in run.Party)
-                if (!run.HasDeparted(captain)) Card(captain, TowerOf(captain));
+            foreach (Captain captain in run.Party) Card(captain, TowerOf(captain));
             // The shoulder buttons step along the bar, so they sit at its ends.
             UIKit.PadBadge(bar, PadGlyph.LeftShoulder, () => GameInput.PadInMatch, new Vector2(0f, 0.5f), Vector2.left * BadgeGap);
             UIKit.PadBadge(bar, PadGlyph.RightShoulder, () => GameInput.PadInMatch, new Vector2(1f, 0.5f), Vector2.right * BadgeGap);
@@ -70,7 +69,7 @@ public class PartyBar
     // The first step starts from the captain up next.
     void StepHighlight(RunState run, int step)
     {
-        List<Captain> present = run.Party.FindAll(captain => captain != null && !run.HasDeparted(captain));
+        List<Captain> present = run.Party.FindAll(captain => captain != null);
         if (present.Count == 0) return;
         int index = present.IndexOf(highlighted != null ? highlighted : match.NextCaptain);
         highlighted = present[(Mathf.Max(index, 0) + step + present.Count) % present.Count];
@@ -88,7 +87,7 @@ public class PartyBar
     {
         var parts = new List<string>();
         foreach (Captain captain in run.Party)
-            parts.Add($"{captain.displayName}:{run.HasDeparted(captain)}:{TowerOf(captain)?.GetHashCode()}");
+            parts.Add($"{captain.displayName}:{TowerOf(captain)?.GetHashCode()}");
         return string.Join("|", parts);
     }
 

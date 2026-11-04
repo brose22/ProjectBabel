@@ -38,3 +38,17 @@ public static class RosterRules
         return true;
     }
 }
+
+// Who is in the run's party (item: party). A captain who leaves, by walkout or release, is taken
+// out of the party and the roster rather than kept as an inactive entry, so no list shows them and
+// party counts and saves see the smaller party.
+public static class PartyRules
+{
+    // Takes the captain out of the party and the roster. Returns whether they were in the party.
+    public static bool Leave<T>(List<T> party, ICollection<T> roster, T captain) where T : class
+    {
+        if (captain == null) return false;
+        roster?.Remove(captain);
+        return party.Remove(captain);
+    }
+}

@@ -15,13 +15,13 @@ _Avoid:_ using "run" for the whole game; that is the **profile**.
 
 **Roster** — Every captain the player owns, up to 12. Captains join through the Captain Recruit tab and events, and leave by release, by walkout, or by being lost with the party when a run is lost. The shop won't sell a captain while the roster is full. When an event would add a 13th captain during a run, the player releases either the newcomer or an existing captain.
 
-**Party** — The captains taken on a run, up to 5, picked from the roster at the Castle.
+**Party** — The captains taken on a run, up to 5, picked from the roster at the Castle. A captain who leaves (walkout or release) is taken out of the party, not kept as an inactive entry.
 
 **Starting captains** — The 3 captains picked the first time the game is played, out of 4 rolled captains: one Knight, one Mage, one Archer and one Healer. Each comes with 2 random soldiers.
 
 **Release** — Removing a captain from the roster for good, by the player's choice. Their soldiers go back to the inventory.
 
-**Walkout** — An unhappy captain leaving the roster for good.
+**Walkout** — An unhappy captain leaving the roster and the party for good.
 
 ## Captains
 

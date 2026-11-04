@@ -84,7 +84,7 @@ public class MatchManager : MonoBehaviour
             for (int i = 0; i < count; i++)
             {
                 Captain captain = party[(nextCaptainIndex + i) % count];
-                if (captain != null && !Tower.All.Exists(t => t.Captain == captain) && !RunState.Current.HasDeparted(captain))
+                if (captain != null && !Tower.All.Exists(t => t.Captain == captain))
                     return captain;
             }
             return null;
@@ -510,7 +510,7 @@ public class MatchManager : MonoBehaviour
     public List<Captain> RollCaptains(int count, int seed)
     {
         RunState run = RunState.Current;
-        return RollCaptains(data, run.Profile.Roster.Concat(run.Party).Concat(run.RecruitOffer), count, seed);
+        return RollCaptains(data, run.Profile.Roster.Concat(run.Party).Concat(run.Departed).Concat(run.RecruitOffer), count, seed);
     }
 
     // The same outside a match (the Castle), with the names of the given captains taken.
@@ -668,11 +668,10 @@ public class MatchManager : MonoBehaviour
         RunSave.Save(RunState.Current);
     }
 
-    // Whether a captain can be given an item from the inventory: they're in the party, still here,
-    // and the player has one.
+    // Whether a captain can be given an item from the inventory: they're in the party and the
+    // player has one.
     public bool CanGiveGift(Captain captain, GiftData gift) =>
-        captain != null && gift != null && RunState.Current.Party.Contains(captain)
-        && !RunState.Current.HasDeparted(captain) && RunState.Current.GiftCount(gift) > 0;
+        captain != null && gift != null && RunState.Current.Party.Contains(captain) && RunState.Current.GiftCount(gift) > 0;
 
     // Gives a captain one item, changing their approval by how they feel about it. Returns the
     // reaction, or null when the gift couldn't be given.
@@ -706,7 +705,6 @@ public class MatchManager : MonoBehaviour
         else run.TakeDamage(-choice.health);
         foreach (Captain captain in run.Party)
         {
-            if (run.HasDeparted(captain)) continue;
             run.AddXp(captain, choice.xp);
             if (choice.approval != 0f) ApprovalStore.Change(captain, choice.approval);
         }

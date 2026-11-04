@@ -77,8 +77,7 @@ public static class RunSave
             matchesPlayed = run.MatchesPlayed,
             map = run.Map,
         };
-        foreach (Captain captain in run.Party)
-            if (!run.HasDeparted(captain)) file.party.Add(captain.id);
+        foreach (Captain captain in run.Party) file.party.Add(captain.id);
         file.recruitOffer.AddRange(run.RecruitOffer);
         foreach (KeyValuePair<Captain, float> entry in run.AllBestApprovals)
             file.bestApproval.Add(new CaptainApproval { captain = entry.Key.id, approval = entry.Value });
