@@ -8,7 +8,9 @@ using UnityEngine.UI;
 public class AiOverlay
 {
     static readonly float[] Speeds = { 1f, 2f, 4f, 8f, 16f, 32f };
-    const float PanelWidth = 250f;
+    // Six speed buttons of 52 px, five 4 px gaps and the panel's 8 px padding each side.
+    const float PanelWidth = 6 * 52f + 5 * 4f + 16f;
+    const float ToggleHeight = 24f;
 
     readonly Canvas canvas;
     readonly List<Action> refreshers = new();
@@ -21,7 +23,10 @@ public class AiOverlay
         canvas.transform.SetParent(parent, false);
 
         RectTransform panel = UIKit.Box(canvas.transform, "AI Run Panel");
-        UIKit.Place(panel, new Vector2(1f, 0f), new Vector2(-8f, 8f), new Vector2(PanelWidth, 0f));
+        // The panel sits above the toggle button in the bottom-right corner.
+        UIKit.Place(panel, new Vector2(1f, 0f), new Vector2(-8f, 8f + ToggleHeight + 4f), new Vector2(PanelWidth, 0f));
+        Button toggle = UIKit.Button(canvas.transform, "AI", () => panel.gameObject.SetActive(!panel.gameObject.activeSelf), 60f, ToggleHeight);
+        UIKit.Place((RectTransform)toggle.transform, new Vector2(1f, 0f), new Vector2(-8f, 8f), new Vector2(60f, ToggleHeight));
         UIKit.Layout<VerticalLayoutGroup>(panel, 8, 4, fitContent: true);
         UIKit.Label(panel, "AI RUN", 14, TextAnchor.MiddleLeft, UIKit.SelectedButtonColor);
         UIKit.LiveLabel(panel, status, refreshers, 12);
@@ -35,7 +40,7 @@ public class AiOverlay
             UIKit.LiveButton(speeds, () => $"{chosen:0}x", () => setSpeed(chosen), refreshers,
                 selected: () => Mathf.Approximately(speed(), chosen), width: 52f, height: 24f);
         }
-        UIKit.Button(panel, "Stop and write report", stop, -1f, 26f);
+        UIKit.Button(panel, "Stop and write report", stop, PanelWidth - 16f, 26f);
     }
 
     public void Refresh() => UIKit.Refresh(refreshers);
