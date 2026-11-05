@@ -85,7 +85,10 @@ public class CaptainCycler
     public void Update()
     {
         Captain current = match.SelectedCaptain;
-        bool shown = current != null && placement.PointerOnField && !placement.IsMoving && !match.IsPaused;
+        // Gone for good once the first wave starts: State leaves Preparing then and WavesCleared
+        // stays above 0 after it.
+        bool beforeFirstWave = match.State == MatchState.Preparing && match.WavesCleared == 0;
+        bool shown = beforeFirstWave && current != null && placement.PointerOnField && !placement.IsMoving && !match.IsPaused;
         if (root.gameObject.activeSelf != shown) root.gameObject.SetActive(shown);
         if (!shown) return;
 

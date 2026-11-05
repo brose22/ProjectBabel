@@ -79,9 +79,9 @@ public class Enemy : MonoBehaviour
     const float DotNumberSeconds = 1f;
     const float DamageNumberHeight = 0.4f;
     const float DamageNumberSpread = 0.2f;
-    const float DamageNumberSize = 1.5f;
-    const float StrongNumberSize = 2.25f;
-    const float MatchupLabelSize = 1.2f;
+    const float DamageNumberSize = 3f;
+    const float StrongNumberSize = 4.5f;
+    const float MatchupLabelSize = 2.4f;
     static readonly Color ResistedNumberColor = new(0.6f, 0.6f, 0.6f);
     float dotDamage;
     float dotNumberTimer;
