@@ -29,7 +29,7 @@ MonoBehaviour:
   abilities:
   - {fileID: 11400000, guid: 0d114fad242fd154c9c8915d516b58a8, type: 2}
   - {fileID: 11400000, guid: 9281479fbac3e54428b1838e202d2a9c, type: 2}
-  sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
+  sprite: {fileID: 21300000, guid: 6c7b15e3952f4db4191bdb0c893e739f, type: 3}
   tintSprite: 1
   power:
     min: 9

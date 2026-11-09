@@ -32,7 +32,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4986bda02ecb3184b99dac983ebfa64e, type: 2}
   - {fileID: 11400000, guid: cbd746a601b800b448e77b3e891bd43a, type: 2}
   - {fileID: 11400000, guid: fa0ea72fa241b6d4ea7f3633871d1aae, type: 2}
-  sprite: {fileID: 21300000, guid: f74c57e77e6d9544487725d831b1b87f, type: 3}
+  sprite: {fileID: 21300000, guid: 20142e145fd37d74982cfe179a63bf96, type: 3}
   tintSprite: 1
   power:
     min: 6.5

@@ -501,6 +501,11 @@ public static class GreyBoxMatchBuilder
         "Thanks! That's sweet of you.", "Um... thanks? I think I'll pass it on.",
     };
 
+    // A role's on-map sprite (captain_knight), drawn in pale greys so the element tint shows; the
+    // generic sprite stands in for a role with no art of its own.
+    static Sprite CaptainSprite(CaptainRole role) =>
+        ArtSprite("captain_" + role.ToString().ToLowerInvariant()) ?? ArtSprite("captain_generic");
+
     // A role's captain template. Portraits are named after the captain they were drawn for
     // (Portraits/captain_brine) with the element on their emblem; gifts are loaded by asset name.
     static CaptainData Template(CaptainRole role, string[] names, (string art, Element element)[] portraits, AbilityData[] abilities,
@@ -513,7 +518,7 @@ public static class GreyBoxMatchBuilder
             t.names = names;
             t.portraits = Array.ConvertAll(portraits, p => new CaptainPortrait { portrait = ArtSprite("Portraits/captain_" + p.art), element = p.element });
             t.abilities = abilities;
-            t.sprite = ArtSprite("captain_generic");
+            t.sprite = CaptainSprite(role);
             t.tintSprite = true;
             t.power = power;
             t.range = new StatRange(0f, 0f);
@@ -1025,9 +1030,10 @@ public static class GreyBoxMatchBuilder
     {
         foreach (CaptainData template in LoadAll<CaptainData>(DataFolder + "/Captains"))
         {
-            if (template.sprite != null) continue;
-            Sprite sprite = ArtSprite("captain_generic");
-            if (sprite == null) continue;
+            // The shared generic sprite gives way to the role's own art (captain_knight) once it exists.
+            if (template.sprite != null && template.sprite.name != "captain_generic") continue;
+            Sprite sprite = CaptainSprite(template.role);
+            if (sprite == null || sprite == template.sprite) continue;
             template.sprite = sprite;
             template.tintSprite = true;
             MarkUpgraded(template, "its sprite");
