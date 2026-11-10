@@ -14,7 +14,22 @@ public static class MainMenuBuilder
     const string PlayFromMenuKey = "Babel.PlayFromMainMenu";
     const string PlayFromMenuItem = "Babel/Play From Main Menu";
 
-    static MainMenuBuilder() => EditorApplication.delayCall += ApplyPlayModeStartScene;
+    static MainMenuBuilder()
+    {
+        EditorApplication.delayCall += ApplyPlayModeStartScene;
+        EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+    }
+
+    // A play-mode test run enters Play from a bootstrap scene the Test Runner has just opened
+    // (Assets/InitTestScene<guid>.unity). Starting from the menu instead would leave the run
+    // waiting forever for tests that never begin, so the start scene steps aside for it.
+    static void OnPlayModeStateChanged(PlayModeStateChange change)
+    {
+        if (change == PlayModeStateChange.ExitingEditMode && SceneManager.GetActiveScene().name.StartsWith("InitTestScene"))
+            EditorSceneManager.playModeStartScene = null;
+        else if (change == PlayModeStateChange.EnteredEditMode)
+            ApplyPlayModeStartScene();
+    }
 
     [MenuItem("Babel/Build Main Menu Scene")]
     public static void Build()
