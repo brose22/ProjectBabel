@@ -23,7 +23,7 @@ public partial class RunScreens
 
         int nextLayer = map.current < 0 ? 0 : map.nodes[map.current].layer + 1;
         string progress = nextLayer >= map.layerCount - 1 ? "The enemy base lies ahead" : $"Stop {nextLayer + 1} of {map.layerCount}";
-        UIKit.Label(column, match.Location != null ? match.Location.displayName.ToUpperInvariant() : "WORLD MAP", 24, TextAnchor.MiddleCenter);
+        UIKit.Label(column, match.Run.Location != null ? match.Run.Location.displayName.ToUpperInvariant() : "WORLD MAP", 24, TextAnchor.MiddleCenter);
         UIKit.Label(column, $"{progress}. Choose one of the glowing stops; each stop you reach reveals the roads beyond it.",
             12, TextAnchor.MiddleCenter, UIKit.MutedTextColor);
         BuildRunStats(root, run);
@@ -94,7 +94,7 @@ public partial class RunScreens
         Button shop = MenuButton("Shop", () => SetShopOpen(true));
         if (shopClosed) screenFocus.Default = () => shop;
         shopClosed = false;
-        MenuButton("Main menu", match.ReturnToMenu);
+        MenuButton("Main menu", match.Run.ReturnToMenu);
         UIKit.Size(UIKit.Group(menu, "Spacer"), MapMenuWidth, 16f);
         // Abandoning ends the run and costs Gold and a soldier, so it takes a second press, and the
         // first one says what it costs.
@@ -166,7 +166,7 @@ public partial class RunScreens
     {
         run.Profile.AbandonRun();
         ProfileSave.Save(run.Profile);
-        if (run.Soldiers.Items.Count == 0) { match.ReturnToCastle(); return; }
+        if (run.Soldiers.Items.Count == 0) { match.Run.ReturnToCastle(); return; }
         abandonPicking = true;
         abandonFilter.Reset();
         shownFor = (MatchState)(-1);
@@ -212,7 +212,7 @@ public partial class RunScreens
                 {
                     run.Profile.LoseSoldier(chosen);
                     abandonPicking = false;
-                    match.ReturnToCastle();
+                    match.Run.ReturnToCastle();
                 }, 70f, 24f);
                 first ??= lose;
             }
@@ -354,13 +354,13 @@ public partial class RunScreens
         string info = isBase ? "Boss fight" : node.kind switch
         {
             NodeKind.Elite => $"{match.Data.eliteGoldMultiplier:0.#}x Gold" + GateCount(node, " | "),
-            NodeKind.Rest => $"Heals {match.RestAmount}",
+            NodeKind.Rest => $"Heals {match.Run.RestAmount}",
             NodeKind.Event => "Unknown",
             _ => GateCount(node, "").TrimStart(),
         };
         string text = name + (info.Length > 0 ? $"\n<size=9><color={UIKit.Hex(choosable ? new Color(0.16f, 0.1f, 0.03f, 1f) : UIKit.MutedTextColor)}>{info}</color></size>" : "");
 
-        Button city = UIKit.Button(area, text, () => match.ChooseCity(node.id));
+        Button city = UIKit.Button(area, text, () => match.Run.ChooseCity(node.id));
         Text cityLabel = city.GetComponentInChildren<Text>();
         cityLabel.fontSize = isBase ? 12 : 11;
         cityLabel.alignment = TextAnchor.MiddleLeft;
@@ -438,7 +438,7 @@ public partial class RunScreens
             case NodeKind.Elite:
                 return $"A tougher battle: enemies from {match.Data.eliteLayerBonus} layers further on, " +
                     $"{match.Data.eliteGoldMultiplier:0.#}x Gold from kills, and a wider choice of captains to recruit on a win.";
-            case NodeKind.Rest: return $"Rest instead of fighting. Heals {match.RestAmount} health.";
+            case NodeKind.Rest: return $"Rest instead of fighting. Heals {match.Run.RestAmount} health.";
             case NodeKind.Event: return "No battle. Something unexpected happens.";
             default: return "A battle. Defend the city against the waves.";
         }

@@ -10,7 +10,7 @@ public partial class RunScreens
     {
         get
         {
-            return new List<Captain>(match.SetupOffer);
+            return new List<Captain>(match.Run.SetupOffer);
         }
     }
 
@@ -64,10 +64,10 @@ public partial class RunScreens
 
         UIKit.Size(UIKit.Group(party, "Spacer"), flexibleWidth: 1f).flexibleHeight = 1f;
         Button begin = UIKit.LiveButton(party, () => picked.Count == PartySize ? "Begin run" : $"Pick {PartySize - picked.Count} more",
-            () => match.BeginRun(picked), refreshers, () => picked.Count == PartySize, height: 34f);
+            () => match.Run.BeginRun(picked), refreshers, () => picked.Count == PartySize, height: 34f);
         UIKit.Size(begin, height: 34f, flexibleWidth: 1f);
         UIKit.Primary(begin, refreshers);
-        UIKit.Size(UIKit.Button(party, "Main menu", match.ReturnToMenu), height: 24f, flexibleWidth: 1f);
+        UIKit.Size(UIKit.Button(party, "Main menu", match.Run.ReturnToMenu), height: 24f, flexibleWidth: 1f);
     }
 
     // An empty slot is an inset placeholder; a filled one is the captain's party card, which

@@ -36,7 +36,7 @@ public partial class CastleScreen
         if (soldierStock != null && stockSeed == profile.ShopSeed) return;
         stockSeed = profile.ShopSeed;
         soldierStock = CastleShop.SoldierStock(stockSeed, data.castleSoldierStock);
-        captainStock = MatchManager.RollCaptains(data, profile.Roster, data.castleCaptainStock,
+        captainStock = RunController.RollCaptains(data, profile.Roster, data.castleCaptainStock,
             CastleShop.SlotSeed(stockSeed, CastleShop.CaptainShelf, 0));
     }
 

@@ -18,8 +18,8 @@ public partial class RunScreens
         switch (match.City.kind)
         {
             case NodeKind.Rest: BuildRest(panel); break;
-            case NodeKind.Event when match.StopEvent != null: BuildEvent(panel, match.StopEvent); break;
-            default: UIKit.Button(panel, "Move on", match.LeaveStop, 220f, 32f); break;
+            case NodeKind.Event when match.Run.StopEvent != null: BuildEvent(panel, match.Run.StopEvent); break;
+            default: UIKit.Button(panel, "Move on", match.Run.LeaveStop, 220f, 32f); break;
         }
     }
 
@@ -37,8 +37,8 @@ public partial class RunScreens
     {
         StopHeader(panel, "REST", "The army makes camp and tends its wounds.");
         RunState run = RunState.Current;
-        int amount = Mathf.Min(match.RestAmount, run.MaxHealth - run.Health);
-        UIKit.Button(panel, amount > 0 ? $"Rest (+{amount} health)" : "Rest (already at full health)", match.Rest, 260f, 32f);
+        int amount = Mathf.Min(match.Run.RestAmount, run.MaxHealth - run.Health);
+        UIKit.Button(panel, amount > 0 ? $"Rest (+{amount} health)" : "Rest (already at full health)", match.Run.Rest, 260f, 32f);
     }
 
     void BuildShop(RectTransform panel, Action leave)
@@ -53,7 +53,7 @@ public partial class RunScreens
         cells.cellSize = ShopCardSize;
         cells.spacing = new Vector2(8f, 8f);
         cells.childAlignment = TextAnchor.UpperCenter;
-        List<GiftData> stock = match.ShopStock;
+        List<GiftData> stock = match.Run.ShopStock;
         int rows = Mathf.Max(1, Mathf.CeilToInt(stock.Count / (float)ShopColumns));
         UIKit.Size(grid, height: rows * ShopCardSize.y + (rows - 1) * 8f, flexibleWidth: 1f);
         foreach (GiftData gift in stock)
@@ -64,7 +64,7 @@ public partial class RunScreens
             UIKit.Label(card, gift.displayName, 13, TextAnchor.MiddleCenter).fontStyle = FontStyle.Bold;
             UIKit.LiveLabel(card, () => $"{gift.cost} Gold   (owned {run.GiftCount(gift)})", refreshers, 11, TextAnchor.MiddleCenter,
                 UIKit.MutedTextColor);
-            UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.BuyGift(gift), refreshers, () => match.CanBuyGift(gift), height: 25f),
+            UIKit.Size(UIKit.LiveButton(card, () => "Buy", () => match.Run.BuyGift(gift), refreshers, () => match.Run.CanBuyGift(gift), height: 25f),
                 height: 25f, flexibleWidth: 1f);
         }
         UIKit.CloseButton(panel, "Back", leave);
@@ -77,7 +77,7 @@ public partial class RunScreens
         {
             string effects = choice.Describe();
             UIKit.LiveButton(panel, () => effects.Length > 0 ? $"{choice.label}  ({effects})" : choice.label,
-                () => match.TakeEventChoice(choice), refreshers, () => match.CanTakeEventChoice(choice), width: 460f, height: 28f);
+                () => match.Run.TakeEventChoice(choice), refreshers, () => match.Run.CanTakeEventChoice(choice), width: 460f, height: 28f);
         }
     }
 
@@ -86,7 +86,7 @@ public partial class RunScreens
     void BuildReleaseChoice()
     {
         RunState run = RunState.Current;
-        Captain newcomer = match.PendingRecruit;
+        Captain newcomer = match.Run.PendingRecruit;
         Captain chosen = null;
 
         RectTransform root = NewScreen("Release");
@@ -114,6 +114,6 @@ public partial class RunScreens
         }
 
         UIKit.Primary(UIKit.LiveButton(panel, () => chosen != null ? $"Release {chosen.displayName}" : "Pick a captain to release",
-            () => match.ReleaseForRecruit(chosen), refreshers, () => chosen != null, width: 260f, height: 32f), refreshers);
+            () => match.Run.ReleaseForRecruit(chosen), refreshers, () => chosen != null, width: 260f, height: 32f), refreshers);
     }
 }

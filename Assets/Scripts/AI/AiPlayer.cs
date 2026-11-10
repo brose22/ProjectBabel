@@ -254,21 +254,21 @@ public class AiPlayer : MonoBehaviour
             recorder.BeginRun(runIndex, runSeed, rolled, Time.realtimeSinceStartup, gameSeconds);
             recorder.Run.note = $"One match on {map} at layer {options.layer + 1} of {match.Data.matchesPerRun - 1}, as picked on the AI Run screen.";
             Decide("Setup", $"rolled party {string.Join(", ", rolled.Select(c => $"{c.displayName} ({c.ClassName})"))} on {map}");
-            match.BeginSingleMatch(rolled, options.layout, options.layer);
+            match.Run.BeginSingleMatch(rolled, options.layout, options.layer);
             pendingLoad = true;
             return;
         }
-        if (options.location >= 0) match.SetupAtLocation(options.location);
+        if (options.location >= 0) match.Run.SetupAtLocation(options.location);
         int partySize = options.captains > 0 ? options.captains : match.Data.partySize;
         // The setup screen offers the roster; top it up further when the party is bigger than that.
-        match.SetupOfferMinimum = partySize;
-        List<Captain> roster = match.SetupOffer.ToList();
+        match.Run.SetupOfferMinimum = partySize;
+        List<Captain> roster = match.Run.SetupOffer.ToList();
         List<int> picks = AiPartyPicker.PickParty(roster.ConvertAll(Info), partySize);
         var party = picks.ConvertAll(i => roster[i]);
         PrepareParty(party);
-        recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds, match.Location != null ? match.Location.displayName : "");
+        recorder.BeginRun(runIndex, runSeed, party, Time.realtimeSinceStartup, gameSeconds, match.Run.Location != null ? match.Run.Location.displayName : "");
         Decide("Setup", $"party {string.Join(", ", party.Select(c => c.displayName))}: strongest mix with a support");
-        match.BeginRun(party);
+        match.Run.BeginRun(party);
     }
 
     // Sets the party's starting bond rank. The captains field the soldiers they join the run with.
@@ -291,7 +291,7 @@ public class AiPlayer : MonoBehaviour
         {
             SoldierItem reward = run.SoldierOffer.OrderByDescending(s => s.rarity).First();
             Decide("Soldier reward", $"took the {reward.rarity} {reward.soldierClass}, the rarest on offer");
-            match.TakeSoldier(reward);
+            match.Run.TakeSoldier(reward);
             return;
         }
 
@@ -309,7 +309,7 @@ public class AiPlayer : MonoBehaviour
         MapNode node = choices[best];
         Decide("Map", $"to {(node.revealed ? node.kind.ToString() : "unknown")} city {node.id} on layer {node.layer}: {reason}");
         recorder.NoteRoute(node.revealed ? node.kind : NodeKind.City);
-        match.ChooseCity(node.id);
+        match.Run.ChooseCity(node.id);
         pendingLoad = true;
     }
 
@@ -317,9 +317,9 @@ public class AiPlayer : MonoBehaviour
     // run, keeping GiftReserve Gold back, and gives each one straight away.
     void BuyGifts()
     {
-        if (!match.ShopOpen) return;
+        if (!match.Run.ShopOpen) return;
         RunState run = RunState.Current;
-        List<GiftData> stock = match.ShopStock;
+        List<GiftData> stock = match.Run.ShopStock;
         if (stock.Count == 0) return;
         int cheapest = stock.Min(g => g.cost);
         for (int bought = 0; bought < MaxGiftsPerVisit; bought++)
@@ -331,13 +331,13 @@ public class AiPlayer : MonoBehaviour
             if (target < 0) return;
             Captain captain = party[target];
             GiftData gift = BestGift(stock, captain);
-            if (run.Gold - gift.cost < GiftReserve || !match.CanBuyGift(gift)) return;
+            if (run.Gold - gift.cost < GiftReserve || !match.Run.CanBuyGift(gift)) return;
             int goldBefore = run.Gold;
-            match.BuyGift(gift);
+            match.Run.BuyGift(gift);
             if (run.Gold >= goldBefore) return;
             recorder.NoteGold(false, "Gifts", goldBefore - run.Gold);
             float approvalBefore = captain.approval;
-            GiftReaction? reaction = match.GiveGift(captain, gift);
+            GiftReaction? reaction = match.Run.GiveGift(captain, gift);
             Decide("Shop", $"bought {gift.name} for {goldBefore - run.Gold} Gold and gave it to {captain.displayName} ({reaction}, approval {approvalBefore:0}->{captain.approval:0})");
         }
     }
@@ -360,22 +360,22 @@ public class AiPlayer : MonoBehaviour
                 if (AiStopChoice.ShouldRest(run.Health, run.MaxHealth))
                 {
                     LogStop($"rested at {run.Health}/{run.MaxHealth} health");
-                    match.Rest();
+                    match.Run.Rest();
                 }
                 else Leave("rest skipped at full health");
                 break;
             default:
-                EventData stopEvent = match.StopEvent;
+                EventData stopEvent = match.Run.StopEvent;
                 if (stopEvent == null) { Leave("no event here"); break; }
                 int pick = AiStopChoice.PickEvent(stopEvent.choices, run.Gold, run.Health, run.MaxHealth, run.ActivePartyCount);
                 if (pick < 0) { Leave("no event choice could be taken"); break; }
                 EventChoice choice = stopEvent.choices[pick];
                 LogStop($"event '{stopEvent.title}': {choice.label} ({choice.Describe()})");
                 int goldBefore = run.Gold;
-                match.TakeEventChoice(choice);
+                match.Run.TakeEventChoice(choice);
                 recorder.NoteGold(run.Gold > goldBefore, "Events", System.Math.Abs(run.Gold - goldBefore));
                 // A recruit for a full roster: the AI keeps the roster it has.
-                if (match.PendingRecruit != null) match.ReleaseForRecruit(match.PendingRecruit);
+                if (match.Run.PendingRecruit != null) match.Run.ReleaseForRecruit(match.Run.PendingRecruit);
                 break;
         }
         pendingLoad = match.State == MatchState.Stop && stopHandled;
@@ -392,7 +392,7 @@ public class AiPlayer : MonoBehaviour
     void Leave(string text)
     {
         LogStop(text);
-        match.LeaveStop();
+        match.Run.LeaveStop();
     }
 
     void EnsureMatchRow()
@@ -449,7 +449,7 @@ public class AiPlayer : MonoBehaviour
         }
         else
         {
-            match.ReturnToMap();
+            match.Run.ReturnToMap();
             pendingLoad = true;
         }
     }
@@ -466,7 +466,7 @@ public class AiPlayer : MonoBehaviour
         runIndex++;
         runSeed = SeedFor(runIndex);
         // Each run starts from a new profile, so runs in a batch compare.
-        match.RestartRun(freshProfile: true);
+        match.Run.RestartRun(freshProfile: true);
         pendingLoad = true;
     }
 

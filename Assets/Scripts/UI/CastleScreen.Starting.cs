@@ -23,7 +23,7 @@ public partial class CastleScreen
     {
         if (startingOffer == null)
         {
-            startingOffer = MatchManager.RollStartingCaptains(data, Random.Range(int.MinValue, int.MaxValue));
+            startingOffer = RunController.RollStartingCaptains(data, Random.Range(int.MinValue, int.MaxValue));
             startingSoldiers.Clear();
             foreach (Captain offered in startingOffer)
             {

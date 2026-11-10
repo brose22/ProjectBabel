@@ -37,14 +37,14 @@ public partial class RunScreens
             UIKit.Label(panel, $"+{match.WinGoldEarned} Gold for the win, +{match.ReserveRefunded} returned from reserves", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
         if (match.HealthRestored > 0)
             UIKit.Label(panel, $"+{match.HealthRestored} health for the win", 12, TextAnchor.MiddleCenter, UIKit.GoodColor);
-        if (match.LocationUnlocked != null)
-            UIKit.Label(panel, $"{match.LocationUnlocked.displayName} is open", 13, TextAnchor.MiddleCenter, UIKit.GoodColor);
+        if (match.Run.LocationUnlocked != null)
+            UIKit.Label(panel, $"{match.Run.LocationUnlocked.displayName} is open", 13, TextAnchor.MiddleCenter, UIKit.GoodColor);
         if (!won)
         {
-            UIKit.Label(panel, $"-{match.GoldLost} Gold lost with the run", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
-            if (match.CaptainsLost.Count > 0)
-                UIKit.Label(panel, $"Lost on the field: {string.Join(", ", match.CaptainsLost.Select(c => c.displayName))}" +
-                                   $" and {match.SoldiersLost} soldier{(match.SoldiersLost == 1 ? "" : "s")}", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
+            UIKit.Label(panel, $"-{match.Run.GoldLost} Gold lost with the run", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
+            if (match.Run.CaptainsLost.Count > 0)
+                UIKit.Label(panel, $"Lost on the field: {string.Join(", ", match.Run.CaptainsLost.Select(c => c.displayName))}" +
+                                   $" and {match.Run.SoldiersLost} soldier{(match.Run.SoldiersLost == 1 ? "" : "s")}", 12, TextAnchor.MiddleCenter, UIKit.BadColor);
         }
 
         UIKit.Size(UIKit.Header(panel, "Captains"), flexibleWidth: 1f);
@@ -56,12 +56,12 @@ public partial class RunScreens
             CaptainResultRow(panel, run, rows[i], i % 2 == 0);
 
         UIKit.Size(UIKit.Group(panel, "Gap"), height: UIKit.Gap);
-        if (won && !runWon) UIKit.Primary(UIKit.Button(panel, "Back to the map", match.ReturnToMap, 220f, 32f), refreshers);
+        if (won && !runWon) UIKit.Primary(UIKit.Button(panel, "Back to the map", match.Run.ReturnToMap, 220f, 32f), refreshers);
         RectTransform buttons = UIKit.Group(panel, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 8, fitContent: true);
         // A lost or finished run goes home to the Castle.
-        if (!won || runWon) UIKit.Primary(UIKit.Button(buttons, "Back to the Castle", match.ReturnToCastle, 170f, 28f), refreshers);
-        UIKit.Button(buttons, "Main menu", match.ReturnToMenu, 150f, 28f);
+        if (!won || runWon) UIKit.Primary(UIKit.Button(buttons, "Back to the Castle", match.Run.ReturnToCastle, 170f, 28f), refreshers);
+        UIKit.Button(buttons, "Main menu", match.Run.ReturnToMenu, 150f, 28f);
     }
 
     // The run's match number, health (with a meter) and Gold, in a framed box in the top right.
