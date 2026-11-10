@@ -5,11 +5,29 @@ using UnityEngine;
 
 // The profile, saved to a JSON file in persistentDataPath: the roster's captains whole, the soldier
 // inventory with its equips, Gold and unlocked locations. Written with every run save, and when a
-// run ends, so it always agrees with the run save beside it.
+// run ends, so it always agrees with the run save beside it. Written through SaveFiles, so a
+// crash mid-write leaves the previous save, and a broken file falls back to its backup.
 public static class ProfileSave
 {
-    // Saves from other versions are ignored rather than migrated.
+    // Bump this when the file's shape changes, and add a step to Migrations that upgrades the
+    // version before it. Older saves are upgraded on load; they are never thrown away.
     const int Version = 1;
+
+    // One step per version bump, keyed by the version it upgrades from: the "1 -> 2" step has
+    // key 1. A step takes the file's JSON in the old shape and returns it in the next one (read
+    // it into a class shaped like the old file, build the new one, write that back out). Steps
+    // run in order, so each only needs to know the version just before its own.
+    static readonly Dictionary<int, Func<string, string>> Migrations = new()
+    {
+        // { 1, MigrateV1ToV2 },
+    };
+
+    // Just enough of the file to tell which version wrote it.
+    [Serializable]
+    class VersionProbe
+    {
+        public int version;
+    }
 
     [Serializable]
     class SaveFile
@@ -40,7 +58,7 @@ public static class ProfileSave
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => PathOverride = null;
 
-    public static bool Exists => File.Exists(FilePath);
+    public static bool Exists => SaveFiles.Exists(FilePath);
 
     public static void Save(Profile profile)
     {
@@ -60,9 +78,9 @@ public static class ProfileSave
             file.packedGifts.Add(new PackedGift { gift = entry.Key, count = entry.Value });
         try
         {
-            File.WriteAllText(FilePath, JsonUtility.ToJson(file, true));
+            SaveFiles.Write(FilePath, JsonUtility.ToJson(file, true));
         }
-        catch (IOException e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Debug.LogWarning($"Couldn't save the profile to {FilePath}: {e.Message}");
         }
@@ -73,17 +91,47 @@ public static class ProfileSave
     public static bool TryLoad(IEnumerable<CaptainData> templates)
     {
         if (!Exists) return false;
-        SaveFile file;
-        try
+        // A profile from a later build can't be read. It is set aside under its own name before
+        // anything saves over it, and the backup (older still) isn't loaded in its place.
+        int newerVersion = 0;
+        string newerText = null;
+        SaveFile Parse(string text)
         {
-            file = JsonUtility.FromJson<SaveFile>(File.ReadAllText(FilePath));
+            if (newerText != null) return null;
+            int version = JsonUtility.FromJson<VersionProbe>(text)?.version ?? 0;
+            if (SaveMigration.Check(version, Version) == SaveVersionStatus.Newer)
+            {
+                newerVersion = version;
+                newerText = text;
+                return null;
+            }
+            if (!SaveMigration.TryUpgrade(ref text, version, Version, Migrations)) return null;
+            SaveFile parsed = JsonUtility.FromJson<SaveFile>(text);
+            if (parsed != null) parsed.version = Version;
+            return parsed;
         }
-        catch (Exception e)
+
+        SaveSource source = SaveFiles.Load(FilePath, Parse, out SaveFile file);
+        if (newerText != null)
         {
-            Debug.LogWarning($"Couldn't read the profile from {FilePath}, starting fresh: {e.Message}");
+            string kept = NewerVersionPath(newerVersion);
+            try
+            {
+                File.WriteAllText(kept, newerText);
+                Debug.LogWarning($"The profile at {FilePath} is from a newer version of the game ({newerVersion}, this build reads up to {Version}). It was copied to {kept} and a fresh profile is used.");
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                Debug.LogWarning($"The profile at {FilePath} is from a newer version of the game ({newerVersion}) and couldn't be copied to {kept}: {e.Message}");
+            }
             return false;
         }
-        if (file == null || file.version != Version) return false;
+        if (source == SaveSource.None)
+        {
+            Debug.LogWarning($"Couldn't use the profile at {FilePath} or its backup, starting fresh.");
+            return false;
+        }
+        if (source == SaveSource.Backup) Debug.LogWarning($"Couldn't use the profile at {FilePath}, loaded its backup.");
 
         var templateByName = new Dictionary<string, CaptainData>();
         foreach (CaptainData template in templates)
@@ -106,8 +154,11 @@ public static class ProfileSave
         return true;
     }
 
-    public static void Delete()
-    {
-        if (File.Exists(FilePath)) File.Delete(FilePath);
-    }
+    // Where a profile written by a later build is kept when this build can't read it. Outside the
+    // main/backup pair, so saving never overwrites it.
+    static string NewerVersionPath(int version) => $"{FilePath}.v{version}{SaveFiles.BackupSuffix}";
+
+    // Deletes the backup too, so a deleted profile can't come back from it. A profile set aside
+    // from a later build is left alone.
+    public static void Delete() => SaveFiles.Delete(FilePath);
 }
