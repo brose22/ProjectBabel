@@ -276,7 +276,7 @@ public partial class RunScreens
         Action<GiftData> give = null;
         give = gift =>
         {
-            GiftReaction? reaction = match.GiveGift(captain, gift);
+            GiftReaction? reaction = match.Run.GiveGift(captain, gift);
             if (reaction == null) return;
             speech.text = $"\"{captain.GiftLine(reaction.Value)}\"";
             UIKit.Refresh(live);

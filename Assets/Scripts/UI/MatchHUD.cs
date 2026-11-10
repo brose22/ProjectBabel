@@ -418,7 +418,7 @@ public class MatchHUD : MonoBehaviour
         Button resume = UIKit.Primary(UIKit.Button(window, "Resume", () => match.SetPaused(false)), barRefreshers);
         UIKit.Size(resume, height: 32f, flexibleWidth: 1f);
         UIKit.PadBadge(resume, PadGlyph.Menu);
-        UIKit.Size(UIKit.Button(window, "Exit Match", match.ExitMatch), height: 32f, flexibleWidth: 1f);
+        UIKit.Size(UIKit.Button(window, "Exit Match", match.Run.ExitMatch), height: 32f, flexibleWidth: 1f);
         UIKit.Size(UIKit.Button(window, "Exit Game", MainMenu.Quit), height: 32f, flexibleWidth: 1f);
         pauseMenu.gameObject.SetActive(false);
     }

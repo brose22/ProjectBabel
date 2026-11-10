@@ -95,7 +95,7 @@ public partial class RunScreens : MonoBehaviour
         // The map screen shows the soldier reward first while soldiers are on offer.
         bool recruiting = wanted == MatchState.Map && RunState.Current.SoldierOffer.Count > 0;
         // An event's recruit for a full roster asks who to release before the stop is left.
-        bool releasing = wanted == MatchState.Stop && match.PendingRecruit != null;
+        bool releasing = wanted == MatchState.Stop && match.Run.PendingRecruit != null;
         if (wanted != shownFor || recruiting != shownRecruiting || releasing != shownReleasing)
         {
             shownFor = wanted;

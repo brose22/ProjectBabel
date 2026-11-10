@@ -35,8 +35,8 @@ public partial class RunScreens
         RectTransform buttons = UIKit.Group(column, "Buttons");
         UIKit.Layout<HorizontalLayoutGroup>(buttons, 0, 10, fitContent: true);
         UIKit.Primary(UIKit.LiveButton(buttons, () => chosen != null ? $"Take the {chosen.rarity} {ClassName(chosen)}" : "Pick a soldier",
-            () => match.TakeSoldier(chosen), refreshers, () => chosen != null, width: 240f, height: 32f), refreshers);
-        UIKit.Button(buttons, "Skip", () => match.TakeSoldier(null), 140f, 32f);
+            () => match.Run.TakeSoldier(chosen), refreshers, () => chosen != null, width: 240f, height: 32f), refreshers);
+        UIKit.Button(buttons, "Skip", () => match.Run.TakeSoldier(null), 140f, 32f);
     }
 
     const float SoldierCardHeight = 96f;
