@@ -7,7 +7,8 @@ using UnityEngine;
 // can quit and pick it up again from the world map. The party refers to the profile's captains by
 // id; soldiers offered as a match reward, not owned yet, are saved whole. Saving the run saves
 // the profile too (ProfileSave), so the two files always agree. A match in progress isn't saved:
-// resuming returns to the map before it.
+// resuming returns to the map before it. Written through SaveFiles, so a crash mid-write leaves
+// the previous save, and a broken file falls back to its backup.
 public static class RunSave
 {
     // Saves from other versions are ignored rather than migrated.
@@ -63,7 +64,7 @@ public static class RunSave
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => PathOverride = null;
 
-    public static bool Exists => File.Exists(FilePath);
+    public static bool Exists => SaveFiles.Exists(FilePath);
 
     // Saves the profile, then the run once it has a party and a map.
     public static void Save(RunState run)
@@ -92,9 +93,9 @@ public static class RunSave
             file.gifts.Add(new GiftStack { gift = entry.Key.name, count = entry.Value });
         try
         {
-            File.WriteAllText(FilePath, JsonUtility.ToJson(file, true));
+            SaveFiles.Write(FilePath, JsonUtility.ToJson(file, true));
         }
-        catch (IOException e)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             Debug.LogWarning($"Couldn't save the run to {FilePath}: {e.Message}");
         }
@@ -106,17 +107,13 @@ public static class RunSave
     public static bool TryResume(Profile profile, IEnumerable<GiftData> gifts = null)
     {
         if (profile == null || !Exists) return false;
-        SaveFile file;
-        try
+        SaveSource source = SaveFiles.Load(FilePath, Parse, out SaveFile file);
+        if (source == SaveSource.None)
         {
-            file = JsonUtility.FromJson<SaveFile>(File.ReadAllText(FilePath));
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"Couldn't read the run from {FilePath}, starting fresh: {e.Message}");
+            Debug.LogWarning($"Couldn't use the run at {FilePath} or its backup, starting fresh.");
             return false;
         }
-        if (file == null || file.version != Version || file.map?.nodes == null || file.map.nodes.Count == 0 || file.health <= 0) return false;
+        if (source == SaveSource.Backup) Debug.LogWarning($"Couldn't use the run at {FilePath}, resuming from its backup.");
 
         List<Captain> party = (file.party ?? new List<string>()).ConvertAll(profile.Find).FindAll(c => c != null);
         if (party.Count == 0) return false;
@@ -144,8 +141,14 @@ public static class RunSave
         return true;
     }
 
-    public static void Delete()
+    // The save in the text of a file, or null if it's from another version or has no run to resume.
+    static SaveFile Parse(string text)
     {
-        if (File.Exists(FilePath)) File.Delete(FilePath);
+        SaveFile file = JsonUtility.FromJson<SaveFile>(text);
+        bool usable = file != null && file.version == Version && file.map?.nodes != null && file.map.nodes.Count > 0 && file.health > 0;
+        return usable ? file : null;
     }
+
+    // Deletes the backup too, so a finished run can't come back from it.
+    public static void Delete() => SaveFiles.Delete(FilePath);
 }
