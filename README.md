@@ -175,3 +175,15 @@ EditMode tests live in `Assets/Tests/EditMode` and run from Unity's Test Runner.
 - Enemy walk frames (`enemy_*_walk1.png`, `enemy_*_walk2.png`) are hand-made in Aseprite and `pixel_art.py` doesn't write them, so redo them if an enemy's palette or body changes.
 - Every match logs per-wave stats to the Console and writes a CSV to `stats/` under Unity's persistent data path (`%USERPROFILE%/AppData/LocalLow/DefaultCompany/ProjectBabel` on Windows). AI Run batches report to `Reports/` instead.
 - Approval and bond rank live on each rolled captain and are saved with the run, so a new run starts every captain at 0.
+
+## Continuous integration
+
+`.github/workflows/tests.yml` runs the edit-mode tests (`Assets/Tests/EditMode`) with GameCI on every push to `main` and on pull requests. The Unity version is read from `ProjectSettings/ProjectVersion.txt`.
+
+The job needs a Unity licence, so until the secrets exist it skips with a notice instead of failing. Add these under the repository's **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Value |
+|---|---|
+| `UNITY_LICENSE` | Contents of the activated `.ulf` licence file (Personal licences: follow the GameCI "Activation" guide at game.ci/docs/github/activation to produce it) |
+| `UNITY_EMAIL` | Email of the Unity account |
+| `UNITY_PASSWORD` | Password of that Unity account |
