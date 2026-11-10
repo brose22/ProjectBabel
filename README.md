@@ -169,6 +169,14 @@ py -I Tools/compile_check.py <checkout root>
 
 EditMode tests live in `Assets/Tests/EditMode` and run from Unity's Test Runner.
 
+`Assets/Tests/PlayMode` holds one smoke test: it loads the menu scene, has the AI player start a run at 32× and play its first wave, and fails if anything logs an error or no wave ends within 60 seconds. Run it from the Test Runner's **PlayMode** tab with the editor focused (an unfocused editor throttles play mode), or headless with the editor closed:
+
+```
+Unity.exe -batchmode -projectPath . -runTests -testPlatform PlayMode -testResults playmode.xml -logFile playmode.log
+```
+
+The test itself takes about 2 seconds; a headless launch around it takes about 100. It reaches the game by reflection, because the game scripts compile into `Assembly-CSharp`, which a test assembly can't reference. Saves are redirected to a scratch folder and to the AI's own `ai/` saves, so the real profile and run are left alone.
+
 ### Art and stats
 
 - `py -I Tools/pixel_art.py [preview.png]` regenerates the placeholder pixel art in `Assets/Art/Sprites` from the character grids in the script (optionally writing an enlarged preview sheet). The scene builder assigns art by name to any soldier class or enemy without a sprite, and the shared generic sprite to captain templates. **Babel → Build Data Assets Only** rebuilds the data assets (templates included) without regenerating the scene.
