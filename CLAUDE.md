@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues for brose22/ProjectBabel, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for brian-md-rose/ProjectBabel, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
